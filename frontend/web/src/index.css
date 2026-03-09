@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #f6f7fb;
+  --color-bg-soft: #f9fafc;
+  --color-surface: rgba(255, 255, 255, 0.82);
+  --color-surface-strong: rgba(255, 255, 255, 0.94);
+  --color-surface-muted: #eef2f7;
+  --color-border: rgba(15, 23, 42, 0.08);
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+
+  --color-accent: #5b5bd6;
+  --color-accent-soft: #ececff;
+  --color-accent-soft-2: #f4f2ff;
+  --color-accent-hover: #4f46e5;
+
+  --color-teal-soft: #e8fbf7;
+  --color-blue-soft: #eef4ff;
+  --color-amber-soft: #fff6e8;
+
+  --shadow-soft: 0 8px 30px rgba(15, 23, 42, 0.06);
+  --shadow-elevated: 0 20px 60px rgba(15, 23, 42, 0.08);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(91, 91, 214, 0.06),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(56, 189, 248, 0.06),
+      transparent 24%
+    ),
+    linear-gradient(180deg, #f8f9fc 0%, #f4f6fb 100%);
+  color: var(--color-text-primary);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@layer utilities {
+  .bg-app {
+    background: transparent;
+  }
+
+  .bg-surface {
+    background: var(--color-surface);
+  }
+
+  .bg-surface-strong {
+    background: var(--color-surface-strong);
+  }
+
+  .bg-surface-muted {
+    background: var(--color-surface-muted);
+  }
+
+  .bg-accent {
+    background: var(--color-accent);
+  }
+
+  .bg-accent-soft {
+    background: var(--color-accent-soft);
+  }
+
+  .bg-accent-soft-2 {
+    background: var(--color-accent-soft-2);
+  }
+
+  .bg-blue-soft {
+    background: var(--color-blue-soft);
+  }
+
+  .bg-teal-soft {
+    background: var(--color-teal-soft);
+  }
+
+  .bg-amber-soft {
+    background: var(--color-amber-soft);
+  }
+
+  .border-theme {
+    border-color: var(--color-border);
+  }
+
+  .text-primary-theme {
+    color: var(--color-text-primary);
+  }
+
+  .text-secondary-theme {
+    color: var(--color-text-secondary);
+  }
+
+  .text-muted-theme {
+    color: var(--color-text-muted);
+  }
+
+  .text-accent {
+    color: var(--color-accent);
+  }
+
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .hero-sheen {
+    background:
+      radial-gradient(
+        circle at top right,
+        rgba(255, 255, 255, 0.45),
+        transparent 28%
+      ),
+      linear-gradient(135deg, #f4f2ff 0%, #edf4ff 55%, #eefaf8 100%);
+  }
+
+  .bar-fill {
+    background: linear-gradient(180deg, #7c83ff 0%, #5b5bd6 100%);
+  }
+}
