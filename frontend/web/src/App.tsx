@@ -1,11 +1,11 @@
 import { Route, Routes } from "react-router-dom";
-import AppShell from "./components/AppShell";
-import DashboardPage from "./modules/dashboard/DashboardPage";
-import SharedExpensesPage from "./modules/shared-expenses/SharedExpensesPage";
-import GroupDetailPage from "./modules/shared-expenses/GroupDetailPage";
-import SubscriptionsPage from "./modules/subscriptions/SubscriptionsPage";
-import LoansPage from "./modules/loans/LoansPage";
-import FinancialTrackerPage from "./modules/financial-tracker/FinancialTrackerPage";
+import AppShell from "./shared/layout/AppShell";
+import DashboardPage from "./features/dashboard/pages/DashboardPage";
+import SharedExpensesPage from "./features/shared-expenses/pages/SharedExpensesPage";
+import GroupDetailPage from "./features/shared-expenses/pages/GroupDetailPage";
+import SubscriptionsPage from "./features/subscriptions/pages/SubscriptionsPage";
+import LoansPage from "./features/loans/pages/LoansPage";
+import SpendAnalyzerPage from "./features/spend-analyzer/pages/SpendAnalyzerPage";
 
 export default function App() {
   return (
@@ -19,7 +19,7 @@ export default function App() {
         />
         <Route path="/subscriptions" element={<SubscriptionsPage />} />
         <Route path="/loans" element={<LoansPage />} />
-        <Route path="/financial-tracker" element={<FinancialTrackerPage />} />
+        <Route path="/spend-analyzer" element={<SpendAnalyzerPage />} />
       </Route>
     </Routes>
   );
