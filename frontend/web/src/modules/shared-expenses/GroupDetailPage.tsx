@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import Badge from "../../components/ui/Badge";
@@ -75,34 +75,13 @@ export default function SharedExpensesPage() {
     queryFn: getUngroupedExpenses,
   });
 
-  // Robust current-user detection
-  const youParticipant = useMemo(() => {
-    return (
-      participants.find(
-        (participant) =>
-          participant.name.trim().toLowerCase() === "you" &&
-          participant.isRegisteredUser,
-      ) ??
-      participants.find(
-        (participant) => participant.name.trim().toLowerCase() === "you",
-      ) ??
-      participants.find((participant) => participant.isRegisteredUser) ??
-      null
-    );
-  }, [participants]);
-
-  const selectableParticipantsForExpense = useMemo(() => {
-    if (!youParticipant) return participants;
-    return participants.filter(
-      (participant) => participant.id !== youParticipant.id,
-    );
-  }, [participants, youParticipant]);
-
-  const selectedExpenseParticipants = useMemo(() => {
-    return participants.filter((participant) =>
-      selectedExpenseParticipantIds.includes(participant.id),
-    );
-  }, [participants, selectedExpenseParticipantIds]);
+  const selectedExpenseParticipants = useMemo(
+    () =>
+      participants.filter((participant) =>
+        selectedExpenseParticipantIds.includes(participant.id),
+      ),
+    [participants, selectedExpenseParticipantIds],
+  );
 
   const createParticipantMutation = useMutation({
     mutationFn: createParticipant,
@@ -116,9 +95,7 @@ export default function SharedExpensesPage() {
     onSuccess: async (newGroup) => {
       await queryClient.invalidateQueries({ queryKey: ["groups"] });
       setGroupName("");
-      setSelectedParticipantIdsForGroup(
-        youParticipant ? [youParticipant.id] : [],
-      );
+      setSelectedParticipantIdsForGroup([]);
       setNewGroupParticipantName("");
       setIsCreateGroupOpen(false);
       navigate(`/shared-expenses/groups/${newGroup.id}`);
@@ -134,73 +111,17 @@ export default function SharedExpensesPage() {
           queryKey: ["group-expenses", selectedGroupId],
         });
       }
-
       setExpenseTitle("");
       setExpenseAmount("");
       setSelectedGroupId("");
-      setSelectedExpenseParticipantIds(
-        youParticipant ? [youParticipant.id] : [],
-      );
-      setPaidByParticipantId(youParticipant?.id ?? "");
+      setSelectedExpenseParticipantIds([]);
+      setPaidByParticipantId("");
       setNewExpenseParticipantName("");
       setIsAddExpenseOpen(false);
     },
   });
 
-  // Always include You in create-group modal
-  useEffect(() => {
-    if (!isCreateGroupOpen || !youParticipant) return;
-
-    setSelectedParticipantIdsForGroup((prev) =>
-      prev.includes(youParticipant.id) ? prev : [youParticipant.id, ...prev],
-    );
-  }, [isCreateGroupOpen, youParticipant]);
-
-  // Always include You in add-expense modal
-  useEffect(() => {
-    if (!isAddExpenseOpen || !youParticipant) return;
-
-    setSelectedExpenseParticipantIds((prev) =>
-      prev.includes(youParticipant.id) ? prev : [youParticipant.id, ...prev],
-    );
-
-    setPaidByParticipantId((prev) => prev || youParticipant.id);
-  }, [isAddExpenseOpen, youParticipant]);
-
-  // When group changes, sync participants to that group + You
-  useEffect(() => {
-    if (!isAddExpenseOpen) return;
-    if (!youParticipant) return;
-
-    if (!selectedGroupId) {
-      setSelectedExpenseParticipantIds([youParticipant.id]);
-      setPaidByParticipantId(youParticipant.id);
-      return;
-    }
-
-    const group = groups.find((g) => g.id === selectedGroupId);
-    if (!group) return;
-
-    const nextParticipantIds = Array.from(
-      new Set([youParticipant.id, ...group.participantIds]),
-    );
-
-    setSelectedExpenseParticipantIds(nextParticipantIds);
-
-    if (!nextParticipantIds.includes(paidByParticipantId)) {
-      setPaidByParticipantId(youParticipant.id);
-    }
-  }, [
-    selectedGroupId,
-    groups,
-    isAddExpenseOpen,
-    youParticipant,
-    paidByParticipantId,
-  ]);
-
   function toggleGroupParticipant(participantId: string) {
-    if (participantId === youParticipant?.id) return;
-
     setSelectedParticipantIdsForGroup((prev) =>
       prev.includes(participantId)
         ? prev.filter((id) => id !== participantId)
@@ -209,25 +130,16 @@ export default function SharedExpensesPage() {
   }
 
   function toggleExpenseParticipant(participantId: string) {
-    if (participantId === youParticipant?.id) return;
-
     setSelectedExpenseParticipantIds((prev) => {
       const next = prev.includes(participantId)
         ? prev.filter((id) => id !== participantId)
         : [...prev, participantId];
 
-      // Keep You always included
-      const ensured = youParticipant
-        ? next.includes(youParticipant.id)
-          ? next
-          : [youParticipant.id, ...next]
-        : next;
-
-      if (!ensured.includes(paidByParticipantId)) {
-        setPaidByParticipantId(youParticipant?.id ?? "");
+      if (!next.includes(paidByParticipantId)) {
+        setPaidByParticipantId("");
       }
 
-      return ensured;
+      return next;
     });
   }
 
@@ -253,13 +165,7 @@ export default function SharedExpensesPage() {
       isRegisteredUser: false,
     });
 
-    setSelectedExpenseParticipantIds((prev) => {
-      const next = [...prev, created.id];
-      return youParticipant && !next.includes(youParticipant.id)
-        ? [youParticipant.id, ...next]
-        : next;
-    });
-
+    setSelectedExpenseParticipantIds((prev) => [...prev, created.id]);
     setNewExpenseParticipantName("");
   }
 
@@ -409,7 +315,7 @@ export default function SharedExpensesPage() {
                         {group.name}
                       </p>
                       <p className="mt-1 text-sm text-muted-theme">
-                        {group.participantIds.length} people
+                        {(group.participantIds ?? []).length} people
                       </p>
                     </div>
 
@@ -483,7 +389,7 @@ export default function SharedExpensesPage() {
                         </p>
 
                         <div className="mt-3 flex flex-wrap gap-2">
-                          {expense.participantIds.map((participantId) => {
+                          {(expense.participantIds ?? []).map((participantId) => {
                             const participant = participants.find(
                               (p) => p.id === participantId,
                             );
@@ -524,8 +430,8 @@ export default function SharedExpensesPage() {
                   New shared group
                 </h2>
                 <p className="mt-2 text-secondary-theme">
-                  You are always included. Add anyone else you want to split
-                  with.
+                  Pick a name and add participants. They do not need to already
+                  be on FinanceOS.
                 </p>
               </div>
 
@@ -560,20 +466,17 @@ export default function SharedExpensesPage() {
                     const checked = selectedParticipantIdsForGroup.includes(
                       participant.id,
                     );
-                    const isYou = participant.id === youParticipant?.id;
 
                     return (
                       <button
                         key={participant.id}
                         type="button"
                         onClick={() => toggleGroupParticipant(participant.id)}
-                        disabled={isYou}
                         className={[
                           "flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition",
                           checked
                             ? "border-transparent bg-accent-soft text-accent"
                             : "border-theme bg-surface text-primary-theme hover:bg-surface-muted",
-                          isYou ? "cursor-default opacity-80" : "",
                         ].join(" ")}
                       >
                         <div className="flex items-center gap-2">
@@ -615,6 +518,10 @@ export default function SharedExpensesPage() {
                     Add Person
                   </Button>
                 </div>
+                <p className="mt-2 text-sm text-muted-theme">
+                  New people will be added as contacts and marked with a red
+                  warning until invited.
+                </p>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -671,7 +578,8 @@ export default function SharedExpensesPage() {
                   New shared expense
                 </h2>
                 <p className="mt-2 text-secondary-theme">
-                  You are always part of the expense. A group is optional.
+                  A group is optional. Great for one-time expenses like Top
+                  Golf.
                 </p>
               </div>
 
@@ -735,18 +643,8 @@ export default function SharedExpensesPage() {
                   Participants
                 </label>
 
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {selectedExpenseParticipants.map((participant) => (
-                    <ParticipantTag
-                      key={participant.id}
-                      name={participant.name}
-                      isRegisteredUser={participant.isRegisteredUser}
-                    />
-                  ))}
-                </div>
-
                 <div className="grid gap-3 md:grid-cols-2">
-                  {selectableParticipantsForExpense.map((participant) => {
+                  {participants.map((participant) => {
                     const checked = selectedExpenseParticipantIds.includes(
                       participant.id,
                     );
@@ -801,8 +699,7 @@ export default function SharedExpensesPage() {
                 </div>
 
                 <p className="mt-2 text-sm text-muted-theme">
-                  You are included automatically. People not on FinanceOS show a
-                  red warning until invited.
+                  People not on FinanceOS will show a red warning until invited.
                 </p>
               </div>
 
@@ -822,6 +719,16 @@ export default function SharedExpensesPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {selectedExpenseParticipants.map((participant) => (
+                  <ParticipantTag
+                    key={participant.id}
+                    name={participant.name}
+                    isRegisteredUser={participant.isRegisteredUser}
+                  />
+                ))}
               </div>
 
               <div className="rounded-2xl border border-theme bg-surface p-4 text-sm text-secondary-theme">

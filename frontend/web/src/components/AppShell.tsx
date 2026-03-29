@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { motion } from "framer-motion";
 
 const navItems = [
@@ -21,13 +21,17 @@ export default function AppShell() {
               transition={{ duration: 0.35 }}
               className="mb-10"
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-accent-soft text-2xl shadow-soft">
-                🛰️
-              </div>
+              <Link to="/" className="inline-block">
+                <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-accent-soft text-2xl shadow-soft transition hover:-translate-y-0.5">
+                  🛰️
+                </div>
+              </Link>
 
-              <h1 className="mt-5 text-[2rem] font-black tracking-tight text-primary-theme">
-                FinanceOS
-              </h1>
+              <Link to="/" className="inline-block">
+                <h1 className="mt-5 text-[2rem] font-black tracking-tight text-primary-theme">
+                  FinanceOS
+                </h1>
+              </Link>
 
               <p className="mt-2 text-base text-muted-theme">
                 A fun place for money stuff
