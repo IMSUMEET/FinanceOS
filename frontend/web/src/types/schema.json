@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://financeos.app/schemas/v1.json",
+  "title": "FinanceOS API Contract",
+  "description": "Schemas the web frontend consumes and produces. Hand this to backend engineers to align request / response payloads.",
+  "$defs": {
+    "Money": {
+      "type": "number",
+      "description": "Positive number representing a monetary amount in the user's base currency. Income / refund flows are represented as negative on transactions; everything else is positive."
+    },
+    "ISODate": {
+      "type": "string",
+      "format": "date",
+      "description": "Calendar date in YYYY-MM-DD."
+    },
+    "ISODateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "Month": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$",
+      "description": "Year + month, eg. 2026-04."
+    },
+    "Category": {
+      "type": "string",
+      "enum": [
+        "Food & Dining",
+        "Groceries",
+        "Transport",
+        "Shopping",
+        "Entertainment",
+        "Travel",
+        "Bills & Utilities",
+        "Health",
+        "Education",
+        "Subscriptions",
+        "Income",
+        "Other"
+      ]
+    },
+    "Transaction": {
+      "type": "object",
+      "required": ["id", "date", "merchant", "merchant_normalized", "amount", "category"],
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "$ref": "#/$defs/ISODate" },
+        "merchant": { "type": "string" },
+        "merchant_normalized": { "type": "string" },
+        "amount": { "$ref": "#/$defs/Money" },
+        "category": { "$ref": "#/$defs/Category" },
+        "notes": { "type": ["string", "null"] },
+        "source": {
+          "type": "string",
+          "enum": ["manual", "csv", "bank_sync", "seed"],
+          "default": "manual"
+        },
+        "created_at": { "$ref": "#/$defs/ISODateTime" }
+      }
+    },
+    "TransactionImport": {
+      "type": "object",
+      "required": ["rows"],
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["date", "merchant", "amount"],
+            "properties": {
+              "date": { "$ref": "#/$defs/ISODate" },
+              "merchant": { "type": "string" },
+              "amount": { "$ref": "#/$defs/Money" },
+              "category": { "$ref": "#/$defs/Category" },
+              "notes": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "source": { "type": "string", "default": "csv" }
+      }
+    },
+    "Filters": {
+      "type": "object",
+      "properties": {
+        "month": {
+          "oneOf": [{ "$ref": "#/$defs/Month" }, { "const": "ALL" }]
+        },
+        "categories": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Category" }
+        },
+        "search": { "type": "string" }
+      }
+    },
+    "Profile": {
+      "type": "object",
+      "required": ["name", "handle", "avatarVariant", "profileCompleted"],
+      "properties": {
+        "name": { "type": "string" },
+        "handle": { "type": "string" },
+        "avatarVariant": {
+          "type": "string",
+          "enum": ["blue", "violet", "emerald", "amber"]
+        },
+        "email": { "type": "string", "format": "email" },
+        "profileCompleted": { "type": "boolean", "default": false }
+      }
+    },
+    "Personality": {
+      "type": "object",
+      "required": ["key", "label", "emoji"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "enum": ["foodie", "shopper", "traveler", "homebody", "subscriber", "saver"]
+        },
+        "label": { "type": "string" },
+        "emoji": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "NotificationItem": {
+      "type": "object",
+      "required": ["id", "kind", "title", "message", "created_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["recurring", "anomaly", "mover", "info"]
+        },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "created_at": { "$ref": "#/$defs/ISODateTime" },
+        "read": { "type": "boolean", "default": false }
+      }
+    },
+    "MonthlyTotal": {
+      "type": "object",
+      "required": ["month", "total"],
+      "properties": {
+        "month": { "$ref": "#/$defs/Month" },
+        "total": { "$ref": "#/$defs/Money" },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "CategoryBreakdown": {
+      "type": "object",
+      "required": ["category", "total"],
+      "properties": {
+        "category": { "$ref": "#/$defs/Category" },
+        "total": { "$ref": "#/$defs/Money" },
+        "share": { "type": "number", "minimum": 0, "maximum": 1 },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "MerchantBreakdown": {
+      "type": "object",
+      "required": ["merchant", "total", "count"],
+      "properties": {
+        "merchant": { "type": "string" },
+        "category": { "$ref": "#/$defs/Category" },
+        "total": { "$ref": "#/$defs/Money" },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "RecurringMerchant": {
+      "type": "object",
+      "required": ["merchant", "cadence", "amount", "annualized"],
+      "properties": {
+        "merchant": { "type": "string" },
+        "cadence": {
+          "type": "string",
+          "enum": ["weekly", "monthly", "yearly"]
+        },
+        "amount": { "$ref": "#/$defs/Money" },
+        "annualized": { "$ref": "#/$defs/Money" },
+        "next_charge": { "$ref": "#/$defs/ISODate" }
+      }
+    },
+    "Anomaly": {
+      "type": "object",
+      "required": ["transaction_id", "reason", "severity"],
+      "properties": {
+        "transaction_id": { "type": "string" },
+        "reason": { "type": "string" },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "deviation_pct": { "type": "number" }
+      }
+    },
+    "MoverEntry": {
+      "type": "object",
+      "required": ["category", "current", "prev", "deltaAbs", "deltaPct"],
+      "properties": {
+        "category": { "$ref": "#/$defs/Category" },
+        "current": { "$ref": "#/$defs/Money" },
+        "prev": { "$ref": "#/$defs/Money" },
+        "deltaAbs": { "type": "number" },
+        "deltaPct": { "type": "number" }
+      }
+    }
+  }
+}

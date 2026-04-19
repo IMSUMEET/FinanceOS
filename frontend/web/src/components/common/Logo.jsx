@@ -8,8 +8,12 @@ function Logo() {
       </div>
 
       <div className="leading-tight">
-        <p className="text-[1.7rem] font-black tracking-tight text-slate-900">FinanceOS</p>
-        <p className="text-sm font-medium text-slate-500">personal finance intelligence</p>
+        <p className="text-[1.7rem] font-black tracking-tight text-slate-900 dark:text-ink-50">
+          FinanceOS
+        </p>
+        <p className="text-sm font-medium text-slate-500 dark:text-ink-400">
+          personal finance intelligence
+        </p>
       </div>
     </div>
   );
