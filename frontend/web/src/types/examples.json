@@ -1,0 +1,95 @@
+{
+  "Transaction": {
+    "id": "txn_01HX5K2ZQH3F2C5N9TQHQK8M0V",
+    "date": "2026-04-12",
+    "merchant": "Blue Bottle Coffee",
+    "merchant_normalized": "Blue Bottle",
+    "amount": 6.75,
+    "category": "Food & Dining",
+    "notes": null,
+    "source": "csv",
+    "created_at": "2026-04-12T14:21:08Z"
+  },
+  "TransactionImport": {
+    "rows": [
+      {
+        "date": "2026-04-12",
+        "merchant": "Blue Bottle Coffee #214",
+        "amount": 6.75,
+        "category": "Food & Dining",
+        "notes": null
+      },
+      {
+        "date": "2026-04-12",
+        "merchant": "Lyft *Ride Tue 8AM",
+        "amount": 14.42,
+        "category": "Transport",
+        "notes": null
+      }
+    ],
+    "source": "csv"
+  },
+  "Filters": {
+    "month": "2026-04",
+    "categories": ["Food & Dining", "Transport"],
+    "search": "blue bottle"
+  },
+  "Profile": {
+    "name": "Akshay",
+    "handle": "Borse",
+    "avatarVariant": "blue",
+    "email": "akshay@financeos.app",
+    "profileCompleted": true
+  },
+  "Personality": {
+    "key": "foodie",
+    "label": "The Foodie",
+    "emoji": "🍜",
+    "description": "Most of your discretionary spend lands in Food & Dining."
+  },
+  "NotificationItem": {
+    "id": "notif_01HX5K3F8E5T0X2RQ7H9F8WJ4Q",
+    "kind": "anomaly",
+    "title": "Unusual charge at Apple",
+    "message": "$249 at Apple is 3.4× your typical electronics spend.",
+    "created_at": "2026-04-15T09:00:00Z",
+    "read": false
+  },
+  "MonthlyTotal": {
+    "month": "2026-04",
+    "total": 2418.55,
+    "count": 47
+  },
+  "CategoryBreakdown": {
+    "category": "Food & Dining",
+    "total": 612.4,
+    "share": 0.253,
+    "count": 18
+  },
+  "MerchantBreakdown": {
+    "merchant": "Blue Bottle",
+    "category": "Food & Dining",
+    "total": 84.25,
+    "count": 12
+  },
+  "RecurringMerchant": {
+    "merchant": "Netflix",
+    "cadence": "monthly",
+    "amount": 15.49,
+    "annualized": 185.88,
+    "next_charge": "2026-05-04"
+  },
+  "Anomaly": {
+    "transaction_id": "txn_01HX5K2ZQH3F2C5N9TQHQK8M0V",
+    "reason": "Apple charge 3.4× typical electronics spend",
+    "severity": "medium",
+    "deviation_pct": 240
+  },
+  "MoverEntry": {
+    "category": "Food & Dining",
+    "current": 612.4,
+    "prev": 432.18,
+    "deltaAbs": 180.22,
+    "deltaPct": 0.417
+  }
+}
