@@ -11,6 +11,7 @@ const TITLES = {
   "/transactions": { eyebrow: "Spend Analyzer", title: "Transactions" },
   "/categories": { eyebrow: "Spend Analyzer", title: "Categories" },
   "/insights": { eyebrow: "Spend Analyzer", title: "Insights" },
+  "/house-sale": { eyebrow: "Real estate", title: "House Sale Calculator" },
   "/upload": { eyebrow: "Spend Analyzer", title: "Import CSV" },
 };
 
@@ -38,14 +39,16 @@ function Topbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Select
-            value={filters.month}
-            onChange={(e) => setFilters((f) => ({ ...f, month: e.target.value }))}
-            options={monthOptions}
-            leadingIcon={Calendar}
-            aria-label="Filter by month"
-            className="hidden sm:inline-flex"
-          />
+          {pathname !== "/house-sale" ? (
+            <Select
+              value={filters.month}
+              onChange={(e) => setFilters((f) => ({ ...f, month: e.target.value }))}
+              options={monthOptions}
+              leadingIcon={Calendar}
+              aria-label="Filter by month"
+              className="hidden sm:inline-flex"
+            />
+          ) : null}
           <ThemeToggle />
           <NavbarActions />
         </div>

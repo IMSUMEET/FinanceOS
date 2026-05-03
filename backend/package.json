@@ -1,0 +1,23 @@
+{
+  "name": "financeos-backend",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx src/local.ts",
+    "build": "esbuild src/lambda.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/lambda.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.24.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

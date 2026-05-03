@@ -1,6 +1,6 @@
-__pycache__
-*.pyc
-venv
+node_modules
+dist
 .env
-*.db
-*.sqlite3
+.env.*
+.git
+*.md
