@@ -71,7 +71,11 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
   if (!Number.isFinite(downPayment) || downPayment < 0) {
     validationErrors.push("Down payment cannot be negative.");
   }
-  if (Number.isFinite(purchasePrice) && Number.isFinite(downPayment) && downPayment > purchasePrice) {
+  if (
+    Number.isFinite(purchasePrice) &&
+    Number.isFinite(downPayment) &&
+    downPayment > purchasePrice
+  ) {
     validationErrors.push("Down payment cannot exceed purchase price.");
   }
   if (!Number.isFinite(annualInterestRate) || annualInterestRate < 0) {
@@ -99,7 +103,9 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
 
   const errors = [
     ...validationErrors,
-    ...(sellingCostBlocked ? ["Agent commission plus seller closing costs must stay below 100%."] : []),
+    ...(sellingCostBlocked
+      ? ["Agent commission plus seller closing costs must stay below 100%."]
+      : []),
   ];
 
   const projectionsOk = validationErrors.length === 0 && !sellingCostBlocked;
@@ -126,6 +132,7 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
     Number.isFinite(loanTermYears) &&
     loanTermYears > 0 &&
     startOfLocalDay(purchaseDate) <= startOfLocalDay(asOf);
+  const canComputePriceTargets = canComputeMortgage && !sellingCostBlocked;
 
   if (canComputeMortgage) {
     mortgage = computeMortgageSummary({
@@ -152,7 +159,12 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
   const hoaPaid = monthlyHoa * 12 * yearsOwned;
 
   const totalInvested =
-    downPayment + repairsImprovements + maintenanceTotal + propertyTaxPaid + insurancePaid + hoaPaid;
+    downPayment +
+    repairsImprovements +
+    maintenanceTotal +
+    propertyTaxPaid +
+    insurancePaid +
+    hoaPaid;
 
   const trueProfit = netProceeds - totalInvested;
 
@@ -161,10 +173,11 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
   let minSalePriceNetProceedsZero = null;
   let targetSalePrice = null;
 
-  if (projectionsOk) {
+  if (canComputePriceTargets) {
     breakEvenSalePrice = (remainingBalance + totalInvested) / denom;
     minSalePriceNetProceedsZero = remainingBalance / denom;
-    targetSalePrice = (remainingBalance + totalInvested + targetProfitSafe) / denom;
+    targetSalePrice =
+      (remainingBalance + totalInvested + targetProfitSafe) / denom;
   }
 
   let roiPercent = null;
@@ -196,9 +209,12 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
     cashReturnedMultiple,
     sellingCostRate,
     isValidModel: projectionsOk,
+    canComputePriceTargets,
     purchasePrice: Number.isFinite(purchasePrice) ? purchasePrice : 0,
     downPayment: Number.isFinite(downPayment) ? downPayment : 0,
-    expectedSalePrice: Number.isFinite(expectedSalePrice) ? expectedSalePrice : 0,
+    expectedSalePrice: Number.isFinite(expectedSalePrice)
+      ? expectedSalePrice
+      : 0,
     agentCommissionPct,
     closingCostsPct,
     repairsImprovements,
@@ -217,10 +233,18 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
 
 export function buildInsightLines(result) {
   const lines = [];
-  const { netProceeds, trueProfit, totalInvested, expectedSalePrice, breakEvenSalePrice } = result;
+  const {
+    netProceeds,
+    trueProfit,
+    totalInvested,
+    expectedSalePrice,
+    breakEvenSalePrice,
+  } = result;
 
   if (result.sellingCostBlocked && result.validationErrors.length === 0) {
-    return ["Lower commission or closing cost percentages so their sum stays under 100%."];
+    return [
+      "Lower commission or closing cost percentages so their sum stays under 100%.",
+    ];
   }
 
   if (!result.isValidModel) {
@@ -239,7 +263,9 @@ export function buildInsightLines(result) {
       "You may receive cash at closing, but you are not truly profitable after counting the cash you put into the property.",
     );
   } else {
-    lines.push("Net proceeds are negative at this price—sale proceeds would not cover payoff and seller costs.");
+    lines.push(
+      "Net proceeds are negative at this price—sale proceeds would not cover payoff and seller costs.",
+    );
   }
 
   if (breakEvenSalePrice != null && expectedSalePrice > 0) {
@@ -249,17 +275,25 @@ export function buildInsightLines(result) {
         `Your break-even sale price (true profit $0) is higher than your expected sale price by ${formatUsd(-diff)}.`,
       );
     } else if (Math.abs(diff) < 500) {
-      lines.push("Your expected sale price is very close to your true break-even price.");
+      lines.push(
+        "Your expected sale price is very close to your true break-even price.",
+      );
     }
   }
 
   if (totalInvested <= 0 && trueProfit > 0 && netProceeds > 0) {
-    lines.push("You entered no ownership cash outlays; true profit mostly reflects sale proceeds minus payoff.");
+    lines.push(
+      "You entered no ownership cash outlays; true profit mostly reflects sale proceeds minus payoff.",
+    );
   }
 
   return lines;
 }
 
 function formatUsd(n) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
 }
