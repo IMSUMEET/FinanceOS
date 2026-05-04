@@ -15,16 +15,31 @@ import {
   _replaceAllMock,
 } from "../services/transactions";
 import { USE_MOCK } from "../api/client";
+import { ANALYSIS_SESSION_KEY } from "../constants/sessionAnalysis";
 
 export const ALL_MONTHS_SENTINEL = "ALL";
 // eslint-disable-next-line react-refresh/only-export-components
 export const TransactionsContext = createContext(null);
 
+function readStoredAnalysis() {
+  try {
+    const raw = sessionStorage.getItem(ANALYSIS_SESSION_KEY);
+    if (!raw) return null;
+    const j = JSON.parse(raw);
+    if (j?.status === "success" && Array.isArray(j.transactions)) return j;
+  } catch {
+    /* ignore corrupt session */
+  }
+  return null;
+}
+
 export function TransactionsProvider({ children }) {
-  // Initial paint uses the seed for zero-flicker; the effect below re-hydrates
-  // from the service layer so the same code path runs whether the backend is
-  // mocked (USE_MOCK=true) or live (VITE_API_BASE_URL set).
-  const [transactions, setTransactions] = useState(seed);
+  const initialStored = readStoredAnalysis();
+  const [transactions, setTransactions] = useState(() => {
+    if (initialStored) return initialStored.transactions;
+    return USE_MOCK ? seed : [];
+  });
+  const [restoredFromSession, setRestoredFromSession] = useState(Boolean(initialStored));
   const [filters, setFilters] = useState({
     month: ALL_MONTHS_SENTINEL,
     categories: [],
@@ -35,6 +50,8 @@ export function TransactionsProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false;
+    if (readStoredAnalysis()) return;
+    if (!USE_MOCK) return;
     listTransactions()
       .then((res) => {
         if (cancelled) return;
@@ -42,7 +59,6 @@ export function TransactionsProvider({ children }) {
         if (rows.length) setTransactions(rows);
       })
       .catch((err) => {
-        // Surface to console for dev — UI keeps working with the seed it already has.
         console.warn("[transactions] hydrate failed, using seed", err);
       });
     return () => {
@@ -102,11 +118,36 @@ export function TransactionsProvider({ children }) {
     }
   }, []);
 
+  const applyAnalysisResult = useCallback(async (analysis) => {
+    if (!analysis || analysis.status !== "success" || !Array.isArray(analysis.transactions)) return;
+    try {
+      sessionStorage.setItem(ANALYSIS_SESSION_KEY, JSON.stringify(analysis));
+    } catch {
+      /* quota / private mode */
+    }
+    setTransactions(analysis.transactions);
+    if (USE_MOCK) {
+      await _replaceAllMock(analysis.transactions);
+    }
+    setRestoredFromSession(false);
+  }, []);
+
+  const clearSessionAnalysis = useCallback(async () => {
+    try {
+      sessionStorage.removeItem(ANALYSIS_SESSION_KEY);
+    } catch {
+      /* ignore */
+    }
+    if (USE_MOCK) {
+      await replaceAll(seed);
+    } else {
+      setTransactions([]);
+    }
+    setRestoredFromSession(false);
+  }, [replaceAll]);
+
   const updateCategory = useCallback(async (id, category) => {
-    // Optimistic update so the UI feels instant.
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, category } : t)),
-    );
+    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, category } : t)));
     try {
       await updateTransactionCategory(id, category);
     } catch (err) {
@@ -135,6 +176,9 @@ export function TransactionsProvider({ children }) {
     replaceAll,
     updateCategory,
     removeOne,
+    applyAnalysisResult,
+    clearSessionAnalysis,
+    restoredFromSession,
   };
 
   return (

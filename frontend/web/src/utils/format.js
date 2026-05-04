@@ -14,8 +14,10 @@ const usdShort = new Intl.NumberFormat("en-US", {
 export function formatCurrency(value, { compact = false, signed = false } = {}) {
   const n = Number(value ?? 0);
   const fmt = compact ? usdShort : usd;
+  const neg = n < 0 ? "-" : "";
   const sign = signed && n > 0 ? "+" : "";
-  return sign + fmt.format(Math.abs(n) === 0 ? 0 : n);
+  const abs = Math.abs(n);
+  return neg + sign + fmt.format(abs === 0 ? 0 : abs);
 }
 
 export function formatAmountSpend(amount) {

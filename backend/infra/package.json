@@ -1,0 +1,17 @@
+{
+  "name": "financeos-backend-infra",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "cdk:bootstrap": "cdk bootstrap",
+    "cdk:diff": "cdk diff",
+    "cdk:deploy": "cdk deploy",
+    "cdk:destroy": "cdk destroy"
+  },
+  "devDependencies": {
+    "aws-cdk": "2.170.0",
+    "aws-cdk-lib": "2.170.0",
+    "constructs": "^10.4.2",
+    "esbuild": "^0.24.2"
+  }
+}

@@ -31,7 +31,8 @@ function clone(rows) {
  */
 export async function listTransactions(filters = {}) {
   if (USE_MOCK) return { rows: clone(mockStore) };
-  return apiClient.get(ENDPOINTS.transactions.list, { query: filters });
+  // Stateless Lambda: no persisted GET /transactions yet — session uses upload analysis only.
+  return { rows: [] };
 }
 
 /**

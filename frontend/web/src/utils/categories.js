@@ -12,6 +12,9 @@ export const CATEGORIES = [
 ];
 
 const COLOR_MAP = {
+  "Equity built": "#10b981",
+  "Interest cost": "#f59e0b",
+  "Still owed": "#64748b",
   Food: "#f97316",
   Groceries: "#22c55e",
   Gas: "#eab308",

@@ -1,0 +1,34 @@
+{
+  "version": "2.0",
+  "routeKey": "ANY /{proxy+}",
+  "rawPath": "/api/analyze",
+  "rawQueryString": "",
+  "headers": {
+    "accept": "application/json",
+    "content-type": "multipart/form-data; boundary=testboundary",
+    "host": "k6uky3zf9c.execute-api.us-east-2.amazonaws.com"
+  },
+  "requestContext": {
+    "accountId": "914834315134",
+    "apiId": "k6uky3zf9c",
+    "domainName": "k6uky3zf9c.execute-api.us-east-2.amazonaws.com",
+    "domainPrefix": "k6uky3zf9c",
+    "http": {
+      "method": "POST",
+      "path": "/api/analyze",
+      "protocol": "HTTP/1.1",
+      "sourceIp": "127.0.0.1",
+      "userAgent": "lambda-console-test"
+    },
+    "requestId": "test-analyze-001",
+    "routeKey": "ANY /{proxy+}",
+    "stage": "$default",
+    "time": "03/May/2026:12:00:00 +0000",
+    "timeEpoch": 1746273600000
+  },
+  "pathParameters": {
+    "proxy": "api/analyze"
+  },
+  "isBase64Encoded": false,
+  "body": "--testboundary\r\nContent-Disposition: form-data; name=\"files\"; filename=\"sample.csv\"\r\nContent-Type: text/csv\r\n\r\nDate,Description,Amount\r\n2025-01-15,Test Coffee Shop,-4.50\r\n2025-01-16,Paycheck Deposit,2500.00\r\n--testboundary--"
+}

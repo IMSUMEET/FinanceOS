@@ -4,22 +4,22 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "3001:3001"
     environment:
-      SPEND_DATA_DIR: /data
-    volumes:
-      - spend_data:/data
+      NODE_ENV: development
+    # Set DATABASE_URL, AWS_REGION, and S3_BUCKET_NAME (e.g. use `env_file: ./backend/.env` if you add that file)
+    # or pass `-e` / a compose `env_file` that points to your real secrets.
+    # optional bind-mount for local iteration:
+    # volumes:
+    #   - ./backend/src:/app/src:ro
 
   frontend:
     build:
       context: ./frontend/web
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: http://localhost:8000
+        VITE_API_URL: http://localhost:3001
     ports:
       - "3000:80"
     depends_on:
       - backend
-
-volumes:
-  spend_data:
