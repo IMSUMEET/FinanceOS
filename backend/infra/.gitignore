@@ -1,0 +1,6 @@
+cdk.out
+*.js.map
+node_modules/
+
+# Local AWS placeholders (never commit filled-in keys)
+aws-credentials.local.ini

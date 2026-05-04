@@ -1,0 +1,33 @@
+{
+  "version": "2.0",
+  "routeKey": "ANY /{proxy+}",
+  "rawPath": "/health",
+  "rawQueryString": "",
+  "headers": {
+    "accept": "application/json",
+    "host": "k6uky3zf9c.execute-api.us-east-2.amazonaws.com"
+  },
+  "requestContext": {
+    "accountId": "914834315134",
+    "apiId": "k6uky3zf9c",
+    "domainName": "k6uky3zf9c.execute-api.us-east-2.amazonaws.com",
+    "domainPrefix": "k6uky3zf9c",
+    "http": {
+      "method": "GET",
+      "path": "/health",
+      "protocol": "HTTP/1.1",
+      "sourceIp": "127.0.0.1",
+      "userAgent": "lambda-console-test"
+    },
+    "requestId": "test-health-001",
+    "routeKey": "ANY /{proxy+}",
+    "stage": "$default",
+    "time": "03/May/2026:12:00:00 +0000",
+    "timeEpoch": 1746273600000
+  },
+  "pathParameters": {
+    "proxy": "health"
+  },
+  "isBase64Encoded": false,
+  "body": null
+}

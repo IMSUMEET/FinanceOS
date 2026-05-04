@@ -5,6 +5,7 @@
  */
 
 export const ENDPOINTS = {
+  analyze: "/api/analyze",
   transactions: {
     list: "/transactions",
     create: "/transactions",

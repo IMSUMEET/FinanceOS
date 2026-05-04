@@ -1,25 +1,33 @@
 # FinanceOS API (Hono, AWS Lambda)
 
-Minimal API for the first Lambda deploy: **GET `/health`** only. No database, S3, or auth in this build.
+Stateless API for Lambda: **GET `/`**, **GET `/health`**, **POST `/api/analyze`** (multipart CSV, in-memory only). No database, S3, or auth in this build.
 
 ## Layout
 
 ```text
 backend/
   src/
-    index.ts    # Hono app + /health
-    lambda.ts   # AWS Lambda entry (hono/aws-lambda)
+    index.ts       # Hono routes: /, /health, POST /api/analyze
+    categorize.ts  # Merchant rules (aligned with frontend)
+    csvAnalyze.ts    # CSV parse + summary (Papa Parse, in-memory)
+    lambda.ts        # AWS Lambda entry (hono/aws-lambda)
     local.ts    # Local dev server
   dist/
-    lambda.js   # Created by `npm run build` (CJS bundle for Lambda)
+    lambda.js   # Optional: `npm run build` (CJS); CDK bundles from `src/` via NodejsFunction
+  infra/
+    bin/app.js           # CDK app entry
+    lib/backend-stack.js # Stack: Lambda + HTTP API
+    package.json
+    cdk.json
   package.json
   tsconfig.json
+  README-deploy.md       # Step-by-step AWS deploy
 ```
 
 ## Prereqs
 
-- Node.js 22+
-- [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
+- Node.js 20+
+- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) (installed via `backend/infra` `npm install`)
 - AWS credentials configured (`aws configure` or environment)
 
 ## Install and verify
@@ -28,10 +36,13 @@ backend/
 cd backend
 npm install
 npm run typecheck
-npm run build
 ```
 
-This writes **`dist/lambda.js`**, which the SAM template expects (`CodeUri: ../backend/dist`, `Handler: lambda.handler`).
+Optional manual bundle (not required for CDK deploy):
+
+```bash
+npm run build
+```
 
 ## Local dev
 
@@ -39,37 +50,15 @@ This writes **`dist/lambda.js`**, which the SAM template expects (`CodeUri: ../b
 npm run dev
 ```
 
-Open **http://localhost:3001/health** — expected:
+Open **http://localhost:3001/** and **http://localhost:3001/health**.
 
-```json
-{
-  "ok": true,
-  "service": "finance-os-api"
-}
-```
+## Deploy (AWS CDK)
 
-## Deploy (SAM)
-
-**1.** Build the Lambda bundle (from `backend`):
-
-```bash
-npm run build
-```
-
-**2.** From **`infra`**, build and deploy the stack:
-
-```bash
-cd ../infra
-sam build -t template.yaml
-sam deploy --guided
-```
-
-- Point **CodeUri** is `../backend/dist` (relative to the template’s directory); `sam build` zips that folder.
-- On success, note **Outputs** → **ApiUrl** (or use `aws cloudformation describe-stacks`).
+See **[README-deploy.md](./README-deploy.md)** for full steps (`cd backend/infra`, `npm install`, `cdk bootstrap`, `cdk deploy`, Vercel env).
 
 ## Test the deployed API
 
-Replace the URL with your **ApiUrl** output:
+Replace the URL with the **ApiUrl** output from `cdk deploy`:
 
 ```bash
 curl https://YOUR_API_ID.execute-api.YOUR_REGION.amazonaws.com/health
@@ -79,8 +68,7 @@ Expected:
 
 ```json
 {
-  "ok": true,
-  "service": "finance-os-api"
+  "status": "ok"
 }
 ```
 
@@ -93,7 +81,7 @@ VITE_API_BASE_URL=https://YOUR_API_ID.execute-api.YOUR_REGION.amazonaws.com
 VITE_USE_MOCK=false
 ```
 
-CORS: the SAM template allows `http://localhost:5173`, `http://localhost:3000`, and `*` (covers all Vercel deployment URLs; tighten for production if needed—API Gateway does not support `https://*.vercel.app` as a pattern in CORS).
+CORS: the CDK stack allows `http://localhost:5173`, `http://localhost:3000`, and `*` (covers Vercel preview URLs; tighten for production if needed).
 
 ## Older Python backend
 
