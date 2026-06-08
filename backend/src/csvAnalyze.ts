@@ -57,6 +57,28 @@ export type AnalyzedTransaction = {
   created_at: string;
 };
 
+function parseToIsoDateString(dateStr: string): string {
+  const match = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (match) {
+    const [_, month, day, year] = match;
+    const paddedMonth = month!.padStart(2, "0");
+    const paddedDay = day!.padStart(2, "0");
+    return `${year}-${paddedMonth}-${paddedDay}`;
+  }
+  const matchIso = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (matchIso) {
+    const [_, year, month, day] = matchIso;
+    const paddedMonth = month!.padStart(2, "0");
+    const paddedDay = day!.padStart(2, "0");
+    return `${year}-${paddedMonth}-${paddedDay}`;
+  }
+  const parsed = Date.parse(dateStr);
+  if (Number.isFinite(parsed)) {
+    return new Date(parsed).toISOString().split("T")[0]!;
+  }
+  return dateStr;
+}
+
 function mapRows(rows: Record<string, unknown>[]): {
   mapped: AnalyzedTransaction[];
   mapping: { date: string; merchant: string; amount: string } | null;
@@ -74,8 +96,9 @@ function mapRows(rows: Record<string, unknown>[]): {
     if (rawAmount === null) continue;
     const merchantRaw = String(r[mapping.merchant] ?? "").trim();
     const merchantNorm = normalizeMerchant(merchantRaw);
-    const date = String(r[mapping.date] ?? "").trim();
-    if (!date || !merchantRaw) continue;
+    const rawDate = String(r[mapping.date] ?? "").trim();
+    if (!rawDate || !merchantRaw) continue;
+    const date = parseToIsoDateString(rawDate);
     const amount = rawAmount > 0 ? -rawAmount : rawAmount;
     const category = categorize(merchantNorm, merchantRaw);
     mapped.push({

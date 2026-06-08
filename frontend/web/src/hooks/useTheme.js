@@ -28,7 +28,7 @@ function detectInitial() {
   if (typeof window === "undefined") return "light";
   const stored = readStored();
   if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "light";
 }
 
 export function useTheme() {
@@ -42,20 +42,6 @@ export function useTheme() {
       subscribers.delete(cb);
     };
   }, [theme]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    function onSysChange(e) {
-      if (readStored()) return;
-      const next = e.matches ? "dark" : "light";
-      applyTheme(next);
-      setThemeState(next);
-      subscribers.forEach((cb) => cb(next));
-    }
-    mq.addEventListener?.("change", onSysChange);
-    return () => mq.removeEventListener?.("change", onSysChange);
-  }, []);
 
   const setTheme = useCallback((next) => {
     try {
