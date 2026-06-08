@@ -65,7 +65,7 @@ async function request(path, { method = "GET", query, body, headers } = {}) {
       ...(body !== undefined ? { "Content-Type": "application/json" } : null),
       ...headers,
     },
-    credentials: "include",
+    credentials: "same-origin",
   };
   if (body !== undefined) init.body = JSON.stringify(body);
 

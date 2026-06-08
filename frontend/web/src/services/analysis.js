@@ -16,7 +16,7 @@ export async function analyzeCsvFormData(formData) {
     method: "POST",
     body: formData,
     headers: { Accept: "application/json" },
-    credentials: "include",
+    credentials: "same-origin",
   });
 
   const text = await res.text();
