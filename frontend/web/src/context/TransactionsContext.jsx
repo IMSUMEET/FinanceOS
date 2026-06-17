@@ -120,15 +120,47 @@ export function TransactionsProvider({ children }) {
 
   const applyAnalysisResult = useCallback(async (analysis) => {
     if (!analysis || analysis.status !== "success" || !Array.isArray(analysis.transactions)) return;
-    try {
-      sessionStorage.setItem(ANALYSIS_SESSION_KEY, JSON.stringify(analysis));
-    } catch {
-      /* quota / private mode */
-    }
-    setTransactions(analysis.transactions);
-    if (USE_MOCK) {
-      await _replaceAllMock(analysis.transactions);
-    }
+    
+    setTransactions((prev) => {
+      const isSeed = prev.length === seed.length && prev.every((t, i) => t.merchant_raw === seed[i].merchant_raw && t.amount === seed[i].amount);
+      const baseList = isSeed ? [] : prev;
+      
+      const seen = new Set();
+      const merged = [];
+      
+      for (const t of baseList) {
+        const key = `${t.date}|${t.merchant_raw}|${t.amount}|${t.card_identity || ""}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(t);
+        }
+      }
+      
+      for (const t of analysis.transactions) {
+        const key = `${t.date}|${t.merchant_raw}|${t.amount}|${t.card_identity || ""}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(t);
+        }
+      }
+      
+      let nextId = 1;
+      const stamped = merged.map((t) => ({ ...t, id: nextId++ }));
+      
+      if (USE_MOCK) {
+        _replaceAllMock(stamped).catch(console.error);
+      }
+      
+      const updatedAnalysis = { ...analysis, transactions: stamped };
+      try {
+        sessionStorage.setItem(ANALYSIS_SESSION_KEY, JSON.stringify(updatedAnalysis));
+      } catch {
+        // ignore
+      }
+      
+      return stamped;
+    });
+    
     setRestoredFromSession(false);
   }, []);
 

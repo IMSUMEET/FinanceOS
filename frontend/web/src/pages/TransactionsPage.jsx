@@ -33,8 +33,8 @@ function TransactionDetail({ tx, onClose, onUpdateCategory }) {
             <dd className="mt-1 font-bold text-ink-900 dark:text-ink-50">{formatDate(tx.date, { year: "numeric", month: "short", day: "numeric" })}</dd>
           </div>
           <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Source</dt>
-            <dd className="mt-1 font-bold text-ink-900 capitalize dark:text-ink-50">{tx.source}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Card / Account</dt>
+            <dd className="mt-1 font-bold text-ink-900 dark:text-ink-50">{tx.card_identity ?? tx.source}</dd>
           </div>
           <div className="col-span-2 rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
             <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Description</dt>
@@ -229,7 +229,14 @@ function TransactionsPage() {
                     className="grid w-full grid-cols-[1.4fr_1fr_auto] gap-3 px-4 py-3 text-left transition hover:bg-[#f8fbff] md:grid-cols-[1.4fr_1fr_1fr_auto] dark:hover:bg-ink-800/60"
                   >
                     <div className="min-w-0">
-                      <p className="truncate font-bold text-ink-900 dark:text-ink-50">{t.merchant_normalized}</p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="truncate font-bold text-ink-900 dark:text-ink-50">{t.merchant_normalized}</p>
+                        {t.card_identity && (
+                          <span className="inline-block rounded bg-ink-100 px-1.5 py-0.5 text-[10px] font-medium text-ink-600 dark:bg-ink-800 dark:text-ink-300">
+                            {t.card_identity}
+                          </span>
+                        )}
+                      </div>
                       <p className="truncate text-xs text-ink-500 dark:text-ink-400">{t.description}</p>
                     </div>
                     <p className="self-center text-sm text-ink-600 dark:text-ink-300">{formatDate(t.date)}</p>
