@@ -12,6 +12,7 @@ export function summarizeTransactions(transactions) {
   let maxTs = -Infinity;
 
   for (const t of transactions) {
+    if (t.category === "Credit Card Payments") continue;
     const amt = Number(t.amount ?? 0);
     if (amt > 0) totalIncome += amt;
     else totalSpending += Math.abs(amt);

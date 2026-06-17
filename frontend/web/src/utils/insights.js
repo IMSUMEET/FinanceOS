@@ -1,11 +1,14 @@
 import { monthKey } from "./format";
 
 const sumSpend = (rows) =>
-  rows.reduce((s, r) => s + Math.abs(Number(r.amount ?? 0)), 0);
+  rows
+    .filter(r => r.category !== "Credit Card Payments")
+    .reduce((s, r) => s + Math.abs(Number(r.amount ?? 0)), 0);
 
 export function monthlyTotals(transactions) {
   const map = new Map();
   for (const t of transactions) {
+    if (t.category === "Credit Card Payments") continue;
     const key = monthKey(t.date);
     if (!key) continue;
     const cur = map.get(key) ?? { month: key, total: 0, count: 0 };
@@ -19,6 +22,7 @@ export function monthlyTotals(transactions) {
 export function categoryBreakdown(transactions) {
   const map = new Map();
   for (const t of transactions) {
+    if (t.category === "Credit Card Payments") continue;
     const cat = t.category || "Other";
     const cur = map.get(cat) ?? { category: cat, total: 0, count: 0 };
     cur.total += Math.abs(Number(t.amount ?? 0));
@@ -31,6 +35,7 @@ export function categoryBreakdown(transactions) {
 export function merchantBreakdown(transactions) {
   const map = new Map();
   for (const t of transactions) {
+    if (t.category === "Credit Card Payments") continue;
     const m = t.merchant_normalized || t.merchant_raw || "Unknown";
     const cur = map.get(m) ?? {
       merchant: m,
@@ -49,6 +54,7 @@ export function monthlyByCategory(transactions) {
   // Returns: [{ month, [cat]: total, ... }]
   const map = new Map();
   for (const t of transactions) {
+    if (t.category === "Credit Card Payments") continue;
     const m = monthKey(t.date);
     if (!m) continue;
     const cur = map.get(m) ?? { month: m };
@@ -94,6 +100,7 @@ export function detectRecurring(transactions) {
   // Merchants that show up in 3+ distinct months with similar amounts → likely subscriptions.
   const byMerchant = new Map();
   for (const t of transactions) {
+    if (t.category === "Credit Card Payments") continue;
     const key = t.merchant_normalized || t.merchant_raw || "Unknown";
     const m = monthKey(t.date);
     const cur = byMerchant.get(key) ?? { merchant: key, months: new Set(), amounts: [], category: t.category };
@@ -126,7 +133,7 @@ export function weekdayVsWeekend(transactions) {
   let weekday = 0;
   let weekend = 0;
   for (const t of transactions) {
-    if (!t.date) continue;
+    if (!t.date || t.category === "Credit Card Payments") continue;
     const d = new Date(t.date);
     const day = d.getDay();
     const amt = Math.abs(Number(t.amount ?? 0));
@@ -146,6 +153,7 @@ export function topAnomalies(transactions, n = 5) {
   // Single-transaction outliers vs that merchant's median.
   const byMerchant = new Map();
   for (const t of transactions) {
+    if (t.category === "Credit Card Payments") continue;
     const k = t.merchant_normalized || t.merchant_raw || "Unknown";
     const cur = byMerchant.get(k) ?? { merchant: k, items: [] };
     cur.items.push(t);
@@ -170,9 +178,10 @@ export function topAnomalies(transactions, n = 5) {
 }
 
 export function dailyAverage(transactions) {
-  if (!transactions.length) return 0;
-  const dates = new Set(transactions.map((t) => t.date));
-  const total = sumSpend(transactions);
+  const filtered = transactions.filter(t => t.category !== "Credit Card Payments");
+  if (!filtered.length) return 0;
+  const dates = new Set(filtered.map((t) => t.date));
+  const total = sumSpend(filtered);
   return total / Math.max(dates.size, 1);
 }
 

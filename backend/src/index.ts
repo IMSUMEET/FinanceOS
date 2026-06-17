@@ -35,7 +35,12 @@ function csvMimeOk(mime: string): boolean {
   if (!mime) return true;
   const m = mime.toLowerCase();
   if (m === "application/octet-stream") return true;
-  if (m === "application/csv" || m === "application/vnd.ms-excel") return true;
+  if (
+    m === "application/csv" ||
+    m === "application/vnd.ms-excel" ||
+    m === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  )
+    return true;
   if (m.startsWith("text/")) return true;
   return false;
 }
@@ -60,7 +65,7 @@ app.post("/api/analyze", async (c) => {
     return c.json(
       {
         status: "error",
-        message: "Could not read upload. Try a smaller CSV or fewer files at once.",
+        message: "Could not read upload. Try a smaller file or fewer files at once.",
         code: "MULTIPART_READ_FAILED",
       },
       400,
@@ -72,7 +77,7 @@ app.post("/api/analyze", async (c) => {
     return c.json(
       {
         status: "error",
-        message: 'No CSV files found. Append files with the field name "files".',
+        message: 'No files found. Append files with the field name "files".',
         code: "MISSING_FILES",
       },
       400,
@@ -85,7 +90,7 @@ app.post("/api/analyze", async (c) => {
       return c.json(
         {
           status: "error",
-          message: "Only .csv files are accepted.",
+          message: "Only .csv, .xlsx, or .xls files are accepted.",
           code: "INVALID_FILE_TYPE",
         },
         400,
@@ -95,7 +100,7 @@ app.post("/api/analyze", async (c) => {
       return c.json(
         {
           status: "error",
-          message: "Each part must be a CSV file.",
+          message: "Each part must be a CSV or Excel file.",
           code: "INVALID_FILE_TYPE",
         },
         400,
@@ -105,7 +110,7 @@ app.post("/api/analyze", async (c) => {
       return c.json(
         {
           status: "error",
-          message: "Each CSV must be 5 MB or smaller.",
+          message: "Each file must be 5 MB or smaller.",
           code: "FILE_TOO_LARGE",
         },
         413,
@@ -119,7 +124,7 @@ app.post("/api/analyze", async (c) => {
     const buffers = await Promise.all(
       files.map(async (f) => ({
         name: f.name || "upload.csv",
-        text: await f.text(),
+        buffer: await f.arrayBuffer(),
       })),
     );
 
