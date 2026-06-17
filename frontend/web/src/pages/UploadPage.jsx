@@ -4,6 +4,7 @@ import { Database, FileSpreadsheet, Trash2, UploadCloud, Wand2, Loader2 } from "
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Pill from "../components/ui/Pill";
+import Badge from "../components/ui/Badge";
 import SectionHeader from "../components/ui/SectionHeader";
 import EmptyState from "../components/ui/EmptyState";
 import { useTransactions } from "../context/useTransactions";
@@ -17,7 +18,7 @@ import { summarizeTransactions } from "../utils/analysisSummary";
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 const COLUMN_HINTS = {
-  date: ["date", "posted", "transaction date", "trans date"],
+  date: ["date", "posted", "transaction date", "trans date", "posting date"],
   merchant: ["merchant", "description", "name", "details"],
   amount: ["amount", "debit", "value", "amt"],
 };
@@ -35,7 +36,55 @@ function pickColumn(headers, hints) {
   return headers[0];
 }
 
-function parseRows(rows) {
+function detectFormat(headers, name = "") {
+  const lc = headers.map((h) => String(h).toLowerCase().trim());
+  const joined = lc.join("|");
+  const has = (s) => joined.includes(s);
+
+  if (has("appears on your statement as") && has("reference") && has("extended details")) {
+    return "amex_credit_card";
+  }
+
+  if (has("transaction date") && has("post date") && has("category")) {
+    if (name.toLowerCase().includes("amazon")) {
+      return "chase_amazon";
+    }
+    return "chase_credit_card";
+  }
+
+  if (
+    (has("posting date") && has("balance") && has("type")) ||
+    (has("details") && has("posting date") && has("balance") && has("status"))
+  ) {
+    return "chase_checking";
+  }
+
+  return "unknown";
+}
+
+function parseToIsoDateString(dateStr) {
+  const match = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (match) {
+    const [_, month, day, year] = match;
+    const paddedMonth = month.padStart(2, "0");
+    const paddedDay = day.padStart(2, "0");
+    return `${year}-${paddedMonth}-${paddedDay}`;
+  }
+  const matchIso = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (matchIso) {
+    const [_, year, month, day] = matchIso;
+    const paddedMonth = month.padStart(2, "0");
+    const paddedDay = day.padStart(2, "0");
+    return `${year}-${paddedMonth}-${paddedDay}`;
+  }
+  const parsed = Date.parse(dateStr);
+  if (Number.isFinite(parsed)) {
+    return new Date(parsed).toISOString().split("T")[0];
+  }
+  return dateStr;
+}
+
+function parseRows(rows, format, fileName = "") {
   if (!rows.length) return { mapped: [], mapping: null };
   const headers = Object.keys(rows[0]);
   const mapping = {
@@ -43,27 +92,62 @@ function parseRows(rows) {
     merchant: pickColumn(headers, COLUMN_HINTS.merchant),
     amount: pickColumn(headers, COLUMN_HINTS.amount),
   };
-  const mapped = rows
-    .map((r) => {
+  const mapped = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const lineNum = i + 2; // Row index is 0-indexed, so row + 2 accounts for 1-based index and header row
+    try {
       const rawAmount = r[mapping.amount];
       const amt = Number(String(rawAmount ?? "").replace(/[$,]/g, ""));
-      if (!Number.isFinite(amt)) return null;
+      if (!Number.isFinite(amt)) {
+        throw new Error(`Invalid amount value "${rawAmount}"`);
+      }
       const merchantRaw = String(r[mapping.merchant] ?? "").trim();
       const merchantNorm = normalizeMerchant(merchantRaw);
-      const date = String(r[mapping.date] ?? "").trim();
-      if (!date || !merchantRaw) return null;
-      return {
+      const rawDate = String(r[mapping.date] ?? "").trim();
+      if (!rawDate) {
+        throw new Error(`Missing date value`);
+      }
+      if (!merchantRaw) {
+        throw new Error(`Missing merchant description`);
+      }
+
+      const date = parseToIsoDateString(rawDate);
+      if (isNaN(Date.parse(date))) {
+        throw new Error(`Invalid date value "${rawDate}"`);
+      }
+
+      let amount = amt;
+      if (format === "amex_credit_card") {
+        amount = -amt;
+      } else if (format === "chase_checking" || format === "chase_credit_card" || format === "chase_amazon") {
+        amount = amt;
+      } else {
+        amount = amt > 0 ? -amt : amt;
+      }
+
+      let card_identity = "Unknown";
+      if (format === "amex_credit_card") card_identity = "Amex Blue Cash";
+      else if (format === "chase_checking") card_identity = "Chase Checking";
+      else if (format === "chase_credit_card") card_identity = "Chase Credit Card";
+      else if (format === "chase_amazon") card_identity = "Chase Amazon";
+
+      mapped.push({
         date,
         merchant_raw: merchantRaw,
         merchant_normalized: merchantNorm,
         description: merchantRaw,
-        amount: amt > 0 ? -amt : amt,
+        amount,
         currency: "USD",
         category: categorize(merchantNorm, merchantRaw),
         source: "csv-import",
-      };
-    })
-    .filter(Boolean);
+        card_identity,
+      });
+    } catch (err) {
+      const fileLabel = fileName ? `in "${fileName}" ` : "";
+      throw new Error(`Error ${fileLabel}at line ${lineNum}: ${err.message}`);
+    }
+  }
   return { mapped, mapping };
 }
 
@@ -124,6 +208,14 @@ function buildMockAnalysisFromRows(allRows, fileMetas) {
   };
 }
 
+const FORMAT_LABELS = {
+  amex_credit_card: { label: "Amex Blue Cash", tone: "brand" },
+  chase_amazon: { label: "Chase Amazon", tone: "warn" },
+  chase_credit_card: { label: "Chase Credit Card", tone: "dark" },
+  chase_checking: { label: "Chase Checking", tone: "success" },
+  unknown: { label: "Unknown Format", tone: "neutral" },
+};
+
 function UploadPage() {
   useDocumentTitle("Import");
   const {
@@ -148,7 +240,7 @@ function UploadPage() {
     if (inputRef.current) inputRef.current.value = "";
   }, []);
 
-  const onChooseFiles = useCallback((fileList) => {
+  const onChooseFiles = useCallback(async (fileList) => {
     const v = validateCsvFiles(fileList);
     if (!v.ok) {
       setPhase("error");
@@ -158,24 +250,44 @@ function UploadPage() {
     }
     setPhase("idle");
     setErrorMessage("");
-    setPendingFiles(v.files);
+    
+    try {
+      const prepared = await Promise.all(
+        v.files.map(async (file) => {
+          const parsed = await parseOneCsvFile(file);
+          const headers = parsed.data.length ? Object.keys(parsed.data[0]) : [];
+          const fmt = detectFormat(headers, file.name);
+          const { mapped } = parseRows(parsed.data, fmt, file.name);
+          return {
+            file,
+            name: file.name,
+            size: file.size,
+            detectedFormat: fmt,
+            rowCount: mapped.length,
+            parsedData: parsed.data,
+          };
+        })
+      );
+      setPendingFiles(prepared);
+    } catch (e) {
+      setPhase("error");
+      setErrorMessage("Error reading CSV files: " + e.message);
+    }
   }, []);
 
   const runAnalysis = useCallback(async () => {
-    const v = validateCsvFiles(pendingFiles);
-    if (!v.ok) {
+    if (!pendingFiles.length) {
       setPhase("error");
-      setErrorMessage(v.message);
+      setErrorMessage("Choose at least one CSV file.");
       return;
     }
-    const files = v.files;
 
     try {
       if (!USE_MOCK) {
         setPhase("uploading");
         const fd = new FormData();
-        for (const f of files) {
-          fd.append("files", f, f.name);
+        for (const pf of pendingFiles) {
+          fd.append("files", pf.file, pf.name);
         }
         setPhase("analyzing");
         const result = await analyzeCsvFormData(fd);
@@ -190,17 +302,20 @@ function UploadPage() {
       }
 
       setPhase("uploading");
-      const parts = await Promise.all(files.map((f) => parseOneCsvFile(f)));
+      // Short delay for UI feel
+      await new Promise((r) => setTimeout(r, 600));
       setPhase("analyzing");
+      await new Promise((r) => setTimeout(r, 600));
+
       const fileMetas = [];
       const allRows = [];
-      for (const { fileName, data } of parts) {
-        const { mapped } = parseRows(data);
+      for (const pf of pendingFiles) {
+        const { mapped } = parseRows(pf.parsedData, pf.detectedFormat, pf.name);
         allRows.push(...mapped);
         fileMetas.push({
-          fileName,
+          fileName: pf.name,
           rowCount: mapped.length,
-          detectedFormat: "unknown",
+          detectedFormat: pf.detectedFormat,
         });
       }
       const analysis = buildMockAnalysisFromRows(allRows, fileMetas);
@@ -336,13 +451,52 @@ function UploadPage() {
             ) : null}
           </div>
           {pendingFiles.length ? (
-            <ul className="mt-2 max-w-md text-left text-xs text-ink-600 dark:text-ink-300">
-              {pendingFiles.map((f) => (
-                <li key={f.name + f.size}>
-                  {f.name} ({(f.size / 1024).toFixed(1)} KB)
-                </li>
-              ))}
-            </ul>
+            <div className="mt-8 w-full max-w-2xl overflow-hidden rounded-xl border border-ink-200 bg-white dark:border-ink-800 dark:bg-ink-900/60">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-ink-100 bg-ink-50/50 text-xs font-semibold text-ink-500 uppercase tracking-wider dark:border-ink-800 dark:bg-ink-950/20 dark:text-ink-400">
+                    <th className="px-5 py-3.5">File Name</th>
+                    <th className="px-5 py-3.5">Detected Card / Format</th>
+                    <th className="px-5 py-3.5 text-right">Rows</th>
+                    <th className="px-5 py-3.5 text-right">Size</th>
+                    <th className="px-5 py-3.5 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ink-100 dark:divide-ink-800/80 text-sm">
+                  {pendingFiles.map((pf, idx) => {
+                    const labelInfo = FORMAT_LABELS[pf.detectedFormat] || FORMAT_LABELS.unknown;
+                    return (
+                      <tr key={pf.name + idx} className="hover:bg-ink-50/30 dark:hover:bg-ink-950/10">
+                        <td className="px-5 py-3.5 font-medium text-ink-900 dark:text-ink-50 truncate max-w-[200px]" title={pf.name}>
+                          {pf.name}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <Badge tone={labelInfo.tone}>{labelInfo.label}</Badge>
+                        </td>
+                        <td className="px-5 py-3.5 text-right font-mono text-ink-600 dark:text-ink-300">
+                          {pf.rowCount}
+                        </td>
+                        <td className="px-5 py-3.5 text-right text-xs text-ink-500 dark:text-ink-400">
+                          {(pf.size / 1024).toFixed(1)} KB
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPendingFiles(prev => prev.filter((_, i) => i !== idx));
+                            }}
+                            className="text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-350 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                            title="Remove file"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : null}
         </div>
       </Card>

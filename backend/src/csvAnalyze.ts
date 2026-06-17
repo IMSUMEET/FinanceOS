@@ -3,7 +3,7 @@ import { categorize, normalizeMerchant } from "./categorize.js";
 
 export const MAX_CSV_BYTES = 5 * 1024 * 1024;
 
-export type DetectedFormat = "chase_credit_card" | "chase_checking" | "unknown";
+export type DetectedFormat = "chase_credit_card" | "chase_checking" | "amex_credit_card" | "chase_amazon" | "unknown";
 
 const COLUMN_HINTS = {
   date: ["date", "posted", "transaction date", "trans date", "posting date"],
@@ -24,19 +24,29 @@ function pickColumn(headers: string[], hints: string[]): string {
   return headers[0]!;
 }
 
-function detectFormat(headers: string[]): DetectedFormat {
+function detectFormat(headers: string[], name: string = ""): DetectedFormat {
   const lc = headers.map((h) => String(h).toLowerCase().trim());
   const joined = lc.join("|");
   const has = (s: string) => joined.includes(s);
+
+  if (has("appears on your statement as") && has("reference") && has("extended details")) {
+    return "amex_credit_card";
+  }
+
   if (has("transaction date") && has("post date") && has("category")) {
+    if (name.toLowerCase().includes("amazon")) {
+      return "chase_amazon";
+    }
     return "chase_credit_card";
   }
+
   if (
     (has("posting date") && has("balance") && has("type")) ||
     (has("details") && has("posting date") && has("balance") && has("status"))
   ) {
     return "chase_checking";
   }
+
   return "unknown";
 }
 
@@ -54,6 +64,7 @@ export type AnalyzedTransaction = {
   currency: string;
   category: string;
   source: string;
+  card_identity?: string;
   created_at: string;
 };
 
@@ -79,7 +90,10 @@ function parseToIsoDateString(dateStr: string): string {
   return dateStr;
 }
 
-function mapRows(rows: Record<string, unknown>[]): {
+function mapRows(
+  rows: Record<string, unknown>[],
+  format: DetectedFormat
+): {
   mapped: AnalyzedTransaction[];
   mapping: { date: string; merchant: string; amount: string } | null;
 } {
@@ -99,8 +113,23 @@ function mapRows(rows: Record<string, unknown>[]): {
     const rawDate = String(r[mapping.date] ?? "").trim();
     if (!rawDate || !merchantRaw) continue;
     const date = parseToIsoDateString(rawDate);
-    const amount = rawAmount > 0 ? -rawAmount : rawAmount;
+
+    let amount = rawAmount;
+    if (format === "amex_credit_card") {
+      amount = -rawAmount;
+    } else if (format === "chase_checking" || format === "chase_credit_card" || format === "chase_amazon") {
+      amount = rawAmount;
+    } else {
+      amount = rawAmount > 0 ? -rawAmount : rawAmount;
+    }
+
     const category = categorize(merchantNorm, merchantRaw);
+    let card_identity = "Unknown";
+    if (format === "amex_credit_card") card_identity = "Amex Blue Cash";
+    else if (format === "chase_checking") card_identity = "Chase Checking";
+    else if (format === "chase_credit_card") card_identity = "Chase Credit Card";
+    else if (format === "chase_amazon") card_identity = "Chase Amazon";
+
     mapped.push({
       date,
       merchant_raw: merchantRaw,
@@ -110,6 +139,7 @@ function mapRows(rows: Record<string, unknown>[]): {
       currency: "USD",
       category,
       source: "csv-analyze",
+      card_identity,
       created_at: new Date(`${date}T12:00:00Z`).toISOString(),
     });
   }
@@ -214,8 +244,8 @@ export async function analyzeCsvBuffers(inputs: { name: string; text: string }[]
       throw new Error(`CSV_PARSE_ERROR:${name}`);
     }
     const headers = rows.length ? Object.keys(rows[0]!) : [];
-    const fmt = detectFormat(headers);
-    const { mapped } = mapRows(rows);
+    const fmt = detectFormat(headers, name);
+    const { mapped } = mapRows(rows, fmt);
     for (const t of mapped) {
       allTx.push({ ...t, id: nextId++ });
     }
