@@ -2,12 +2,12 @@ import { createElement } from "react";
 import {
   Activity,
   AlertTriangle,
-  Bot,
   CalendarClock,
   Lock,
   Repeat,
   TrendingDown,
   TrendingUp,
+  UserCircle,
 } from "lucide-react";
 import Card from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
@@ -86,7 +86,7 @@ function InsightsPage() {
       <Card variant="dark">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-ink-300">Insight Engine</p>
+            <p className="text-sm text-ink-300">Spending summary</p>
             <h2 className="mt-2 text-2xl font-black md:text-3xl">
               {isAllMonths
                 ? "All months in view"
@@ -241,20 +241,20 @@ function InsightsPage() {
         />
 
         <NarrativeCard
-          icon={Bot}
-          eyebrow="AI coach"
-          title={hasProfile ? "Personalized recommendations" : "Profile required"}
+          icon={UserCircle}
+          eyebrow="Profile"
+          title={hasProfile ? "Saved on this device" : "Profile required"}
           tone={hasProfile ? "success" : "neutral"}
           body={
             hasProfile
-              ? "Your profile is active. AI spend coach can now use your behavior patterns to suggest smarter monthly optimizations."
-              : "You are in guest mode. Create a profile from the top-right profile tab to unlock AI coach, custom goals, and proactive savings suggestions."
+              ? "Your name and preferences are stored locally in this browser."
+              : "Guest mode works for browsing. Create a profile from the top-right tab to save your name and export data."
           }
         >
           <div className="mt-4 rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60">
             {hasProfile ? (
               <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                AI coach status: ready
+                Profile active
               </p>
             ) : (
               <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-600 dark:text-ink-300">

@@ -409,12 +409,12 @@ function OverviewPage() {
       </Reveal>
 
       <Reveal delay={0.05}>
-        {/* Insight engine */}
+        {/* Spending highlights */}
         <Card variant="dark">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm text-ink-300">Insight Engine</p>
-              <h3 className="mt-2 text-2xl font-black">Smart observation</h3>
+              <p className="text-sm text-ink-300">Highlights</p>
+              <h3 className="mt-2 text-2xl font-black">At a glance</h3>
             </div>
             <TrendingUp className="text-emerald-400" />
           </div>
@@ -433,9 +433,13 @@ function OverviewPage() {
           </p>
           <div className="mt-6 grid gap-3 md:grid-cols-2">
             <div className="rounded-xl2 bg-white/10 px-4 py-4">
-              <p className="text-sm text-ink-300">Suggested action</p>
+              <p className="text-sm text-ink-300">Worth a look</p>
               <p className="mt-1 font-semibold text-white">
-                Cap dining spend for the next 2 weeks and review recurring charges.
+                {recurring.length > 0
+                  ? `You have ${recurring.length} recurring charge${recurring.length === 1 ? "" : "s"} (~${formatCurrency(annualizedRecurring, { compact: true })}/yr).`
+                  : topCategory
+                    ? `${topCategory.category} leads your spending at ${formatCurrency(topCategory.total, { compact: true })}.`
+                    : "Import transactions to see where your money goes."}
               </p>
             </div>
             <Link to="/insights" className="block">

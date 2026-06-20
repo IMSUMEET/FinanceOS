@@ -26,7 +26,7 @@ Source of truth for the data shapes the web frontend expects from / sends to the
 - All dates are ISO-8601 (`YYYY-MM-DD` for calendar dates, RFC 3339 for instants).
 - Pagination is not yet defined; v1 returns full result sets capped at 5,000 rows.
 - The frontend treats `Filters.month === "ALL"` as "no month filter".
-- The product is guest-accessible without authentication. Advanced features (AI coach, personalized recommendations) are unlocked only when `Profile.profileCompleted === true`.
+- The product is guest-accessible without authentication. A completed profile (`Profile.profileCompleted === true`) saves your name locally and enables export.
 
 ## How to validate
 

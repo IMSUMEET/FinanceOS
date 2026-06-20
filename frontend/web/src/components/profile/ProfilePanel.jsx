@@ -147,7 +147,7 @@ function ProfilePanel({ onClose }) {
               </h3>
               <p className="mt-0.5 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
                 <span aria-hidden>{personality.emoji}</span>
-                {hasProfile ? personality.label : "Unlock AI coach"}
+                {hasProfile ? personality.label : "Profile not set up"}
               </p>
             </div>
           </div>
@@ -240,8 +240,8 @@ function ProfilePanel({ onClose }) {
         </div>
         <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50/60 px-3 py-2 text-xs text-brand-800 dark:border-brand-800/60 dark:bg-brand-900/20 dark:text-brand-200">
           {hasProfile
-            ? "Advanced AI coach features are enabled for this profile."
-            : "Create your profile to enable AI coach and personalized recommendations."}
+            ? "Profile saved on this device. Export and personalization are available."
+            : "Create a profile to save your name and unlock export on this device."}
         </div>
       </section>
     </div>
