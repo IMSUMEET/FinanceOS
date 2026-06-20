@@ -42,7 +42,7 @@ On commit, Husky runs `lint-staged`, which auto-formats staged files with Pretti
 
 `main` is protected by the **Protect main** ruleset:
 
-- **No direct pushes to `main`** — use a PR (repo admins can bypass in emergencies)
+- **No direct pushes to `main`** — use a PR
 - **`CI / check` must pass** before merge
 - **No force push** or branch deletion on `main`
 
@@ -79,7 +79,7 @@ Details: [`.github/BRANCH_PROTECTION.md`](.github/BRANCH_PROTECTION.md)
 
 ## Do not
 
-- Push directly to `main` (unless you are bypassing as a repo admin)
+- Push directly to `main`
 - Skip hooks (`git commit --no-verify`) to bypass formatting or lint
 - Commit `.env` or secrets (only `.env.example` is tracked)
 - Add vendor or tool branding to commit messages or PR descriptions

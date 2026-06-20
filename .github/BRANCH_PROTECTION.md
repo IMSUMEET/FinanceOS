@@ -60,7 +60,6 @@ The `Protect main` ruleset:
 - Requires pull requests before merging to `main` (direct pushes blocked)
 - Requires the `CI / check` status to pass
 - Blocks force pushes and branch deletion
-- Allows repository admins to bypass (for emergencies)
 
 Adjust review requirements in `main-branch.json` if you want mandatory approvals (set `required_approving_review_count` to `1` or higher).
 
