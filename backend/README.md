@@ -52,6 +52,16 @@ npm run dev
 
 Open **http://localhost:3001/** and **http://localhost:3001/health**.
 
+Run the web app with mock mode off so uploads hit this server:
+
+```bash
+# frontend/web/.env.local
+VITE_API_BASE_URL=http://localhost:3001
+VITE_USE_MOCK=false
+```
+
+Then `cd frontend/web && npm run dev` (http://localhost:5173). CORS allows the Vite dev origin.
+
 ## Deploy (AWS CDK)
 
 See **[README-deploy.md](./README-deploy.md)** for full steps (`cd backend/infra`, `npm install`, `cdk bootstrap`, `cdk deploy`, Vercel env).

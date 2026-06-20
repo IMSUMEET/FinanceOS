@@ -1,7 +1,18 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { analyzeCsvBuffers, MAX_CSV_BYTES, isCsvFileName } from "./csvAnalyze.js";
 
 export const app = new Hono();
+
+app.use(
+  "*",
+  cors({
+    origin: (origin) => origin ?? "*",
+    allowHeaders: ["Content-Type", "Authorization", "Accept"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    maxAge: 300,
+  }),
+);
 
 app.get("/", (c) => {
   return c.json({

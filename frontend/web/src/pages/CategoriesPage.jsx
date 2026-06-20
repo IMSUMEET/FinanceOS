@@ -17,13 +17,13 @@ import { categoryColor } from "../utils/categories";
 import { formatAmountSpend, formatCurrency, formatDate } from "../utils/format";
 
 function CategoryGrid() {
-  const { filtered, derived } = useTransactions();
-  const total = derived.categories.reduce((s, c) => s + c.total, 0);
+  const { scopeFiltered, categoryDerived } = useTransactions();
+  const total = categoryDerived.categories.reduce((s, c) => s + c.total, 0);
 
   // Sparkline points per category (across months in current filter)
   const sparkByCat = useMemo(() => {
     const out = {};
-    for (const m of derived.monthlyByCategory) {
+    for (const m of categoryDerived.monthlyByCategory) {
       for (const k of Object.keys(m)) {
         if (k === "month") continue;
         out[k] = out[k] ?? [];
@@ -31,9 +31,9 @@ function CategoryGrid() {
       }
     }
     return out;
-  }, [derived.monthlyByCategory]);
+  }, [categoryDerived.monthlyByCategory]);
 
-  if (derived.categories.length === 0) {
+  if (categoryDerived.categories.length === 0) {
     return (
       <Card>
         <EmptyState
@@ -47,7 +47,7 @@ function CategoryGrid() {
 
   return (
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-      {derived.categories.map((c) => {
+      {categoryDerived.categories.map((c) => {
         const share = total ? (c.total / total) * 100 : 0;
         const color = categoryColor(c.category);
         return (
@@ -63,8 +63,7 @@ function CategoryGrid() {
                     {formatCurrency(c.total)}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-ink-500 dark:text-ink-400">
-                    {share.toFixed(1)}% of spend · {c.count} txns ·{" "}
-                    {filtered.filter((t) => t.category === c.category).length} in view
+                    {share.toFixed(1)}% of spend · {c.count} txns
                   </p>
                 </div>
                 <Badge tone="neutral">View</Badge>
@@ -81,18 +80,18 @@ function CategoryGrid() {
 }
 
 function CategoryDetail({ name }) {
-  const { filtered, derived } = useTransactions();
+  const { scopeFiltered, categoryDerived } = useTransactions();
 
   const monthlyForCat = useMemo(() => {
-    return derived.monthlyByCategory.map((m) => ({ month: m.month, total: m[name] ?? 0 }));
-  }, [derived.monthlyByCategory, name]);
+    return categoryDerived.monthlyByCategory.map((m) => ({ month: m.month, total: m[name] ?? 0 }));
+  }, [categoryDerived.monthlyByCategory, name]);
 
   const txns = useMemo(
     () =>
-      [...filtered]
+      [...scopeFiltered]
         .filter((t) => t.category === name)
         .sort((a, b) => (a.date < b.date ? 1 : -1)),
-    [filtered, name],
+    [scopeFiltered, name],
   );
 
   const total = txns.reduce((s, t) => s + Math.abs(t.amount), 0);

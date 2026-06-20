@@ -71,25 +71,41 @@ export function TransactionsProvider({ children }) {
     return Array.from(set).filter(Boolean).sort();
   }, [transactions]);
 
-  const filtered = useMemo(() => {
-    return transactions.filter((t) => {
-      if (filters.month !== ALL_MONTHS_SENTINEL && monthKey(t.date) !== filters.month) {
-        return false;
-      }
-      if (filters.categories.length && !filters.categories.includes(t.category)) {
-        return false;
-      }
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        const hay = `${t.merchant_normalized ?? ""} ${t.merchant_raw ?? ""} ${t.description ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      const amt = Math.abs(Number(t.amount ?? 0));
-      if (filters.amountMin != null && amt < filters.amountMin) return false;
-      if (filters.amountMax != null && amt > filters.amountMax) return false;
-      return true;
-    });
-  }, [transactions, filters]);
+  const applyFilters = useCallback(
+    (rows, { includeCategories = true } = {}) =>
+      rows.filter((t) => {
+        if (filters.month !== ALL_MONTHS_SENTINEL && monthKey(t.date) !== filters.month) {
+          return false;
+        }
+        if (
+          includeCategories &&
+          filters.categories.length &&
+          !filters.categories.includes(t.category)
+        ) {
+          return false;
+        }
+        if (filters.search) {
+          const q = filters.search.toLowerCase();
+          const hay = `${t.merchant_normalized ?? ""} ${t.merchant_raw ?? ""} ${t.description ?? ""}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        const amt = Math.abs(Number(t.amount ?? 0));
+        if (filters.amountMin != null && amt < filters.amountMin) return false;
+        if (filters.amountMax != null && amt > filters.amountMax) return false;
+        return true;
+      }),
+    [filters],
+  );
+
+  const filtered = useMemo(
+    () => applyFilters(transactions),
+    [transactions, applyFilters],
+  );
+
+  const scopeFiltered = useMemo(
+    () => applyFilters(transactions, { includeCategories: false }),
+    [transactions, applyFilters],
+  );
 
   const derived = useMemo(
     () => ({
@@ -99,6 +115,16 @@ export function TransactionsProvider({ children }) {
       merchants: merchantBreakdown(filtered),
     }),
     [filtered],
+  );
+
+  const categoryDerived = useMemo(
+    () => ({
+      monthly: monthlyTotals(scopeFiltered),
+      monthlyByCategory: monthlyByCategory(scopeFiltered),
+      categories: categoryBreakdown(scopeFiltered),
+      merchants: merchantBreakdown(scopeFiltered),
+    }),
+    [scopeFiltered],
   );
 
   const addMany = useCallback(async (rows) => {
@@ -200,10 +226,12 @@ export function TransactionsProvider({ children }) {
     ALL_MONTHS_SENTINEL,
     transactions,
     filtered,
+    scopeFiltered,
     months,
     filters,
     setFilters,
     derived,
+    categoryDerived,
     addMany,
     replaceAll,
     updateCategory,
