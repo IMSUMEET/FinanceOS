@@ -9,24 +9,31 @@ description: >-
 
 # PR Workflow
 
-## Before every commit
+## Local setup (once per machine)
 
-Run the frontend gate from `frontend/web`:
-
-```bash
-cd frontend/web
-npm run lint
-npm run build
-```
-
-Both must pass. If you only touched `backend/`, also run the backend tests:
+After clone or pull, install dependencies so Husky and Prettier work:
 
 ```bash
-cd backend
-pytest -q
+npm install                    # repo root
+cd frontend/web && npm install
+cd ../../backend && npm install
 ```
 
-If you only touched docs / skills, you can skip the build but still run lint if the change touched any code config.
+See [`skills/code-standards/SKILL.md`](../code-standards/SKILL.md) and [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for full details.
+
+## Before every commit / push
+
+From the **repo root**, run the full CI pipeline:
+
+```bash
+npm run ci
+```
+
+This matches GitHub Actions (`CI / check`): Prettier check, frontend lint + build, backend typecheck.
+
+Husky auto-formats staged files on commit; still run `npm run ci` before push to catch issues early.
+
+If you only touched docs / skills with no code, you can run `npm run format:check` instead of the full `ci`.
 
 ## Commit-message style
 
@@ -73,8 +80,7 @@ gh pr create --base main --title "<conventional title>" --body "$(cat <<'EOF'
 
 ## Test plan
 
-- [ ] `cd frontend/web && npm run lint`
-- [ ] `cd frontend/web && npm run build`
+- [ ] `npm run ci` (from repo root)
 - [ ] manual: <flows you exercised>
 
 ## Backend impact

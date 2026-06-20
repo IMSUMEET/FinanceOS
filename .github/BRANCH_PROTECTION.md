@@ -39,10 +39,13 @@ The [CI workflow](workflows/ci.yml) runs on every pull request to `main`:
 
 ## GitHub rulesets (branch protection)
 
-Ruleset definitions live in [`.github/rulesets/main-branch.json`](rulesets/main-branch.json). They are **not** applied automatically when you merge this PR — a repo admin must apply them once:
+The **Protect main** ruleset is active on `Oblivion-Labs-Dev/FinanceOS`. Verify at: https://github.com/Oblivion-Labs-Dev/FinanceOS/settings/rules
+
+Ruleset definition: [`.github/rulesets/main-branch.json`](rulesets/main-branch.json)
+
+To re-apply or update after editing the JSON (repo admin):
 
 ```bash
-chmod +x scripts/apply-github-rulesets.sh
 ./scripts/apply-github-rulesets.sh
 ```
 
@@ -61,4 +64,7 @@ The `Protect main` ruleset:
 
 Adjust review requirements in `main-branch.json` if you want mandatory approvals (set `required_approving_review_count` to `1` or higher).
 
-**Note:** Apply the ruleset **after** the CI workflow has run at least once on `main`, so GitHub recognizes the `CI / check` status context.
+## See also
+
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md) — local setup and workflow for all contributors
+- [`skills/code-standards/SKILL.md`](../skills/code-standards/SKILL.md) — formatting, CI, and branch rules in detail

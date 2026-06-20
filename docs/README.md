@@ -10,7 +10,7 @@ If you're new, read in this order:
 4. [`design/design-system.md`](./design/design-system.md) — colors, motion, components
 5. [`adr/`](./adr) — accepted architectural decisions
 
-For coding conventions an AI assistant should follow, see [`../skills/`](../skills).
+For coding conventions, see [`../CONTRIBUTING.md`](../CONTRIBUTING.md) and [`../skills/`](../skills).
 
 ## Layout
 
