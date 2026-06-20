@@ -21,16 +21,19 @@ import CategoryDonut from "../components/charts/CategoryDonut";
 import WelcomeHero from "../components/dashboard/WelcomeHero";
 import Reveal from "../components/effects/Reveal";
 import { StaggerGroup, StaggerItem } from "../components/effects/StaggerGroup";
+import { usePageFilters } from "../context/usePageFilters";
 import { useTransactions } from "../context/useTransactions";
+import { ALL_MONTHS_SENTINEL } from "../context/pageFilters";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import {
-  compareMonthOverMonth,
+  compareSelectedMonthToPrevious,
   dailyAverage,
   detectRecurring,
-  topCategoryMovers,
+  previousMonthKey,
+  topCategoryMoversForMonth,
   totalSpend,
 } from "../utils/insights";
-import { formatAmountSpend, formatCurrency, formatDate, formatPct } from "../utils/format";
+import { formatAmountSpend, formatCurrency, formatDate, formatMonth, formatPct } from "../utils/format";
 
 function TopMerchantsList({ merchants }) {
   if (!merchants.length) {
@@ -90,19 +93,24 @@ function RecentTxStrip({ rows }) {
 
 function OverviewPage() {
   useDocumentTitle("Overview");
-  const { filtered, derived } = useTransactions();
+  const { transactions } = useTransactions();
+  const { filtered, derived, filters } = usePageFilters("overview");
   const [activeCatIdx, setActiveCatIdx] = useState(null);
 
+  const isAllMonths = filters.month === ALL_MONTHS_SENTINEL;
   const total = totalSpend(filtered);
-  const mom = compareMonthOverMonth(filtered);
+  const mom = isAllMonths
+    ? { deltaPct: null, deltaAbs: 0, current: null, previous: null }
+    : compareSelectedMonthToPrevious(transactions, filters.month);
   const avgDaily = dailyAverage(filtered);
-  const movers = topCategoryMovers(filtered);
+  const movers = isAllMonths ? [] : topCategoryMoversForMonth(transactions, filters.month);
   const recurring = detectRecurring(filtered);
   const topCategory = derived.categories[0];
   const annualizedRecurring = recurring.reduce((s, r) => s + r.annualized, 0);
   const recentTx = [...filtered]
     .sort((a, b) => (b.date < a.date ? -1 : 1))
     .slice(0, 5);
+  const priorMonthLabel = isAllMonths ? "" : formatMonth(previousMonthKey(filters.month));
 
   const thisWeek = useMemo(() => {
     const now = new Date();
@@ -121,10 +129,11 @@ function OverviewPage() {
   }, [filtered]);
 
   const momTone = mom.deltaPct == null ? "neutral" : mom.deltaPct < 0 ? "up" : "down";
-  const momLabel =
-    mom.deltaPct == null
-      ? "First period"
-      : `${formatPct(mom.deltaPct)} vs last month`;
+  const momLabel = isAllMonths
+    ? `Across ${derived.monthly.length || 0} months`
+    : mom.deltaPct == null
+      ? "No prior month to compare"
+      : `${formatPct(mom.deltaPct)} vs ${priorMonthLabel}`;
 
   return (
     <section className="space-y-5 pt-2">
@@ -193,11 +202,15 @@ function OverviewPage() {
             </div>
           </Card>
 
-          {/* Movers */}
+          {/* Movers / top categories */}
           <Card>
             <SectionHeader
-              eyebrow="What changed"
-              title="Biggest category movers vs last month"
+              eyebrow={isAllMonths ? "All time" : "What changed"}
+              title={
+                isAllMonths
+                  ? "Top spending categories"
+                  : `Biggest movers vs ${priorMonthLabel}`
+              }
               action={
                 <Link to="/insights">
                   <IconButton variant="dark" aria-label="See all insights">
@@ -207,8 +220,42 @@ function OverviewPage() {
               }
             />
             <div className="mt-6 grid gap-3 md:grid-cols-2">
-              {movers.length === 0 ? (
-                <p className="text-sm text-ink-500 dark:text-ink-400">Need at least 2 months of data to compare.</p>
+              {isAllMonths ? (
+                derived.categories.length === 0 ? (
+                  <p className="text-sm text-ink-500 dark:text-ink-400">No category activity yet.</p>
+                ) : (
+                  derived.categories.slice(0, 4).map((c) => {
+                    const share = total ? (c.total / total) * 100 : 0;
+                    return (
+                      <div
+                        key={c.category}
+                        className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CategoryDot category={c.category} size={10} />
+                          <div className="min-w-0">
+                            <p className="truncate font-bold text-ink-900 dark:text-ink-50">{c.category}</p>
+                            <p className="text-xs text-ink-500 dark:text-ink-400">
+                              {c.count} {c.count === 1 ? "transaction" : "transactions"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="tabular font-black text-ink-900 dark:text-ink-50">
+                            {formatCurrency(c.total)}
+                          </p>
+                          <p className="text-xs font-semibold text-ink-500 dark:text-ink-400">
+                            {share.toFixed(1)}% of spend
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )
+              ) : movers.length === 0 ? (
+                <p className="text-sm text-ink-500 dark:text-ink-400">
+                  No prior month data for {formatMonth(filters.month)}.
+                </p>
               ) : (
                 movers.slice(0, 4).map((m) => {
                   const up = m.deltaAbs >= 0;
@@ -372,11 +419,17 @@ function OverviewPage() {
             <TrendingUp className="text-emerald-400" />
           </div>
           <p className="mt-5 text-ink-300">
-            {movers.length > 0 && movers[0].deltaAbs > 0
-              ? `${movers[0].category} spend rose ${formatPct(movers[0].deltaPct)} (${formatCurrency(
-                  Math.abs(movers[0].deltaAbs),
-                )}) compared to last month — the biggest jump in your portfolio.`
-              : "Your spend looks steady this month. Use the Insights tab for deeper breakdowns."}
+            {isAllMonths
+              ? topCategory
+                ? `${topCategory.category} is your largest category at ${formatCurrency(topCategory.total)} across all months. Pick a month above to see month-over-month changes.`
+                : "Upload transactions to unlock spending insights."
+              : movers.length > 0 && movers[0].deltaAbs > 0
+                ? `${movers[0].category} spend rose ${formatPct(movers[0].deltaPct)} (${formatCurrency(
+                    Math.abs(movers[0].deltaAbs),
+                  )}) vs ${priorMonthLabel} — the biggest jump in that period.`
+                : movers.length > 0
+                  ? "Your category mix looks steady compared to the prior month."
+                  : "Select a month with prior data to see how spending shifted."}
           </p>
           <div className="mt-6 grid gap-3 md:grid-cols-2">
             <div className="rounded-xl2 bg-white/10 px-4 py-4">

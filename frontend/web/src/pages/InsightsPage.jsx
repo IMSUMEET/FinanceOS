@@ -13,17 +13,20 @@ import Card from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
 import CategoryDot from "../components/ui/CategoryDot";
 import SectionHeader from "../components/ui/SectionHeader";
+import { usePageFilters } from "../context/usePageFilters";
 import { useTransactions } from "../context/useTransactions";
+import { ALL_MONTHS_SENTINEL } from "../context/pageFilters";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { useProfile } from "../hooks/useProfile";
 import {
-  compareMonthOverMonth,
+  compareSelectedMonthToPrevious,
   detectRecurring,
+  previousMonthKey,
   topAnomalies,
-  topCategoryMovers,
+  topCategoryMoversForMonth,
   weekdayVsWeekend,
 } from "../utils/insights";
-import { formatAmountSpend, formatCurrency, formatDate, formatPct } from "../utils/format";
+import { formatAmountSpend, formatCurrency, formatDate, formatMonth, formatPct } from "../utils/format";
 
 function NarrativeCard({ icon, eyebrow, title, body, tone = "neutral", children }) {
   const tones = {
@@ -55,22 +58,28 @@ function NarrativeCard({ icon, eyebrow, title, body, tone = "neutral", children 
 
 function InsightsPage() {
   useDocumentTitle("Insights");
-  const { filtered } = useTransactions();
+  const { transactions } = useTransactions();
+  const { filtered, filters } = usePageFilters("insights");
   const { hasProfile } = useProfile();
 
-  const mom = compareMonthOverMonth(filtered);
-  const movers = topCategoryMovers(filtered);
+  const isAllMonths = filters.month === ALL_MONTHS_SENTINEL;
+  const mom = isAllMonths
+    ? { deltaPct: null, deltaAbs: 0, current: null, previous: null }
+    : compareSelectedMonthToPrevious(transactions, filters.month);
+  const movers = isAllMonths ? [] : topCategoryMoversForMonth(transactions, filters.month);
   const recurring = detectRecurring(filtered);
   const anomalies = topAnomalies(filtered, 5);
   const week = weekdayVsWeekend(filtered);
+  const priorMonthLabel = isAllMonths ? "" : formatMonth(previousMonthKey(filters.month));
 
   const annualizedRecurring = recurring.reduce((s, r) => s + r.annualized, 0);
-  const momCopy =
-    mom.deltaPct == null
-      ? "Need at least 2 months to compare."
+  const momCopy = isAllMonths
+    ? "Select a month in the header to compare spending vs the prior month."
+    : mom.deltaPct == null
+      ? `No data for the month before ${formatMonth(filters.month)}.`
       : `You spent ${formatCurrency(Math.abs(mom.deltaAbs))} ${
           mom.deltaAbs >= 0 ? "more" : "less"
-        } this month than last (${formatPct(mom.deltaPct)}).`;
+        } in ${formatMonth(filters.month)} than ${priorMonthLabel} (${formatPct(mom.deltaPct)}).`;
 
   return (
     <section className="space-y-5 pt-2">
@@ -79,11 +88,13 @@ function InsightsPage() {
           <div>
             <p className="text-sm text-ink-300">Insight Engine</p>
             <h2 className="mt-2 text-2xl font-black md:text-3xl">
-              {mom.deltaPct == null
-                ? "Build a baseline"
-                : mom.deltaAbs >= 0
-                  ? `Spend up ${formatPct(mom.deltaPct)} this month`
-                  : `Spend down ${formatPct(mom.deltaPct)} this month`}
+              {isAllMonths
+                ? "All months in view"
+                : mom.deltaPct == null
+                  ? "Build a baseline"
+                  : mom.deltaAbs >= 0
+                    ? `Spend up ${formatPct(mom.deltaPct)} in ${formatMonth(filters.month)}`
+                    : `Spend down ${formatPct(mom.deltaPct)} in ${formatMonth(filters.month)}`}
             </h2>
             <p className="mt-2 text-ink-300 max-w-2xl">{momCopy}</p>
           </div>
@@ -99,9 +110,13 @@ function InsightsPage() {
         <NarrativeCard
           icon={Activity}
           eyebrow="Movers"
-          title="Biggest swings"
+          title={isAllMonths ? "Month-over-month" : "Biggest swings"}
           tone={movers[0]?.deltaAbs > 0 ? "danger" : "success"}
-          body="Categories that moved most vs the previous month."
+          body={
+            isAllMonths
+              ? "Pick a month above to see which categories moved most vs the prior month."
+              : `Categories that moved most in ${formatMonth(filters.month)} vs ${priorMonthLabel}.`
+          }
         >
           <div className="mt-4 space-y-3">
             {movers.length === 0 ? (

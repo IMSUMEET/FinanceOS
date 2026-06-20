@@ -11,19 +11,19 @@ import EmptyState from "../components/ui/EmptyState";
 import SectionHeader from "../components/ui/SectionHeader";
 import MiniSparkline from "../components/charts/MiniSparkline";
 import MonthlyCategoryBars from "../components/charts/MonthlyCategoryBars";
-import { useTransactions } from "../context/useTransactions";
+import { usePageFilters } from "../context/usePageFilters";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { categoryColor } from "../utils/categories";
 import { formatAmountSpend, formatCurrency, formatDate } from "../utils/format";
 
 function CategoryGrid() {
-  const { scopeFiltered, categoryDerived } = useTransactions();
-  const total = categoryDerived.categories.reduce((s, c) => s + c.total, 0);
+  const { derived } = usePageFilters("categories");
+  const total = derived.categories.reduce((s, c) => s + c.total, 0);
 
   // Sparkline points per category (across months in current filter)
   const sparkByCat = useMemo(() => {
     const out = {};
-    for (const m of categoryDerived.monthlyByCategory) {
+    for (const m of derived.monthlyByCategory) {
       for (const k of Object.keys(m)) {
         if (k === "month") continue;
         out[k] = out[k] ?? [];
@@ -31,9 +31,9 @@ function CategoryGrid() {
       }
     }
     return out;
-  }, [categoryDerived.monthlyByCategory]);
+  }, [derived.monthlyByCategory]);
 
-  if (categoryDerived.categories.length === 0) {
+  if (derived.categories.length === 0) {
     return (
       <Card>
         <EmptyState
@@ -47,7 +47,7 @@ function CategoryGrid() {
 
   return (
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-      {categoryDerived.categories.map((c) => {
+      {derived.categories.map((c) => {
         const share = total ? (c.total / total) * 100 : 0;
         const color = categoryColor(c.category);
         return (
@@ -80,18 +80,18 @@ function CategoryGrid() {
 }
 
 function CategoryDetail({ name }) {
-  const { scopeFiltered, categoryDerived } = useTransactions();
+  const { filtered, derived } = usePageFilters("categories");
 
   const monthlyForCat = useMemo(() => {
-    return categoryDerived.monthlyByCategory.map((m) => ({ month: m.month, total: m[name] ?? 0 }));
-  }, [categoryDerived.monthlyByCategory, name]);
+    return derived.monthlyByCategory.map((m) => ({ month: m.month, total: m[name] ?? 0 }));
+  }, [derived.monthlyByCategory, name]);
 
   const txns = useMemo(
     () =>
-      [...scopeFiltered]
+      [...filtered]
         .filter((t) => t.category === name)
         .sort((a, b) => (a.date < b.date ? 1 : -1)),
-    [scopeFiltered, name],
+    [filtered, name],
   );
 
   const total = txns.reduce((s, t) => s + Math.abs(t.amount), 0);
@@ -209,7 +209,6 @@ function CategoriesPage() {
         <SectionHeader
           eyebrow="Categories"
           title="How your money is split"
-          action={<Pill tone="dark">All categories</Pill>}
         />
       </Card>
       <CategoryGrid />

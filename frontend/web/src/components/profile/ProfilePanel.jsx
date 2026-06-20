@@ -90,7 +90,7 @@ function exportCsv(rows) {
 }
 
 function ProfilePanel({ onClose }) {
-  const { transactions, replaceAll, setFilters, ALL_MONTHS_SENTINEL } = useTransactions();
+  const { transactions, replaceAll, resetAllPageFilters } = useTransactions();
   const { profile, cycleAvatar, updateProfile, hasProfile, displayName } = useProfile();
   const { theme, toggleTheme } = useTheme();
   const [nameInput, setNameInput] = useState(profile.name ?? "");
@@ -105,7 +105,7 @@ function ProfilePanel({ onClose }) {
 
   function handleReset() {
     replaceAll(seed);
-    setFilters((f) => ({ ...f, month: ALL_MONTHS_SENTINEL, categories: [], search: "" }));
+    resetAllPageFilters();
     onClose?.();
   }
 

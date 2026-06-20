@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { Bell, Calendar, Moon, RotateCcw, Sun, Upload } from "lucide-react";
+import { usePageFilters } from "../../context/usePageFilters";
 import { useTransactions } from "../../context/useTransactions";
 import { useTheme } from "../../hooks/useTheme";
 import { formatMonth } from "../../utils/format";
@@ -9,11 +10,11 @@ import seed from "../../data/mockTransactions";
 function SettingsPopover({ open, onClose }) {
   const {
     months,
-    filters,
-    setFilters,
-    ALL_MONTHS_SENTINEL,
     replaceAll,
+    resetAllPageFilters,
+    ALL_MONTHS_SENTINEL,
   } = useTransactions();
+  const { filters, setFilters } = usePageFilters();
   const { theme, toggleTheme } = useTheme();
 
   const monthOptions = [
@@ -23,7 +24,7 @@ function SettingsPopover({ open, onClose }) {
 
   function handleReset() {
     replaceAll(seed);
-    setFilters((f) => ({ ...f, month: ALL_MONTHS_SENTINEL, categories: [], search: "" }));
+    resetAllPageFilters();
     onClose?.();
   }
 

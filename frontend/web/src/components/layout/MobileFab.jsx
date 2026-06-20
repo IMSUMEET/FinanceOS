@@ -8,13 +8,13 @@ import ProfilePanel from "../profile/ProfilePanel";
 import seed from "../../data/mockTransactions";
 
 function MobileFab() {
-  const { replaceAll, setFilters, ALL_MONTHS_SENTINEL } = useTransactions();
+  const { replaceAll, resetAllPageFilters } = useTransactions();
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   function handleReset() {
     replaceAll(seed);
-    setFilters((f) => ({ ...f, month: ALL_MONTHS_SENTINEL, categories: [], search: "" }));
+    resetAllPageFilters();
     setOpen(false);
   }
 

@@ -76,24 +76,56 @@ export function compareMonthOverMonth(transactions) {
   return { current, previous, deltaPct, deltaAbs };
 }
 
-export function topCategoryMovers(transactions) {
-  // Compare last full month to one before, return categories with the biggest swings.
-  const months = monthlyByCategory(transactions);
-  if (months.length < 2) return [];
-  const [prev, cur] = months.slice(-2);
+export function previousMonthKey(key) {
+  const [y, m] = key.split("-").map(Number);
+  const d = new Date(y, m - 1, 1);
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function compareSelectedMonthToPrevious(transactions, selectedMonth) {
+  const totals = monthlyTotals(transactions);
+  const current = totals.find((t) => t.month === selectedMonth) ?? null;
+  const previous = totals.find((t) => t.month === previousMonthKey(selectedMonth)) ?? null;
+  if (!current || !previous) {
+    return { current, previous, deltaPct: null, deltaAbs: 0 };
+  }
+  const deltaAbs = current.total - previous.total;
+  const deltaPct = previous.total > 0 ? (deltaAbs / previous.total) * 100 : null;
+  return { current, previous, deltaPct, deltaAbs };
+}
+
+function categoryMoversBetween(prevRow, curRow) {
+  if (!prevRow || !curRow) return [];
   const cats = new Set([
-    ...Object.keys(prev).filter((k) => k !== "month"),
-    ...Object.keys(cur).filter((k) => k !== "month"),
+    ...Object.keys(prevRow).filter((k) => k !== "month"),
+    ...Object.keys(curRow).filter((k) => k !== "month"),
   ]);
   const movers = [];
   for (const c of cats) {
-    const a = prev[c] ?? 0;
-    const b = cur[c] ?? 0;
+    const a = prevRow[c] ?? 0;
+    const b = curRow[c] ?? 0;
     const deltaAbs = b - a;
     const deltaPct = a > 0 ? (deltaAbs / a) * 100 : b > 0 ? 100 : 0;
     movers.push({ category: c, prev: a, current: b, deltaAbs, deltaPct });
   }
   return movers.sort((a, b) => Math.abs(b.deltaAbs) - Math.abs(a.deltaAbs));
+}
+
+export function topCategoryMovers(transactions) {
+  // Compare last full month to one before, return categories with the biggest swings.
+  const months = monthlyByCategory(transactions);
+  if (months.length < 2) return [];
+  const [prev, cur] = months.slice(-2);
+  return categoryMoversBetween(prev, cur);
+}
+
+export function topCategoryMoversForMonth(transactions, selectedMonth) {
+  const months = monthlyByCategory(transactions);
+  const prevKey = previousMonthKey(selectedMonth);
+  const prev = months.find((m) => m.month === prevKey);
+  const cur = months.find((m) => m.month === selectedMonth);
+  return categoryMoversBetween(prev, cur);
 }
 
 export function detectRecurring(transactions) {

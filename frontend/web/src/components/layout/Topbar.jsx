@@ -3,6 +3,7 @@ import { Calendar } from "lucide-react";
 import NavbarActions from "../common/NavbarActions";
 import ThemeToggle from "../common/ThemeToggle";
 import Select from "../ui/Select";
+import { usePageFilters } from "../../context/usePageFilters";
 import { useTransactions } from "../../context/useTransactions";
 import { formatMonth } from "../../utils/format";
 
@@ -17,7 +18,8 @@ const TITLES = {
 
 function Topbar() {
   const { pathname } = useLocation();
-  const { months, filters, setFilters, ALL_MONTHS_SENTINEL } = useTransactions();
+  const { months, ALL_MONTHS_SENTINEL } = useTransactions();
+  const { filters, setFilters } = usePageFilters();
 
   const meta = TITLES[pathname] ?? TITLES["/"];
 
