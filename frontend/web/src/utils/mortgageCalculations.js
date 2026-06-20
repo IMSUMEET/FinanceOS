@@ -43,7 +43,12 @@ export function computeMonthlyPayment(originalLoanAmount, annualAprPercent, loan
  * @param {number} monthsElapsed  clamped 0..loanTermMonths by caller
  * @returns {number} >= 0
  */
-export function computeRemainingBalance(originalLoanAmount, annualAprPercent, loanTermMonths, monthsElapsed) {
+export function computeRemainingBalance(
+  originalLoanAmount,
+  annualAprPercent,
+  loanTermMonths,
+  monthsElapsed,
+) {
   const P = Number(originalLoanAmount);
   const n = Math.floor(Number(loanTermMonths));
   const t = Math.min(Math.max(0, Math.floor(Number(monthsElapsed))), n);

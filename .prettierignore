@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+.git
+.husky
+package-lock.json
+**/__pycache__
+**/*.pyc
+archive

@@ -1,13 +1,6 @@
 import { motion as Motion } from "framer-motion";
 
-function Reveal({
-  children,
-  delay = 0,
-  y = 16,
-  duration = 0.45,
-  className = "",
-  once = true,
-}) {
+function Reveal({ children, delay = 0, y = 16, duration = 0.45, className = "", once = true }) {
   return (
     <Motion.div
       initial={{ opacity: 0, y }}

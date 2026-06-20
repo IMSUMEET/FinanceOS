@@ -57,7 +57,9 @@ function CategoryGrid() {
                 <div>
                   <div className="flex items-center gap-2">
                     <CategoryDot category={c.category} size={10} />
-                    <p className="text-sm font-semibold text-ink-500 dark:text-ink-400">{c.category}</p>
+                    <p className="text-sm font-semibold text-ink-500 dark:text-ink-400">
+                      {c.category}
+                    </p>
                   </div>
                   <p className="tabular mt-3 text-3xl font-black text-ink-900 dark:text-ink-50">
                     {formatCurrency(c.total)}
@@ -88,9 +90,7 @@ function CategoryDetail({ name }) {
 
   const txns = useMemo(
     () =>
-      [...filtered]
-        .filter((t) => t.category === name)
-        .sort((a, b) => (a.date < b.date ? 1 : -1)),
+      [...filtered].filter((t) => t.category === name).sort((a, b) => (a.date < b.date ? 1 : -1)),
     [filtered, name],
   );
 
@@ -126,7 +126,9 @@ function CategoryDetail({ name }) {
               <h2 className="mt-1 text-3xl font-black text-ink-900 dark:text-ink-50">{name}</h2>
             </div>
           </div>
-          <Pill>{formatCurrency(total)} · {txns.length} txns</Pill>
+          <Pill>
+            {formatCurrency(total)} · {txns.length} txns
+          </Pill>
         </div>
       </Card>
 
@@ -149,11 +151,15 @@ function CategoryDetail({ name }) {
                   <p className="truncate font-bold text-ink-900 dark:text-ink-50">{m.merchant}</p>
                   <p className="text-xs text-ink-500 dark:text-ink-400">{m.count} txns</p>
                 </div>
-                <p className="tabular shrink-0 font-black text-ink-900 dark:text-ink-50">{formatCurrency(m.total)}</p>
+                <p className="tabular shrink-0 font-black text-ink-900 dark:text-ink-50">
+                  {formatCurrency(m.total)}
+                </p>
               </div>
             ))}
             {merchantsForCat.length === 0 ? (
-              <p className="text-sm text-ink-500 dark:text-ink-400">No merchants in this category for the current filters.</p>
+              <p className="text-sm text-ink-500 dark:text-ink-400">
+                No merchants in this category for the current filters.
+              </p>
             ) : null}
           </div>
         </Card>
@@ -164,7 +170,11 @@ function CategoryDetail({ name }) {
           <p className="text-sm font-bold text-ink-700 dark:text-ink-200">Transactions in {name}</p>
         </div>
         {txns.length === 0 ? (
-          <EmptyState icon={ArrowUpRight} title="No transactions" description="Try adjusting filters." />
+          <EmptyState
+            icon={ArrowUpRight}
+            title="No transactions"
+            description="Try adjusting filters."
+          />
         ) : (
           <ul className="divide-y divide-ink-100 dark:divide-ink-800">
             {txns.map((t) => (
@@ -173,10 +183,14 @@ function CategoryDetail({ name }) {
                 className="grid grid-cols-[1.4fr_1fr_auto] gap-3 px-4 py-3 hover:bg-[#f8fbff] dark:hover:bg-ink-800/60"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-bold text-ink-900 dark:text-ink-50">{t.merchant_normalized}</p>
+                  <p className="truncate font-bold text-ink-900 dark:text-ink-50">
+                    {t.merchant_normalized}
+                  </p>
                   <p className="truncate text-xs text-ink-500 dark:text-ink-400">{t.description}</p>
                 </div>
-                <p className="self-center text-sm text-ink-600 dark:text-ink-300">{formatDate(t.date)}</p>
+                <p className="self-center text-sm text-ink-600 dark:text-ink-300">
+                  {formatDate(t.date)}
+                </p>
                 <p className="tabular self-center text-right font-black text-ink-900 dark:text-ink-50">
                   -{formatAmountSpend(t.amount)}
                 </p>
@@ -206,10 +220,7 @@ function CategoriesPage() {
   return (
     <section className="space-y-5 pt-2">
       <Card>
-        <SectionHeader
-          eyebrow="Categories"
-          title="How your money is split"
-        />
+        <SectionHeader eyebrow="Categories" title="How your money is split" />
       </Card>
       <CategoryGrid />
     </section>

@@ -5,7 +5,10 @@ import { formatCurrency } from "./format";
  * @param {number} salePrice
  * @param {{ sellingCostRate: number; remainingBalance: number; totalInvested: number }} p
  */
-export function calculateProfitAtSalePrice(salePrice, { sellingCostRate, remainingBalance, totalInvested }) {
+export function calculateProfitAtSalePrice(
+  salePrice,
+  { sellingCostRate, remainingBalance, totalInvested },
+) {
   const P = Number(salePrice);
   if (!Number.isFinite(P)) return 0;
   const r = Number(sellingCostRate);
@@ -32,7 +35,8 @@ export function generateProfitCurveSeries({
   pointCount = 25,
 }) {
   const ev = Math.max(Number(expectedSalePrice) || 0, 1);
-  const tgtRaw = targetSalePrice != null && Number.isFinite(targetSalePrice) ? Number(targetSalePrice) : ev;
+  const tgtRaw =
+    targetSalePrice != null && Number.isFinite(targetSalePrice) ? Number(targetSalePrice) : ev;
   const tgt = Math.max(tgtRaw, ev);
 
   let start = Math.max(ev * 0.8, 0);
@@ -53,7 +57,11 @@ export function generateProfitCurveSeries({
     const salePrice = start + step * i;
     points.push({
       salePrice,
-      profit: calculateProfitAtSalePrice(salePrice, { sellingCostRate, remainingBalance, totalInvested }),
+      profit: calculateProfitAtSalePrice(salePrice, {
+        sellingCostRate,
+        remainingBalance,
+        totalInvested,
+      }),
     });
   }
 
@@ -98,7 +106,9 @@ export function getHouseSaleNarrativeBullets(result) {
       );
     } else {
       const gap = result.breakEvenSalePrice - result.expectedSalePrice;
-      lines.push(`🧭 You need about ${formatCurrency(gap)} more in sale price to truly break even.`);
+      lines.push(
+        `🧭 You need about ${formatCurrency(gap)} more in sale price to truly break even.`,
+      );
     }
   }
 

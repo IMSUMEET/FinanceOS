@@ -41,8 +41,7 @@ function QuickAction({ icon, label, onClick, tone = "default", disabled = false 
   const tones = {
     default:
       "border-ink-100 bg-white text-ink-700 hover:border-brand-200 hover:bg-brand-50/40 dark:border-ink-800 dark:bg-ink-900/60 dark:text-ink-200 dark:hover:border-brand-700 dark:hover:bg-ink-800",
-    warn:
-      "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/30",
+    warn: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/30",
     danger:
       "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-900/20 dark:text-rose-200 dark:hover:bg-rose-900/30",
   };
@@ -157,17 +156,25 @@ function ProfilePanel({ onClose }) {
               <p className="tabular text-sm font-black text-ink-900 dark:text-ink-50">
                 {formatCurrency(total, { compact: true })}
               </p>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Spend</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+                Spend
+              </p>
             </div>
             <div className="rounded-xl border border-ink-100 bg-ink-50 px-2 py-2 text-center dark:border-ink-800 dark:bg-ink-800/60">
-              <p className="tabular text-sm font-black text-ink-900 dark:text-ink-50">{transactions.length}</p>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Txns</p>
+              <p className="tabular text-sm font-black text-ink-900 dark:text-ink-50">
+                {transactions.length}
+              </p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+                Txns
+              </p>
             </div>
             <div className="rounded-xl border border-ink-100 bg-ink-50 px-2 py-2 text-center dark:border-ink-800 dark:bg-ink-800/60">
               <p className="tabular text-sm font-black text-ink-900 dark:text-ink-50">
                 {formatCurrency(annualizedRecurring, { compact: true })}
               </p>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Recurring/yr</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+                Recurring/yr
+              </p>
             </div>
           </div>
         </div>
@@ -201,7 +208,11 @@ function ProfilePanel({ onClose }) {
               />
             </label>
           </div>
-          <Button type="submit" className="mt-3 w-full" disabled={!nameInput.trim() || !handleInput.trim()}>
+          <Button
+            type="submit"
+            className="mt-3 w-full"
+            disabled={!nameInput.trim() || !handleInput.trim()}
+          >
             Save profile and unlock
           </Button>
         </form>
@@ -215,7 +226,11 @@ function ProfilePanel({ onClose }) {
           <InfoRow
             icon={Mail}
             label="Email"
-            value={hasProfile ? `${profile.name.toLowerCase()}.${profile.handle.toLowerCase()}@financeos.app` : "—"}
+            value={
+              hasProfile
+                ? `${profile.name.toLowerCase()}.${profile.handle.toLowerCase()}@financeos.app`
+                : "—"
+            }
           />
           <InfoRow icon={MapPin} label="Region" value="Pune, India" />
           <InfoRow icon={ShieldCheck} label="Plan" value={hasProfile ? "FinanceOS Pro" : "Guest"} />

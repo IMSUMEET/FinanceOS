@@ -3,11 +3,7 @@ import { motion as Motion } from "framer-motion";
 import { Bell, ChevronDown, Settings } from "lucide-react";
 import { useTransactions } from "../../context/useTransactions";
 import { useProfile } from "../../hooks/useProfile";
-import {
-  detectRecurring,
-  topAnomalies,
-  topCategoryMovers,
-} from "../../utils/insights";
+import { detectRecurring, topAnomalies, topCategoryMovers } from "../../utils/insights";
 import Avatar from "./Avatar";
 import Drawer from "../ui/Drawer";
 import NotificationsPopover from "./NotificationsPopover";
@@ -116,10 +112,7 @@ function NavbarActions() {
           >
             <Settings size={18} />
           </ActionButton>
-          <SettingsPopover
-            open={openMenu === "settings"}
-            onClose={() => setOpenMenu(null)}
-          />
+          <SettingsPopover open={openMenu === "settings"} onClose={() => setOpenMenu(null)} />
         </PopoverHost>
 
         <Motion.button

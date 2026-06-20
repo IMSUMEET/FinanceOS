@@ -129,7 +129,11 @@ export function TransactionsProvider({ children }) {
     if (!analysis || analysis.status !== "success" || !Array.isArray(analysis.transactions)) return;
 
     setTransactions((prev) => {
-      const isSeed = prev.length === seed.length && prev.every((t, i) => t.merchant_raw === seed[i].merchant_raw && t.amount === seed[i].amount);
+      const isSeed =
+        prev.length === seed.length &&
+        prev.every(
+          (t, i) => t.merchant_raw === seed[i].merchant_raw && t.amount === seed[i].amount,
+        );
       const baseList = isSeed ? [] : prev;
 
       const seen = new Set();
@@ -221,9 +225,5 @@ export function TransactionsProvider({ children }) {
     restoredFromSession,
   };
 
-  return (
-    <TransactionsContext.Provider value={value}>
-      {children}
-    </TransactionsContext.Provider>
-  );
+  return <TransactionsContext.Provider value={value}>{children}</TransactionsContext.Provider>;
 }

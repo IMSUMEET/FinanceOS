@@ -4,21 +4,21 @@ Source of truth for the data shapes the web frontend expects from / sends to the
 
 ## Endpoints (v1)
 
-| Method | Path                      | Request schema                          | Response schema                                          |
-| ------ | ------------------------- | --------------------------------------- | -------------------------------------------------------- |
-| GET    | `/transactions`           | query: `Filters`                        | `{ "rows": Transaction[] }`                              |
-| POST   | `/transactions`           | `Transaction` (without `id`)            | `Transaction`                                            |
-| PATCH  | `/transactions/:id`       | `Partial<Transaction>`                  | `Transaction`                                            |
-| DELETE | `/transactions/:id`       | —                                       | `{ "ok": true }`                                         |
-| POST   | `/transactions/import`    | `TransactionImport`                     | `{ "imported": number, "rows": Transaction[] }`          |
-| GET    | `/insights/summary`       | query: `month`                          | `{ "total": Money, "monthly": MonthlyTotal[], "categories": CategoryBreakdown[], "merchants": MerchantBreakdown[] }` |
-| GET    | `/insights/movers`        | query: `month`                          | `{ "movers": MoverEntry[] }`                             |
-| GET    | `/insights/recurring`     | —                                       | `{ "items": RecurringMerchant[] }`                       |
-| GET    | `/insights/anomalies`     | query: `month`                          | `{ "items": Anomaly[] }`                                 |
-| GET    | `/notifications`          | —                                       | `{ "items": NotificationItem[] }`                        |
-| POST   | `/notifications/:id/read` | —                                       | `NotificationItem`                                       |
-| GET    | `/profile`                | —                                       | `Profile`                                                |
-| PATCH  | `/profile`                | `Partial<Profile>`                      | `Profile`                                                |
+| Method | Path                      | Request schema               | Response schema                                                                                                      |
+| ------ | ------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/transactions`           | query: `Filters`             | `{ "rows": Transaction[] }`                                                                                          |
+| POST   | `/transactions`           | `Transaction` (without `id`) | `Transaction`                                                                                                        |
+| PATCH  | `/transactions/:id`       | `Partial<Transaction>`       | `Transaction`                                                                                                        |
+| DELETE | `/transactions/:id`       | —                            | `{ "ok": true }`                                                                                                     |
+| POST   | `/transactions/import`    | `TransactionImport`          | `{ "imported": number, "rows": Transaction[] }`                                                                      |
+| GET    | `/insights/summary`       | query: `month`               | `{ "total": Money, "monthly": MonthlyTotal[], "categories": CategoryBreakdown[], "merchants": MerchantBreakdown[] }` |
+| GET    | `/insights/movers`        | query: `month`               | `{ "movers": MoverEntry[] }`                                                                                         |
+| GET    | `/insights/recurring`     | —                            | `{ "items": RecurringMerchant[] }`                                                                                   |
+| GET    | `/insights/anomalies`     | query: `month`               | `{ "items": Anomaly[] }`                                                                                             |
+| GET    | `/notifications`          | —                            | `{ "items": NotificationItem[] }`                                                                                    |
+| POST   | `/notifications/:id/read` | —                            | `NotificationItem`                                                                                                   |
+| GET    | `/profile`                | —                            | `Profile`                                                                                                            |
+| PATCH  | `/profile`                | `Partial<Profile>`           | `Profile`                                                                                                            |
 
 ## Conventions
 
@@ -62,4 +62,3 @@ Backend handoff checklist:
    `schema.json`.
 3. Set `VITE_API_BASE_URL` in the deployment environment and unset
    `VITE_USE_MOCK`. The UI will swap from mock to live with no other change.
-

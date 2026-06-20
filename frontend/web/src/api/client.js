@@ -16,8 +16,7 @@ const RAW_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 const RAW_MOCK = import.meta.env.VITE_USE_MOCK ?? "";
 
 export const API_BASE_URL = String(RAW_BASE).replace(/\/+$/, "");
-export const USE_MOCK =
-  String(RAW_MOCK).toLowerCase() === "true" || API_BASE_URL === "";
+export const USE_MOCK = String(RAW_MOCK).toLowerCase() === "true" || API_BASE_URL === "";
 
 export class ApiError extends Error {
   constructor(message, { status, body } = {}) {
@@ -74,8 +73,7 @@ async function request(path, { method = "GET", query, body, headers } = {}) {
 
   if (!response.ok) {
     const message =
-      (data && typeof data === "object" && data.message) ||
-      `Request failed (${response.status})`;
+      (data && typeof data === "object" && data.message) || `Request failed (${response.status})`;
     throw new ApiError(message, { status: response.status, body: data });
   }
   return data;

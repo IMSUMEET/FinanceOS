@@ -66,15 +66,15 @@ frontend/web/
 
 All routes are declared in one place: [`src/App.jsx`](../../frontend/web/src/App.jsx).
 
-| Path | Page |
-| --- | --- |
-| `/` | `OverviewPage` |
-| `/transactions` | `TransactionsPage` |
-| `/categories` | `CategoriesPage` |
+| Path                | Page                               |
+| ------------------- | ---------------------------------- |
+| `/`                 | `OverviewPage`                     |
+| `/transactions`     | `TransactionsPage`                 |
+| `/categories`       | `CategoriesPage`                   |
 | `/categories/:name` | `CategoriesPage` (drilled-in view) |
-| `/insights` | `InsightsPage` |
-| `/upload` | `UploadPage` |
-| `*` | `NotFoundPage` |
+| `/insights`         | `InsightsPage`                     |
+| `/upload`           | `UploadPage`                       |
+| `*`                 | `NotFoundPage`                     |
 
 Every page sets its title via `useDocumentTitle`.
 

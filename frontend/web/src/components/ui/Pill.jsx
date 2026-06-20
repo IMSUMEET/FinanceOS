@@ -3,7 +3,8 @@ function Pill({ tone = "dark", className = "", children, ...rest }) {
     dark: "bg-ink-900 text-white dark:bg-ink-100 dark:text-ink-900",
     brand: "bg-brand text-white shadow-brand",
     soft: "bg-white text-ink-700 border border-ink-200 dark:bg-ink-800 dark:text-ink-200 dark:border-ink-700",
-    glass: "bg-white/70 text-ink-700 border border-white/70 backdrop-blur dark:bg-ink-800/70 dark:text-ink-200 dark:border-ink-700",
+    glass:
+      "bg-white/70 text-ink-700 border border-white/70 backdrop-blur dark:bg-ink-800/70 dark:text-ink-200 dark:border-ink-700",
   };
 
   return (

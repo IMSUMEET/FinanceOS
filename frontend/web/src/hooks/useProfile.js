@@ -64,12 +64,10 @@ export function useProfile() {
 
   const hasProfile = Boolean(
     profile.profileCompleted &&
-      String(profile.name ?? "").trim() &&
-      String(profile.handle ?? "").trim(),
+    String(profile.name ?? "").trim() &&
+    String(profile.handle ?? "").trim(),
   );
-  const displayName = hasProfile
-    ? `${profile.name} ${profile.handle}`.trim()
-    : "Guest user";
+  const displayName = hasProfile ? `${profile.name} ${profile.handle}`.trim() : "Guest user";
 
   return { profile, updateProfile, cycleAvatar, hasProfile, displayName };
 }

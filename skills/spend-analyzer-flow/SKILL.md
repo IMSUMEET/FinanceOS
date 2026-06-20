@@ -30,16 +30,16 @@ Read [`src/context/TransactionsContext.jsx`](../../frontend/web/src/context/Tran
 
 ## Where things live
 
-| Concern | File |
-| --- | --- |
-| State + mutations | [`context/TransactionsContext.jsx`](../../frontend/web/src/context/TransactionsContext.jsx) |
-| Hook for consumers | [`context/useTransactions.js`](../../frontend/web/src/context/useTransactions.js) |
-| Mock seed | [`data/mockTransactions.js`](../../frontend/web/src/data/mockTransactions.js) |
+| Concern                   | File                                                                                                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| State + mutations         | [`context/TransactionsContext.jsx`](../../frontend/web/src/context/TransactionsContext.jsx)                                                          |
+| Hook for consumers        | [`context/useTransactions.js`](../../frontend/web/src/context/useTransactions.js)                                                                    |
+| Mock seed                 | [`data/mockTransactions.js`](../../frontend/web/src/data/mockTransactions.js)                                                                        |
 | Fetch + persistence layer | [`services/transactions.js`](../../frontend/web/src/services/transactions.js), [`services/insights.js`](../../frontend/web/src/services/insights.js) |
-| Pure computation | [`utils/insights.js`](../../frontend/web/src/utils/insights.js), [`utils/personality.js`](../../frontend/web/src/utils/personality.js) |
-| Number / date formatting | [`utils/format.js`](../../frontend/web/src/utils/format.js) |
-| Categorization rules | [`utils/categorize.js`](../../frontend/web/src/utils/categorize.js), [`utils/categories.js`](../../frontend/web/src/utils/categories.js) |
-| Charts | [`components/charts/`](../../frontend/web/src/components/charts) |
+| Pure computation          | [`utils/insights.js`](../../frontend/web/src/utils/insights.js), [`utils/personality.js`](../../frontend/web/src/utils/personality.js)               |
+| Number / date formatting  | [`utils/format.js`](../../frontend/web/src/utils/format.js)                                                                                          |
+| Categorization rules      | [`utils/categorize.js`](../../frontend/web/src/utils/categorize.js), [`utils/categories.js`](../../frontend/web/src/utils/categories.js)             |
+| Charts                    | [`components/charts/`](../../frontend/web/src/components/charts)                                                                                     |
 
 ## Conventions
 

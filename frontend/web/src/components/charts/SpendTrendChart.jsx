@@ -1,4 +1,12 @@
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { formatCurrency, formatMonth } from "../../utils/format";
 import { useTheme } from "../../hooks/useTheme";
 
@@ -47,7 +55,10 @@ function SpendTrendChart({ data, height = 240 }) {
             tickLine={false}
             width={56}
           />
-          <Tooltip content={<TooltipBox />} cursor={{ stroke: "#3b82f6", strokeWidth: 1, strokeDasharray: "3 3" }} />
+          <Tooltip
+            content={<TooltipBox />}
+            cursor={{ stroke: "#3b82f6", strokeWidth: 1, strokeDasharray: "3 3" }}
+          />
           <Area
             type="monotone"
             dataKey="total"

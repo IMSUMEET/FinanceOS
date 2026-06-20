@@ -8,8 +8,12 @@ function TooltipBox({ active, payload }) {
   const d = payload[0].payload;
   return (
     <div className="rounded-2xl border border-white/70 bg-white/95 px-4 py-2 shadow-soft backdrop-blur dark:border-ink-700 dark:bg-ink-900/95">
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">{d.category}</p>
-      <p className="tabular mt-1 text-sm font-black text-ink-900 dark:text-ink-50">{formatCurrency(d.total)}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+        {d.category}
+      </p>
+      <p className="tabular mt-1 text-sm font-black text-ink-900 dark:text-ink-50">
+        {formatCurrency(d.total)}
+      </p>
     </div>
   );
 }
@@ -31,7 +35,10 @@ function CategoryBars({ data, height = 260 }) {
             tickLine={false}
             width={104}
           />
-          <Tooltip content={<TooltipBox />} cursor={{ fill: isDark ? "rgba(59,130,246,0.12)" : "rgba(59,130,246,0.06)" }} />
+          <Tooltip
+            content={<TooltipBox />}
+            cursor={{ fill: isDark ? "rgba(59,130,246,0.12)" : "rgba(59,130,246,0.06)" }}
+          />
           <Bar dataKey="total" radius={[10, 10, 10, 10]} barSize={16}>
             {data.map((d) => (
               <Cell key={d.category} fill={categoryColor(d.category)} />

@@ -22,7 +22,9 @@ function TransactionDetail({ tx, onClose, onUpdateCategory }) {
     <Drawer open={!!tx} onClose={onClose} title={tx.merchant_normalized} subtitle={tx.category}>
       <div className="space-y-5">
         <div className="rounded-xl2 bg-[#f8fbff] p-5 dark:bg-ink-800/60">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Amount</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+            Amount
+          </p>
           <p className="tabular mt-1 text-3xl font-black text-ink-900 dark:text-ink-50">
             -{formatAmountSpend(tx.amount)}
           </p>
@@ -30,20 +32,36 @@ function TransactionDetail({ tx, onClose, onUpdateCategory }) {
 
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Date</dt>
-            <dd className="mt-1 font-bold text-ink-900 dark:text-ink-50">{formatDate(tx.date, { year: "numeric", month: "short", day: "numeric" })}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+              Date
+            </dt>
+            <dd className="mt-1 font-bold text-ink-900 dark:text-ink-50">
+              {formatDate(tx.date, { year: "numeric", month: "short", day: "numeric" })}
+            </dd>
           </div>
           <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Card / Account</dt>
-            <dd className="mt-1 font-bold text-ink-900 dark:text-ink-50">{tx.card_identity ?? tx.source}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+              Card / Account
+            </dt>
+            <dd className="mt-1 font-bold text-ink-900 dark:text-ink-50">
+              {tx.card_identity ?? tx.source}
+            </dd>
           </div>
           <div className="col-span-2 rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Description</dt>
-            <dd className="mt-1 font-semibold text-ink-800 dark:text-ink-200">{tx.description ?? "—"}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+              Description
+            </dt>
+            <dd className="mt-1 font-semibold text-ink-800 dark:text-ink-200">
+              {tx.description ?? "—"}
+            </dd>
           </div>
           <div className="col-span-2 rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
-            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Raw merchant</dt>
-            <dd className="mt-1 font-mono text-xs text-ink-600 break-all dark:text-ink-300">{tx.merchant_raw}</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+              Raw merchant
+            </dt>
+            <dd className="mt-1 font-mono text-xs text-ink-600 break-all dark:text-ink-300">
+              {tx.merchant_raw}
+            </dd>
           </div>
         </dl>
 
@@ -129,77 +147,77 @@ function TransactionsPage() {
   return (
     <section className="space-y-5 pt-2">
       <div className="lg:static sticky top-[88px] z-20 -mx-4 px-4 md:mx-0 md:px-0">
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-ink-500 dark:text-ink-400">Activity</p>
-            <h2 className="mt-1 text-2xl font-black text-ink-900 dark:text-ink-50">
-              {sorted.length} transactions
-            </h2>
+        <Card>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-ink-500 dark:text-ink-400">Activity</p>
+              <h2 className="mt-1 text-2xl font-black text-ink-900 dark:text-ink-50">
+                {sorted.length} transactions
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Pill tone={activeFilters ? "brand" : "soft"}>
+                <Filter size={14} />
+                {activeFilters ? `${activeFilters} filters` : "No filters"}
+              </Pill>
+              {activeFilters > 0 ? (
+                <IconButton onClick={clearAll} aria-label="Clear filters">
+                  <X size={16} />
+                </IconButton>
+              ) : null}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Pill tone={activeFilters ? "brand" : "soft"}>
-              <Filter size={14} />
-              {activeFilters ? `${activeFilters} filters` : "No filters"}
-            </Pill>
-            {activeFilters > 0 ? (
-              <IconButton onClick={clearAll} aria-label="Clear filters">
-                <X size={16} />
-              </IconButton>
-            ) : null}
-          </div>
-        </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]">
-          <Input
-            icon={Search}
-            placeholder="Search merchants, descriptions…"
-            value={filters.search}
-            onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-          />
-          <Select
-            value={filters.amountMin ?? ""}
-            onChange={(e) =>
-              setFilters((f) => ({
-                ...f,
-                amountMin: e.target.value ? Number(e.target.value) : null,
-              }))
-            }
-            options={[
-              { value: "", label: "Min: any" },
-              { value: "10", label: "Min: $10" },
-              { value: "50", label: "Min: $50" },
-              { value: "100", label: "Min: $100" },
-            ]}
-          />
-          <Select
-            value={filters.amountMax ?? ""}
-            onChange={(e) =>
-              setFilters((f) => ({
-                ...f,
-                amountMax: e.target.value ? Number(e.target.value) : null,
-              }))
-            }
-            options={[
-              { value: "", label: "Max: any" },
-              { value: "50", label: "Max: $50" },
-              { value: "200", label: "Max: $200" },
-              { value: "500", label: "Max: $500" },
-            ]}
-          />
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          {CATEGORIES.map((c) => (
-            <CategoryChip
-              key={c}
-              label={c}
-              active={filters.categories.includes(c)}
-              onToggle={() => toggleCategory(c)}
+          <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]">
+            <Input
+              icon={Search}
+              placeholder="Search merchants, descriptions…"
+              value={filters.search}
+              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
             />
-          ))}
-        </div>
-      </Card>
+            <Select
+              value={filters.amountMin ?? ""}
+              onChange={(e) =>
+                setFilters((f) => ({
+                  ...f,
+                  amountMin: e.target.value ? Number(e.target.value) : null,
+                }))
+              }
+              options={[
+                { value: "", label: "Min: any" },
+                { value: "10", label: "Min: $10" },
+                { value: "50", label: "Min: $50" },
+                { value: "100", label: "Min: $100" },
+              ]}
+            />
+            <Select
+              value={filters.amountMax ?? ""}
+              onChange={(e) =>
+                setFilters((f) => ({
+                  ...f,
+                  amountMax: e.target.value ? Number(e.target.value) : null,
+                }))
+              }
+              options={[
+                { value: "", label: "Max: any" },
+                { value: "50", label: "Max: $50" },
+                { value: "200", label: "Max: $200" },
+                { value: "500", label: "Max: $500" },
+              ]}
+            />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {CATEGORIES.map((c) => (
+              <CategoryChip
+                key={c}
+                label={c}
+                active={filters.categories.includes(c)}
+                onToggle={() => toggleCategory(c)}
+              />
+            ))}
+          </div>
+        </Card>
       </div>
 
       <Card padding="sm">
@@ -232,16 +250,22 @@ function TransactionsPage() {
                   >
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="truncate font-bold text-ink-900 dark:text-ink-50">{t.merchant_normalized}</p>
+                        <p className="truncate font-bold text-ink-900 dark:text-ink-50">
+                          {t.merchant_normalized}
+                        </p>
                         {t.card_identity && (
                           <span className="inline-block rounded bg-ink-100 px-1.5 py-0.5 text-[10px] font-medium text-ink-600 dark:bg-ink-800 dark:text-ink-300">
                             {t.card_identity}
                           </span>
                         )}
                       </div>
-                      <p className="truncate text-xs text-ink-500 dark:text-ink-400">{t.description}</p>
+                      <p className="truncate text-xs text-ink-500 dark:text-ink-400">
+                        {t.description}
+                      </p>
                     </div>
-                    <p className="self-center text-sm text-ink-600 dark:text-ink-300">{formatDate(t.date)}</p>
+                    <p className="self-center text-sm text-ink-600 dark:text-ink-300">
+                      {formatDate(t.date)}
+                    </p>
                     <div className="hidden self-center md:flex">
                       <Badge tone="neutral">
                         <CategoryDot category={t.category} size={8} />

@@ -161,10 +161,7 @@ function HeroCharacter({ variant = "blue", size = 320, className = "" }) {
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
       >
         {/* Laptop base */}
-        <path
-          d="M 70 248 L 250 248 L 262 268 L 58 268 Z"
-          fill="#cbd5e1"
-        />
+        <path d="M 70 248 L 250 248 L 262 268 L 58 268 Z" fill="#cbd5e1" />
         <rect x="78" y="240" width="164" height="14" rx="3" fill="#e2e8f0" />
 
         {/* Laptop screen */}

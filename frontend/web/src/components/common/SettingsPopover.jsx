@@ -8,12 +8,7 @@ import { formatMonth } from "../../utils/format";
 import seed from "../../data/mockTransactions";
 
 function SettingsPopover({ open, onClose }) {
-  const {
-    months,
-    replaceAll,
-    resetAllPageFilters,
-    ALL_MONTHS_SENTINEL,
-  } = useTransactions();
+  const { months, replaceAll, resetAllPageFilters, ALL_MONTHS_SENTINEL } = useTransactions();
   const { filters, setFilters } = usePageFilters();
   const { theme, toggleTheme } = useTheme();
 
@@ -86,9 +81,7 @@ function SettingsPopover({ open, onClose }) {
                   </span>
                 </span>
               </span>
-              <span className="text-xs font-bold text-brand-600 dark:text-brand-300">
-                Toggle
-              </span>
+              <span className="text-xs font-bold text-brand-600 dark:text-brand-300">Toggle</span>
             </button>
 
             <button
@@ -100,8 +93,12 @@ function SettingsPopover({ open, onClose }) {
                   <RotateCcw size={16} />
                 </span>
                 <span>
-                  <span className="block text-sm font-bold text-ink-900 dark:text-ink-50">Reset demo data</span>
-                  <span className="block text-xs text-ink-500 dark:text-ink-400">Restore the seed transactions</span>
+                  <span className="block text-sm font-bold text-ink-900 dark:text-ink-50">
+                    Reset demo data
+                  </span>
+                  <span className="block text-xs text-ink-500 dark:text-ink-400">
+                    Restore the seed transactions
+                  </span>
                 </span>
               </span>
             </button>
@@ -116,8 +113,12 @@ function SettingsPopover({ open, onClose }) {
                   <Upload size={16} />
                 </span>
                 <span>
-                  <span className="block text-sm font-bold text-ink-900 dark:text-ink-50">Import a CSV</span>
-                  <span className="block text-xs text-ink-500 dark:text-ink-400">Bring your own transactions</span>
+                  <span className="block text-sm font-bold text-ink-900 dark:text-ink-50">
+                    Import a CSV
+                  </span>
+                  <span className="block text-xs text-ink-500 dark:text-ink-400">
+                    Bring your own transactions
+                  </span>
                 </span>
               </span>
             </Link>
@@ -128,8 +129,12 @@ function SettingsPopover({ open, onClose }) {
                   <Bell size={16} />
                 </span>
                 <span>
-                  <span className="block text-sm font-bold text-ink-900 dark:text-ink-50">Email digests</span>
-                  <span className="block text-xs text-ink-500 dark:text-ink-400">Weekly insights to your inbox</span>
+                  <span className="block text-sm font-bold text-ink-900 dark:text-ink-50">
+                    Email digests
+                  </span>
+                  <span className="block text-xs text-ink-500 dark:text-ink-400">
+                    Weekly insights to your inbox
+                  </span>
                 </span>
               </span>
               <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-bold uppercase text-ink-500 dark:bg-ink-800 dark:text-ink-400">

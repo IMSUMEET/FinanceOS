@@ -1,0 +1,23 @@
+{
+  "name": "financeos",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "npm run lint --prefix frontend/web",
+    "typecheck": "npm run typecheck --prefix backend",
+    "ci": "npm run format:check && npm run lint && npm run build --prefix frontend/web && npm run typecheck",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.3"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md,yml,yaml,html}": "prettier --write"
+  }
+}

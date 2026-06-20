@@ -1,7 +1,15 @@
 import { useCallback, useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { Database, FileSpreadsheet, Trash2, UploadCloud, Wand2, Loader2, FolderOpen } from "lucide-react";
+import {
+  Database,
+  FileSpreadsheet,
+  Trash2,
+  UploadCloud,
+  Wand2,
+  Loader2,
+  FolderOpen,
+} from "lucide-react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Pill from "../components/ui/Pill";
@@ -45,7 +53,13 @@ function detectFormat(headers, name = "") {
   if (has("appears on your statement as") && has("reference") && has("extended details")) {
     return "amex_credit_card";
   }
-  if (has("date") && has("description") && has("amount") && !has("location") && name.toLowerCase().includes("amex")) {
+  if (
+    has("date") &&
+    has("description") &&
+    has("amount") &&
+    !has("location") &&
+    name.toLowerCase().includes("amex")
+  ) {
     return "amex_credit_card";
   }
 
@@ -61,7 +75,13 @@ function detectFormat(headers, name = "") {
     return "playstation_credit_card";
   }
 
-  if (has("trans. date") && has("post date") && has("description") && has("amount") && has("category")) {
+  if (
+    has("trans. date") &&
+    has("post date") &&
+    has("description") &&
+    has("amount") &&
+    has("category")
+  ) {
     return "discover_credit_card";
   }
 
@@ -83,14 +103,14 @@ function detectFormat(headers, name = "") {
 }
 
 function parseToIsoDateString(dateStr) {
-  const match = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  const match = dateStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
   if (match) {
     const [_, month, day, year] = match;
     const paddedMonth = month.padStart(2, "0");
     const paddedDay = day.padStart(2, "0");
     return `${year}-${paddedMonth}-${paddedDay}`;
   }
-  const matchIso = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  const matchIso = dateStr.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
   if (matchIso) {
     const [_, year, month, day] = matchIso;
     const paddedMonth = month.padStart(2, "0");
@@ -107,8 +127,8 @@ function parseToIsoDateString(dateStr) {
 function parseExcelDate(val) {
   const d = new Date(Math.round((val - 25569) * 86400 * 1000));
   const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
@@ -120,9 +140,13 @@ function sheetToRows(worksheet) {
   for (let i = 0; i < rawRows.length; i++) {
     const row = rawRows[i];
     if (Array.isArray(row)) {
-      const rowStrings = row.map(cell => String(cell ?? "").toLowerCase().trim());
-      const hasDate = rowStrings.some(s => s.includes("date") || s.includes("trans"));
-      const hasDesc = rowStrings.some(s => s.includes("desc") || s.includes("merchant"));
+      const rowStrings = row.map((cell) =>
+        String(cell ?? "")
+          .toLowerCase()
+          .trim(),
+      );
+      const hasDate = rowStrings.some((s) => s.includes("date") || s.includes("trans"));
+      const hasDesc = rowStrings.some((s) => s.includes("desc") || s.includes("merchant"));
       if (hasDate && hasDesc) {
         headerIndex = i;
         break;
@@ -131,7 +155,11 @@ function sheetToRows(worksheet) {
   }
 
   if (headerIndex === -1) {
-    headerIndex = rawRows.findIndex(row => Array.isArray(row) && row.some(cell => cell !== null && cell !== undefined && cell !== ""));
+    headerIndex = rawRows.findIndex(
+      (row) =>
+        Array.isArray(row) &&
+        row.some((cell) => cell !== null && cell !== undefined && cell !== ""),
+    );
     if (headerIndex === -1) return [];
   }
 
@@ -140,7 +168,7 @@ function sheetToRows(worksheet) {
   for (let i = headerIndex + 1; i < rawRows.length; i++) {
     const row = rawRows[i];
     if (Array.isArray(row)) {
-      if (row.every(cell => cell === null || cell === undefined || cell === "")) continue;
+      if (row.every((cell) => cell === null || cell === undefined || cell === "")) continue;
 
       const obj = {};
       headers.forEach((header, colIdx) => {
@@ -170,7 +198,7 @@ function parseRows(rows, format, fileName = "") {
   const mapped = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    const lineNum = i + 2; 
+    const lineNum = i + 2;
     try {
       const rawDate = String(r[mapping.date] ?? "").trim();
       if (!rawDate) {
@@ -189,12 +217,18 @@ function parseRows(rows, format, fileName = "") {
 
       let amount = 0;
       if (format === "citi_credit_card") {
-        const debitColumn = headers.find(h => h.toLowerCase().trim() === "debit");
-        const creditColumn = headers.find(h => h.toLowerCase().trim() === "credit");
+        const debitColumn = headers.find((h) => h.toLowerCase().trim() === "debit");
+        const creditColumn = headers.find((h) => h.toLowerCase().trim() === "credit");
         const debitVal = debitColumn ? r[debitColumn] : null;
         const creditVal = creditColumn ? r[creditColumn] : null;
-        const dNum = debitVal !== null && debitVal !== undefined && debitVal !== "" ? Number(String(debitVal).replace(/[$,]/g, "")) : null;
-        const cNum = creditVal !== null && creditVal !== undefined && creditVal !== "" ? Number(String(creditVal).replace(/[$,]/g, "")) : null;
+        const dNum =
+          debitVal !== null && debitVal !== undefined && debitVal !== ""
+            ? Number(String(debitVal).replace(/[$,]/g, ""))
+            : null;
+        const cNum =
+          creditVal !== null && creditVal !== undefined && creditVal !== ""
+            ? Number(String(creditVal).replace(/[$,]/g, ""))
+            : null;
         if (cNum !== null && !isNaN(cNum) && cNum !== 0) {
           amount = -cNum;
         } else if (dNum !== null && !isNaN(dNum) && dNum !== 0) {
@@ -203,12 +237,18 @@ function parseRows(rows, format, fileName = "") {
           throw new Error(`Missing or invalid amount`);
         }
       } else if (format === "capital_one_credit_card") {
-        const debitColumn = headers.find(h => h.toLowerCase().trim() === "debit");
-        const creditColumn = headers.find(h => h.toLowerCase().trim() === "credit");
+        const debitColumn = headers.find((h) => h.toLowerCase().trim() === "debit");
+        const creditColumn = headers.find((h) => h.toLowerCase().trim() === "credit");
         const debitVal = debitColumn ? r[debitColumn] : null;
         const creditVal = creditColumn ? r[creditColumn] : null;
-        const dNum = debitVal !== null && debitVal !== undefined && debitVal !== "" ? Number(String(debitVal).replace(/[$,]/g, "")) : null;
-        const cNum = creditVal !== null && creditVal !== undefined && creditVal !== "" ? Number(String(creditVal).replace(/[$,]/g, "")) : null;
+        const dNum =
+          debitVal !== null && debitVal !== undefined && debitVal !== ""
+            ? Number(String(debitVal).replace(/[$,]/g, ""))
+            : null;
+        const cNum =
+          creditVal !== null && creditVal !== undefined && creditVal !== ""
+            ? Number(String(creditVal).replace(/[$,]/g, ""))
+            : null;
         if (cNum !== null && !isNaN(cNum) && cNum !== 0) {
           amount = cNum;
         } else if (dNum !== null && !isNaN(dNum) && dNum !== 0) {
@@ -224,11 +264,18 @@ function parseRows(rows, format, fileName = "") {
         }
         if (format === "amex_credit_card" || format === "discover_credit_card") {
           amount = -amt;
-        } else if (format === "chase_checking" || format === "chase_credit_card" || format === "chase_amazon") {
+        } else if (
+          format === "chase_checking" ||
+          format === "chase_credit_card" ||
+          format === "chase_amazon"
+        ) {
           amount = amt;
         } else if (format === "playstation_credit_card") {
-          const categoryCol = headers.find(h => h.toLowerCase().trim() === "category") || "Category";
-          const catVal = String(r[categoryCol] ?? "").trim().toLowerCase();
+          const categoryCol =
+            headers.find((h) => h.toLowerCase().trim() === "category") || "Category";
+          const catVal = String(r[categoryCol] ?? "")
+            .trim()
+            .toLowerCase();
           if (catVal === "payment") {
             amount = amt;
           } else {
@@ -245,7 +292,9 @@ function parseRows(rows, format, fileName = "") {
       else if (format === "chase_credit_card") card_identity = "Chase Credit Card";
       else if (format === "chase_amazon") card_identity = "Chase Amazon";
       else if (format === "citi_credit_card") {
-        card_identity = fileName.toLowerCase().includes("costco") ? "Costco Credit Card" : "Citi Reward+";
+        card_identity = fileName.toLowerCase().includes("costco")
+          ? "Costco Credit Card"
+          : "Citi Reward+";
       } else if (format === "capital_one_credit_card") card_identity = "Venture X";
       else if (format === "playstation_credit_card") card_identity = "Playstation Credit Card";
       else if (format === "discover_credit_card") card_identity = "Discover Card";
@@ -298,7 +347,7 @@ function parseOneCsvFile(file) {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           let sheetName = workbook.SheetNames[0];
           if (workbook.SheetNames.includes("Sheet2")) {
             sheetName = "Sheet2";
@@ -339,9 +388,7 @@ function buildMockAnalysisFromRows(allRows, fileMetas) {
   const summary = summarizeTransactions(stamped);
   const insights = [
     `Processed ${fileMetas.length} file(s) locally (mock mode).`,
-    ...(summary.topCategories[0]
-      ? [`Top category: ${summary.topCategories[0].category}.`]
-      : []),
+    ...(summary.topCategories[0] ? [`Top category: ${summary.topCategories[0].category}.`] : []),
   ];
   return {
     status: "success",
@@ -402,7 +449,7 @@ function UploadPage() {
     }
     setPhase("idle");
     setErrorMessage("");
-    
+
     try {
       const prepared = await Promise.all(
         v.files.map(async (file) => {
@@ -418,7 +465,7 @@ function UploadPage() {
             rowCount: mapped.length,
             parsedData: parsed.data,
           };
-        })
+        }),
       );
       setPendingFiles(prepared);
     } catch (e) {
@@ -477,8 +524,7 @@ function UploadPage() {
       setPendingFiles([]);
     } catch (e) {
       const msg =
-        e?.message ||
-        (typeof e === "string" ? e : "Something went wrong. Please try again.");
+        e?.message || (typeof e === "string" ? e : "Something went wrong. Please try again.");
       setPhase("error");
       setErrorMessage(msg);
     }
@@ -532,8 +578,8 @@ function UploadPage() {
           Files are processed in memory and not stored on our servers.
         </p>
         <p className="mt-1 text-xs text-ink-500 dark:text-ink-400">
-          For now, uploads are limited to 5 MB per file. Larger files will need S3-based async processing
-          later.
+          For now, uploads are limited to 5 MB per file. Larger files will need S3-based async
+          processing later.
         </p>
 
         <div
@@ -563,7 +609,9 @@ function UploadPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white shadow-brand">
             <UploadCloud size={24} />
           </div>
-          <p className="text-lg font-black text-ink-900 dark:text-ink-50">Drop CSV or Excel files here</p>
+          <p className="text-lg font-black text-ink-900 dark:text-ink-50">
+            Drop CSV or Excel files here
+          </p>
           <p className="max-w-md text-sm text-ink-500 dark:text-ink-400">
             {!USE_MOCK
               ? "Files are sent to your configured API (multipart) and analyzed on the server."
@@ -634,8 +682,14 @@ function UploadPage() {
                   {pendingFiles.map((pf, idx) => {
                     const labelInfo = FORMAT_LABELS[pf.detectedFormat] || FORMAT_LABELS.unknown;
                     return (
-                      <tr key={pf.name + idx} className="hover:bg-ink-50/30 dark:hover:bg-ink-950/10">
-                        <td className="px-5 py-3.5 font-medium text-ink-900 dark:text-ink-50 truncate max-w-[200px]" title={pf.name}>
+                      <tr
+                        key={pf.name + idx}
+                        className="hover:bg-ink-50/30 dark:hover:bg-ink-950/10"
+                      >
+                        <td
+                          className="px-5 py-3.5 font-medium text-ink-900 dark:text-ink-50 truncate max-w-[200px]"
+                          title={pf.name}
+                        >
                           {pf.name}
                         </td>
                         <td className="px-5 py-3.5">
@@ -651,7 +705,7 @@ function UploadPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              setPendingFiles(prev => prev.filter((_, i) => i !== idx));
+                              setPendingFiles((prev) => prev.filter((_, i) => i !== idx));
                             }}
                             className="text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-350 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
                             title="Remove file"

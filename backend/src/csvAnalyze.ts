@@ -42,7 +42,13 @@ function detectFormat(headers: string[], name: string = ""): DetectedFormat {
   if (has("appears on your statement as") && has("reference") && has("extended details")) {
     return "amex_credit_card";
   }
-  if (has("date") && has("description") && has("amount") && !has("location") && name.toLowerCase().includes("amex")) {
+  if (
+    has("date") &&
+    has("description") &&
+    has("amount") &&
+    !has("location") &&
+    name.toLowerCase().includes("amex")
+  ) {
     return "amex_credit_card";
   }
 
@@ -58,7 +64,13 @@ function detectFormat(headers: string[], name: string = ""): DetectedFormat {
     return "playstation_credit_card";
   }
 
-  if (has("trans. date") && has("post date") && has("description") && has("amount") && has("category")) {
+  if (
+    has("trans. date") &&
+    has("post date") &&
+    has("description") &&
+    has("amount") &&
+    has("category")
+  ) {
     return "discover_credit_card";
   }
 
@@ -123,8 +135,8 @@ function parseToIsoDateString(dateStr: string): string {
 function parseExcelDate(val: number): string {
   const d = new Date(Math.round((val - 25569) * 86400 * 1000));
   const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
@@ -136,9 +148,13 @@ export function sheetToRows(worksheet: XLSX.WorkSheet): Record<string, unknown>[
   for (let i = 0; i < rawRows.length; i++) {
     const row = rawRows[i];
     if (Array.isArray(row)) {
-      const rowStrings = row.map(cell => String(cell ?? "").toLowerCase().trim());
-      const hasDate = rowStrings.some(s => s.includes("date") || s.includes("trans"));
-      const hasDesc = rowStrings.some(s => s.includes("desc") || s.includes("merchant"));
+      const rowStrings = row.map((cell) =>
+        String(cell ?? "")
+          .toLowerCase()
+          .trim(),
+      );
+      const hasDate = rowStrings.some((s) => s.includes("date") || s.includes("trans"));
+      const hasDesc = rowStrings.some((s) => s.includes("desc") || s.includes("merchant"));
       if (hasDate && hasDesc) {
         headerIndex = i;
         break;
@@ -147,7 +163,11 @@ export function sheetToRows(worksheet: XLSX.WorkSheet): Record<string, unknown>[
   }
 
   if (headerIndex === -1) {
-    headerIndex = rawRows.findIndex(row => Array.isArray(row) && row.some(cell => cell !== null && cell !== undefined && cell !== ""));
+    headerIndex = rawRows.findIndex(
+      (row) =>
+        Array.isArray(row) &&
+        row.some((cell) => cell !== null && cell !== undefined && cell !== ""),
+    );
     if (headerIndex === -1) return [];
   }
 
@@ -156,7 +176,7 @@ export function sheetToRows(worksheet: XLSX.WorkSheet): Record<string, unknown>[
   for (let i = headerIndex + 1; i < rawRows.length; i++) {
     const row = rawRows[i];
     if (Array.isArray(row)) {
-      if (row.every(cell => cell === null || cell === undefined || cell === "")) continue;
+      if (row.every((cell) => cell === null || cell === undefined || cell === "")) continue;
 
       const obj: Record<string, unknown> = {};
       headers.forEach((header, colIdx) => {
@@ -178,7 +198,7 @@ export function sheetToRows(worksheet: XLSX.WorkSheet): Record<string, unknown>[
 function mapRows(
   rows: Record<string, unknown>[],
   format: DetectedFormat,
-  fileName: string = ""
+  fileName: string = "",
 ): {
   mapped: AnalyzedTransaction[];
   mapping: { date: string; merchant: string; amount: string } | null;
@@ -212,8 +232,8 @@ function mapRows(
 
       let amount = 0;
       if (format === "citi_credit_card") {
-        const debitColumn = headers.find(h => h.toLowerCase().trim() === "debit");
-        const creditColumn = headers.find(h => h.toLowerCase().trim() === "credit");
+        const debitColumn = headers.find((h) => h.toLowerCase().trim() === "debit");
+        const creditColumn = headers.find((h) => h.toLowerCase().trim() === "credit");
         const debitVal = debitColumn ? parseAmount(r[debitColumn]) : null;
         const creditVal = creditColumn ? parseAmount(r[creditColumn]) : null;
         if (creditVal !== null && creditVal !== 0) {
@@ -221,11 +241,13 @@ function mapRows(
         } else if (debitVal !== null && debitVal !== 0) {
           amount = -debitVal;
         } else {
-          throw new Error(`Missing or invalid amount (debit: "${debitColumn ? r[debitColumn] : ''}", credit: "${creditColumn ? r[creditColumn] : ''}")`);
+          throw new Error(
+            `Missing or invalid amount (debit: "${debitColumn ? r[debitColumn] : ""}", credit: "${creditColumn ? r[creditColumn] : ""}")`,
+          );
         }
       } else if (format === "capital_one_credit_card") {
-        const debitColumn = headers.find(h => h.toLowerCase().trim() === "debit");
-        const creditColumn = headers.find(h => h.toLowerCase().trim() === "credit");
+        const debitColumn = headers.find((h) => h.toLowerCase().trim() === "debit");
+        const creditColumn = headers.find((h) => h.toLowerCase().trim() === "credit");
         const debitVal = debitColumn ? parseAmount(r[debitColumn]) : null;
         const creditVal = creditColumn ? parseAmount(r[creditColumn]) : null;
         if (creditVal !== null && creditVal !== 0) {
@@ -233,7 +255,9 @@ function mapRows(
         } else if (debitVal !== null && debitVal !== 0) {
           amount = -debitVal;
         } else {
-          throw new Error(`Missing or invalid amount (debit: "${debitColumn ? r[debitColumn] : ''}", credit: "${creditColumn ? r[creditColumn] : ''}")`);
+          throw new Error(
+            `Missing or invalid amount (debit: "${debitColumn ? r[debitColumn] : ""}", credit: "${creditColumn ? r[creditColumn] : ""}")`,
+          );
         }
       } else {
         const rawAmount = parseAmount(r[mapping.amount]);
@@ -242,11 +266,18 @@ function mapRows(
         }
         if (format === "amex_credit_card" || format === "discover_credit_card") {
           amount = -rawAmount;
-        } else if (format === "chase_checking" || format === "chase_credit_card" || format === "chase_amazon") {
+        } else if (
+          format === "chase_checking" ||
+          format === "chase_credit_card" ||
+          format === "chase_amazon"
+        ) {
           amount = rawAmount;
         } else if (format === "playstation_credit_card") {
-          const categoryCol = headers.find(h => h.toLowerCase().trim() === "category") || "Category";
-          const catVal = String(r[categoryCol] ?? "").trim().toLowerCase();
+          const categoryCol =
+            headers.find((h) => h.toLowerCase().trim() === "category") || "Category";
+          const catVal = String(r[categoryCol] ?? "")
+            .trim()
+            .toLowerCase();
           if (catVal === "payment") {
             amount = rawAmount;
           } else {
@@ -267,7 +298,9 @@ function mapRows(
       else if (format === "chase_credit_card") card_identity = "Chase Credit Card";
       else if (format === "chase_amazon") card_identity = "Chase Amazon";
       else if (format === "citi_credit_card") {
-        card_identity = fileName.toLowerCase().includes("costco") ? "Costco Credit Card" : "Citi Reward+";
+        card_identity = fileName.toLowerCase().includes("costco")
+          ? "Costco Credit Card"
+          : "Citi Reward+";
       } else if (format === "capital_one_credit_card") card_identity = "Venture X";
       else if (format === "playstation_credit_card") card_identity = "Playstation Credit Card";
       else if (format === "discover_credit_card") card_identity = "Discover Card";
@@ -374,7 +407,9 @@ export type AnalyzeSuccessBody = {
   insights: string[];
 };
 
-export async function analyzeCsvBuffers(inputs: { name: string; buffer: ArrayBuffer }[]): Promise<AnalyzeSuccessBody> {
+export async function analyzeCsvBuffers(
+  inputs: { name: string; buffer: ArrayBuffer }[],
+): Promise<AnalyzeSuccessBody> {
   const analysisId = crypto.randomUUID();
   const createdAt = new Date().toISOString();
   const fileMetas: AnalyzeSuccessBody["files"] = [];
@@ -386,7 +421,7 @@ export async function analyzeCsvBuffers(inputs: { name: string; buffer: ArrayBuf
     const isExcel = name.toLowerCase().endsWith(".xlsx") || name.toLowerCase().endsWith(".xls");
 
     if (isExcel) {
-      const workbook = XLSX.read(buffer, { type: 'array' });
+      const workbook = XLSX.read(buffer, { type: "array" });
       let sheetName = workbook.SheetNames[0]!;
       if (workbook.SheetNames.includes("Sheet2")) {
         sheetName = "Sheet2";
@@ -439,4 +474,3 @@ export function isCsvFileName(name: string): boolean {
   const n = name.toLowerCase();
   return n.endsWith(".csv") || n.endsWith(".xlsx") || n.endsWith(".xls");
 }
-

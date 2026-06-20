@@ -14,10 +14,8 @@ function Card({
       "rounded-xl3 border-white/60 bg-white/75 shadow-soft backdrop-blur-xl dark:border-ink-800 dark:bg-ink-900/70 dark:shadow-softDark",
     solid:
       "rounded-xl3 border-ink-200/70 bg-white shadow-soft dark:border-ink-800 dark:bg-ink-900 dark:shadow-softDark",
-    inset:
-      "rounded-xl2 border-transparent bg-[#f6f9ff] dark:bg-ink-800/50",
-    dark:
-      "rounded-xl3 border-white/10 bg-insight text-white shadow-dark dark:border-ink-800",
+    inset: "rounded-xl2 border-transparent bg-[#f6f9ff] dark:bg-ink-800/50",
+    dark: "rounded-xl3 border-white/10 bg-insight text-white shadow-dark dark:border-ink-800",
     bare: "rounded-xl2 border-transparent bg-transparent",
   };
   const padders = {

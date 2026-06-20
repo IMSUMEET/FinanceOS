@@ -32,16 +32,16 @@ If you only touched docs / skills, you can skip the build but still run lint if 
 
 Use the conventional-commits prefix that best fits:
 
-| Prefix | When |
-| --- | --- |
-| `feat:` | New user-visible feature |
-| `fix:` | Bug fix |
-| `chore:` | Tooling, config, deps |
-| `refactor:` | No behaviour change |
-| `docs:` | `docs/`, `skills/`, READMEs |
-| `style:` | Formatting, no logic change |
-| `test:` | Tests only |
-| `perf:` | Performance change |
+| Prefix      | When                        |
+| ----------- | --------------------------- |
+| `feat:`     | New user-visible feature    |
+| `fix:`      | Bug fix                     |
+| `chore:`    | Tooling, config, deps       |
+| `refactor:` | No behaviour change         |
+| `docs:`     | `docs/`, `skills/`, READMEs |
+| `style:`    | Formatting, no logic change |
+| `test:`     | Tests only                  |
+| `perf:`     | Performance change          |
 
 Subject is imperative, ≤ 72 chars, no trailing period:
 
@@ -49,7 +49,7 @@ Subject is imperative, ≤ 72 chars, no trailing period:
 feat: gate AI coach behind a completed profile
 ```
 
-Use a body when the *why* isn't obvious from the diff. Reference issues with `Closes #123` in the footer.
+Use a body when the _why_ isn't obvious from the diff. Reference issues with `Closes #123` in the footer.
 
 ## Branching
 
