@@ -8,6 +8,7 @@
       "exclude": []
     }
   },
+  "bypass_actors": [],
   "rules": [
     {
       "type": "pull_request",
