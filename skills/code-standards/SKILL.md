@@ -31,12 +31,12 @@ Editor setup (VS Code):
 
 ## Formatting config
 
-| File | Role |
-| ---- | ---- |
-| [`.prettierrc`](../../.prettierrc) | Prettier options (semicolons, double quotes, 100 cols) |
-| [`.prettierignore`](../../.prettierignore) | Ignores `node_modules`, `dist`, `archive`, lockfiles |
-| [`.editorconfig`](../../.editorconfig) | Basic editor defaults (2-space indent, LF, UTF-8) |
-| [`frontend/web/eslint.config.js`](../../frontend/web/eslint.config.js) | ESLint + `eslint-config-prettier` (no rule conflicts) |
+| File                                                                   | Role                                                   |
+| ---------------------------------------------------------------------- | ------------------------------------------------------ |
+| [`.prettierrc`](../../.prettierrc)                                     | Prettier options (semicolons, double quotes, 100 cols) |
+| [`.prettierignore`](../../.prettierignore)                             | Ignores `node_modules`, `dist`, `archive`, lockfiles   |
+| [`.editorconfig`](../../.editorconfig)                                 | Basic editor defaults (2-space indent, LF, UTF-8)      |
+| [`frontend/web/eslint.config.js`](../../frontend/web/eslint.config.js) | ESLint + `eslint-config-prettier` (no rule conflicts)  |
 
 ## Commands (always from repo root unless noted)
 
@@ -52,12 +52,12 @@ Run `npm run ci` before push or opening a PR. Fix failures locally — do not di
 
 ## What runs automatically
 
-| Trigger | Action |
-| ------- | ------ |
-| `git commit` | Husky → lint-staged → Prettier on staged files |
-| VS Code save | Prettier format (if extension installed) |
-| PR to `main` | GitHub Actions [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
-| Merge to `main` | Blocked until `CI / check` passes |
+| Trigger         | Action                                                                      |
+| --------------- | --------------------------------------------------------------------------- |
+| `git commit`    | Husky → lint-staged → Prettier on staged files                              |
+| VS Code save    | Prettier format (if extension installed)                                    |
+| PR to `main`    | GitHub Actions [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
+| Merge to `main` | Blocked until `CI / check` passes                                           |
 
 ## Branch protection (GitHub)
 

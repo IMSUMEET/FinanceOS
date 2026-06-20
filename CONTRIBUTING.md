@@ -57,25 +57,25 @@ Details: [`.github/BRANCH_PROTECTION.md`](.github/BRANCH_PROTECTION.md)
 
 ## Skills by topic
 
-| Topic | Guide |
-| ----- | ----- |
-| Local setup, formatting, CI, branch rules | [`skills/code-standards/SKILL.md`](skills/code-standards/SKILL.md) |
-| Commit, push, open PR | [`skills/pr-workflow/SKILL.md`](skills/pr-workflow/SKILL.md) |
-| React / Tailwind frontend | [`skills/frontend-conventions/SKILL.md`](skills/frontend-conventions/SKILL.md) |
-| API contract / mock flag | [`skills/backend-contract/SKILL.md`](skills/backend-contract/SKILL.md) |
-| UI component choice | [`skills/ui-components/SKILL.md`](skills/ui-components/SKILL.md) |
-| Transactions, filters, charts | [`skills/spend-analyzer-flow/SKILL.md`](skills/spend-analyzer-flow/SKILL.md) |
-| Profile gating | [`skills/profile-gating/SKILL.md`](skills/profile-gating/SKILL.md) |
+| Topic                                     | Guide                                                                          |
+| ----------------------------------------- | ------------------------------------------------------------------------------ |
+| Local setup, formatting, CI, branch rules | [`skills/code-standards/SKILL.md`](skills/code-standards/SKILL.md)             |
+| Commit, push, open PR                     | [`skills/pr-workflow/SKILL.md`](skills/pr-workflow/SKILL.md)                   |
+| React / Tailwind frontend                 | [`skills/frontend-conventions/SKILL.md`](skills/frontend-conventions/SKILL.md) |
+| API contract / mock flag                  | [`skills/backend-contract/SKILL.md`](skills/backend-contract/SKILL.md)         |
+| UI component choice                       | [`skills/ui-components/SKILL.md`](skills/ui-components/SKILL.md)               |
+| Transactions, filters, charts             | [`skills/spend-analyzer-flow/SKILL.md`](skills/spend-analyzer-flow/SKILL.md)   |
+| Profile gating                            | [`skills/profile-gating/SKILL.md`](skills/profile-gating/SKILL.md)             |
 
 ## Repo layout
 
-| Path | Purpose |
-| ---- | ------- |
-| `frontend/web/` | React + Vite app |
-| `backend/` | Hono API (Lambda + local dev) |
-| `package.json` (root) | Prettier, Husky, `npm run ci` |
-| `.github/workflows/ci.yml` | PR checks |
-| `skills/` | Project conventions and workflow guides |
+| Path                       | Purpose                                 |
+| -------------------------- | --------------------------------------- |
+| `frontend/web/`            | React + Vite app                        |
+| `backend/`                 | Hono API (Lambda + local dev)           |
+| `package.json` (root)      | Prettier, Husky, `npm run ci`           |
+| `.github/workflows/ci.yml` | PR checks                               |
+| `skills/`                  | Project conventions and workflow guides |
 
 ## Do not
 

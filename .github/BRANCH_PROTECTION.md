@@ -55,10 +55,10 @@ Optional: target a fork or different org repo:
 GITHUB_REPO=your-org/your-fork ./scripts/apply-github-rulesets.sh
 ```
 
-The `Protect main` ruleset:
+The **Protect main** ruleset:
 
 - Requires pull requests before merging to `main` (direct pushes blocked)
-- Requires the `CI / check` status to pass
+- **Requires `CI / check` to pass before merge** — merge is blocked until GitHub Actions CI succeeds; branch must be up to date with `main`
 - Blocks force pushes and branch deletion
 
 Adjust review requirements in `main-branch.json` if you want mandatory approvals (set `required_approving_review_count` to `1` or higher).
