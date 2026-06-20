@@ -53,6 +53,27 @@ Typical workflow:
 3. Run `npm run ci` locally before push
 4. Open a PR to `main`; wait for CI to pass before merge
 
+### Branch and PR commands
+
+Direct pushes to `main` are blocked for most contributors. Use a branch every time:
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b your-name/short-description
+
+# ... edit files ...
+
+npm run ci
+git add -A
+git commit -m "feat: describe your change"
+git push -u origin your-name/short-description
+gh pr create --repo Oblivion-Labs-Dev/FinanceOS --base main --head your-name/short-description \
+  --title "Your PR title" --body "## Summary\n\n- bullet points\n\n## Test plan\n\n- [ ] npm run ci"
+```
+
+Merge the PR on GitHub after **CI / check** is green.
+
 Details: [`.github/BRANCH_PROTECTION.md`](.github/BRANCH_PROTECTION.md)
 
 ## Skills by topic
