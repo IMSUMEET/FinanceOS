@@ -30,18 +30,29 @@ export function formatPct(value, digits = 1) {
   return `${value > 0 ? "+" : ""}${value.toFixed(digits)}%`;
 }
 
+function parseCalendarDate(iso, day = 1) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    return new Date(`${iso}T12:00:00Z`);
+  }
+  if (/^\d{4}-\d{2}$/.test(iso)) {
+    const paddedDay = String(day).padStart(2, "0");
+    return new Date(`${iso}-${paddedDay}T12:00:00Z`);
+  }
+  return new Date(iso);
+}
+
 export function formatDate(iso, opts = { month: "short", day: "numeric" }) {
   if (!iso) return "";
-  const d = new Date(iso);
+  const d = parseCalendarDate(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", opts);
+  return d.toLocaleDateString("en-US", { ...opts, timeZone: "UTC" });
 }
 
 export function formatMonth(iso) {
   if (!iso) return "";
-  const d = new Date(`${iso}-01`);
+  const d = parseCalendarDate(iso, 1);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  return d.toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" });
 }
 
 export function monthKey(iso) {

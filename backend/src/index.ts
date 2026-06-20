@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { analyzeCsvBuffers, MAX_CSV_BYTES, isCsvFileName } from "./csvAnalyze.js";
+import { buildReportData, generateInsightsWithOpenRouter, mapToAllowedCategory } from "./openrouter.js";
 
 export const app = new Hono();
 
@@ -140,6 +141,36 @@ app.post("/api/analyze", async (c) => {
     );
 
     const result = await analyzeCsvBuffers(buffers);
+    const mappedTransactions = result.transactions.map((t: any) => {
+      const allowedCat = mapToAllowedCategory(t.category);
+      const isIncome = t.amount > 0;
+      return {
+        id: `txn_${String(t.id).padStart(3, "0")}`,
+        date: t.date,
+        description: t.description || t.merchant_raw || "Unknown",
+        merchant: t.merchant_normalized || "Unknown",
+        amount: Number(t.amount || 0),
+        type: isIncome ? "income" : "expense",
+        localCategory: allowedCat,
+        localConfidence: t.category === "Other" ? 0.5 : 0.9,
+        finalCategory: allowedCat,
+        categorySource: "local",
+        
+        // backwards compatibility fields
+        merchant_raw: t.merchant_raw || t.description || "Unknown",
+        merchant_normalized: t.merchant_normalized || "Unknown",
+        currency: t.currency || "USD",
+        category: allowedCat,
+        source: t.source || "csv-analyze",
+        card_identity: t.card_identity || "Unknown",
+        created_at: t.created_at || new Date().toISOString()
+      };
+    });
+
+    const reportData = buildReportData(mappedTransactions);
+    const insights = await generateInsightsWithOpenRouter(reportData);
+    const hasApiKey = !!process.env.OPENROUTER_API_KEY;
+
     console.log(
       JSON.stringify({
         event: "analyze",
@@ -147,9 +178,18 @@ app.post("/api/analyze", async (c) => {
         totalBytes,
         transactionCount: result.transactions.length,
         outcome: "success",
+        aiStatus: hasApiKey ? "success" : "fallback"
       }),
     );
-    return c.json(result);
+
+    return c.json({
+      status: "success",
+      mode: "local-categorization-ai-suggestions",
+      transactions: mappedTransactions,
+      reportData,
+      insights,
+      aiStatus: hasApiKey && !insights.summary.startsWith("You had $") ? "success" : "fallback"
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
     console.log(

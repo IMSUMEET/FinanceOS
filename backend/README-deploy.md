@@ -184,3 +184,182 @@ cp .env.example .env.local
 # Set VITE_API_BASE_URL=http://localhost:3001 and VITE_USE_MOCK=false to exercise POST /api/analyze against local Hono.
 npm run dev
 ```
+
+## Deploying AI CSV Analyzer (financeos-ai-csv-analyzer)
+
+The project includes a second stack **`FinanceOsAiCsvAnalyzerStack`** that deploys `financeos-ai-csv-analyzer` Lambda. This stack uses the OpenRouter API to perform LLM-based transaction categorization and financial insights summary.
+
+### 1. Setting `OPENROUTER_API_KEY`
+Before deploying, set `OPENROUTER_API_KEY` as an environment variable in your shell so CDK can pass it to the Lambda function:
+
+```bash
+# On Linux/macOS
+export OPENROUTER_API_KEY="your-openrouter-key"
+
+# On Windows (PowerShell)
+$env:OPENROUTER_API_KEY="your-openrouter-key"
+
+# On Windows (CMD)
+set OPENROUTER_API_KEY="your-openrouter-key"
+```
+
+*Note: You can also specify `OPENROUTER_MODEL` (defaults to `openrouter/free`) and `APP_URL` (defaults to `https://financeos.app`).*
+
+### 2. How to Deploy
+Run the deploy script from the `backend` directory:
+```bash
+npm run deploy:ai-analyzer
+```
+*(Or directly from `backend/infra` by running `npm run deploy:ai-analyzer` / `npx cdk deploy FinanceOsAiCsvAnalyzerStack`)*
+
+Once completed, CDK will print the **`AiAnalyzerUrl`** output (the Function URL).
+
+### 3. How to Test with `curl`
+You can test the deployed function URL or local endpoint by sending a raw CSV or a JSON payload containing the CSV content:
+
+#### Option A: Sending JSON Payload
+```bash
+curl -X POST <FUNCTION_URL_OR_LOCALHOST> \
+  -H "Content-Type: application/json" \
+  -d '{"csv": "Date,Description,Amount\n2026-06-01,SAFEWAY #1234,-82.14\n2026-06-02,Direct Deposit,2500.00"}'
+```
+
+#### Option B: Sending Raw CSV Text
+```bash
+curl -X POST <FUNCTION_URL_OR_LOCALHOST> \
+  -H "Content-Type: text/csv" \
+  --data-binary "Date,Description,Amount
+2026-06-01,SAFEWAY #1234,-82.14
+2026-06-02,Direct Deposit,2500.00"
+```
+
+### 4. Example Response
+```json
+{
+  "status": "success",
+  "mode": "ai-categorization-ai-suggestions",
+  "transactions": [
+    {
+      "id": "txn_001",
+      "date": "2026-06-01",
+      "description": "SAFEWAY #1234",
+      "merchant": "Safeway",
+      "amount": -82.14,
+      "type": "expense",
+      "localCategory": "Food",
+      "localConfidence": 0.9,
+      "aiCategory": "Food",
+      "aiConfidence": 0.95,
+      "finalCategory": "Food",
+      "categorySource": "ai",
+      "merchant_raw": "SAFEWAY #1234",
+      "merchant_normalized": "Safeway",
+      "currency": "USD",
+      "category": "Food",
+      "source": "csv-analyze",
+      "card_identity": "Unknown",
+      "created_at": "2026-06-01T12:00:00.000Z"
+    },
+    {
+      "id": "txn_002",
+      "date": "2026-06-02",
+      "description": "Direct Deposit",
+      "merchant": "Direct Deposit",
+      "amount": 2500,
+      "type": "income",
+      "localCategory": "Income",
+      "localConfidence": 0.9,
+      "aiCategory": "Income",
+      "aiConfidence": 0.95,
+      "finalCategory": "Income",
+      "categorySource": "ai",
+      "merchant_raw": "Direct Deposit",
+      "merchant_normalized": "Direct Deposit",
+      "currency": "USD",
+      "category": "Income",
+      "source": "csv-analyze",
+      "card_identity": "Unknown",
+      "created_at": "2026-06-02T12:00:00.000Z"
+    }
+  ],
+  "reportData": {
+    "period": {
+      "start": "2026-06-01",
+      "end": "2026-06-02"
+    },
+    "totalTransactions": 2,
+    "totalIncome": 2500,
+    "totalExpenses": 82,
+    "netCashFlow": 2418,
+    "savingsRate": 96.72,
+    "categoryTotals": {
+      "Income": 2500,
+      "Housing": 0,
+      "Food": 82,
+      "Transportation": 0,
+      "Shopping": 0,
+      "Bills & Utilities": 0,
+      "Health": 0,
+      "Entertainment": 0,
+      "Transfers": 0,
+      "Other": 0
+    },
+    "topMerchants": [
+      {
+        "merchant": "Safeway",
+        "total": 82,
+        "count": 1
+      }
+    ],
+    "largestTransactions": [
+      {
+        "id": "txn_001",
+        "date": "2026-06-01",
+        "merchant": "Safeway",
+        "amount": 82
+      }
+    ],
+    "dailySpending": [
+      {
+        "date": "2026-06-01",
+        "amount": 82
+      }
+    ],
+    "monthlyTrend": [
+      {
+        "month": "2026-06",
+        "income": 2500,
+        "expenses": 82,
+        "netCashFlow": 2418
+      }
+    ]
+  },
+  "insights": {
+    "summary": "You had $2500 income, $82 expenses, and $2418 net cash flow during this period.",
+    "score": 70,
+    "riskLevel": "low",
+    "observations": [
+      {
+        "title": "Net cash flow",
+        "message": "Your net cash flow was $2418.",
+        "severity": "info",
+        "category": "Cash Flow"
+      }
+    ],
+    "recommendations": [
+      {
+        "title": "Review top categories",
+        "message": "Start by reviewing your largest spending categories.",
+        "impact": "medium",
+        "estimatedMonthlySavings": 0
+      }
+    ],
+    "anomalies": []
+  },
+  "aiStatus": {
+    "categorization": "success",
+    "insights": "success"
+  }
+}
+```
+

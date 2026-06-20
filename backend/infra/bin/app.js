@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const cdk = require("aws-cdk-lib");
 const { BackendStack } = require("../lib/backend-stack");
+const { FinanceOsAiCsvAnalyzerStack } = require("../lib/ai-analyzer-stack");
 
 const app = new cdk.App();
 
@@ -11,4 +12,9 @@ const app = new cdk.App();
 new BackendStack(app, "FileProcessing", {
   stackName: "File-Processing",
   description: "File Processing — FinanceOS CSV API (Lambda + HTTP API)",
+});
+
+new FinanceOsAiCsvAnalyzerStack(app, "FinanceOsAiCsvAnalyzerStack", {
+  stackName: "FinanceOsAiCsvAnalyzerStack",
+  description: "AI CSV Analyzer Stack — Personal Finance AI Categorizer and Insights",
 });
