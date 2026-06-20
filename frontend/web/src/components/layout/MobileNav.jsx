@@ -71,39 +71,42 @@ function MobileNav() {
             </NavLink>
           </li>
         ))}
-        <li className="mx-0.5 h-8 w-px shrink-0 self-center bg-ink-200/90 dark:bg-ink-600" aria-hidden />
+        <li
+          className="mx-0.5 h-8 w-px shrink-0 self-center bg-ink-200/90 dark:bg-ink-600"
+          aria-hidden
+        />
         {REAL_ESTATE_NAV.map(({ to, label, icon, end, comingSoon }) => (
           <li key={to} className="min-w-0 shrink-0">
             {comingSoon ? (
               <MobileComingSoonItem label={label} icon={icon} />
             ) : (
-            <NavLink
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                [
-                  "relative mx-auto flex max-w-[72px] flex-col items-center gap-0.5 rounded-full px-1.5 py-1.5 text-[9px] font-semibold transition sm:px-2 sm:text-[10px]",
-                  isActive ? "text-white" : "text-ink-500 dark:text-ink-300 active:scale-95",
-                ].join(" ")
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive ? (
-                    <Motion.span
-                      layoutId="mobile-nav-pill"
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                      className="absolute inset-0 rounded-full bg-brand shadow-brand"
-                    />
-                  ) : null}
-                  <span className="relative z-10 flex flex-col items-center gap-0.5">
-                    {createElement(icon, { size: 18 })}
-                    <span>{label}</span>
-                  </span>
-                  {isActive ? <span className="sr-only">(current)</span> : null}
-                </>
-              )}
-            </NavLink>
+              <NavLink
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  [
+                    "relative mx-auto flex max-w-[72px] flex-col items-center gap-0.5 rounded-full px-1.5 py-1.5 text-[9px] font-semibold transition sm:px-2 sm:text-[10px]",
+                    isActive ? "text-white" : "text-ink-500 dark:text-ink-300 active:scale-95",
+                  ].join(" ")
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive ? (
+                      <Motion.span
+                        layoutId="mobile-nav-pill"
+                        transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                        className="absolute inset-0 rounded-full bg-brand shadow-brand"
+                      />
+                    ) : null}
+                    <span className="relative z-10 flex flex-col items-center gap-0.5">
+                      {createElement(icon, { size: 18 })}
+                      <span>{label}</span>
+                    </span>
+                    {isActive ? <span className="sr-only">(current)</span> : null}
+                  </>
+                )}
+              </NavLink>
             )}
           </li>
         ))}

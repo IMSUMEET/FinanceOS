@@ -26,15 +26,15 @@ const { profile, updateProfile, cycleAvatar, hasProfile, displayName } = useProf
 
 ## What's free vs gated
 
-| Feature | Guest | Profile required |
-| --- | --- | --- |
-| Upload CSV / view transactions | yes | — |
-| Categories, totals, trends | yes | — |
-| Spend Analyzer charts + insights | yes | — |
-| Export CSV | yes | — |
-| Personalised AI coach | — | yes |
-| Personalised recommendations / narratives | — | yes |
-| Saved budgets, alerts (future) | — | yes |
+| Feature                                   | Guest | Profile required |
+| ----------------------------------------- | ----- | ---------------- |
+| Upload CSV / view transactions            | yes   | —                |
+| Categories, totals, trends                | yes   | —                |
+| Spend Analyzer charts + insights          | yes   | —                |
+| Export CSV                                | yes   | —                |
+| Personalised AI coach                     | —     | yes              |
+| Personalised recommendations / narratives | —     | yes              |
+| Saved budgets, alerts (future)            | —     | yes              |
 
 **Default to free.** If you are unsure whether a new feature should be gated, leave it free. Only gate features that genuinely depend on a stable user identity (anything we'd persist server-side per user, or anything that calls a paid API on the user's behalf).
 

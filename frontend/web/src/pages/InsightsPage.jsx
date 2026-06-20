@@ -26,7 +26,13 @@ import {
   topCategoryMoversForMonth,
   weekdayVsWeekend,
 } from "../utils/insights";
-import { formatAmountSpend, formatCurrency, formatDate, formatMonth, formatPct } from "../utils/format";
+import {
+  formatAmountSpend,
+  formatCurrency,
+  formatDate,
+  formatMonth,
+  formatPct,
+} from "../utils/format";
 
 function NarrativeCard({ icon, eyebrow, title, body, tone = "neutral", children }) {
   const tones = {
@@ -45,7 +51,9 @@ function NarrativeCard({ icon, eyebrow, title, body, tone = "neutral", children 
             {createElement(icon, { size: 18 })}
           </span>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">{eyebrow}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+              {eyebrow}
+            </p>
             <h3 className="mt-0.5 text-lg font-black text-ink-900 dark:text-ink-50">{title}</h3>
           </div>
         </div>
@@ -123,17 +131,24 @@ function InsightsPage() {
               <p className="text-sm text-ink-500 dark:text-ink-400">No comparison available yet.</p>
             ) : (
               movers.slice(0, 4).map((m) => (
-                <div key={m.category} className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60">
+                <div
+                  key={m.category}
+                  className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60"
+                >
                   <div className="flex items-center gap-3 min-w-0">
                     <CategoryDot category={m.category} />
                     <div className="min-w-0">
-                      <p className="truncate font-bold text-ink-900 dark:text-ink-50">{m.category}</p>
+                      <p className="truncate font-bold text-ink-900 dark:text-ink-50">
+                        {m.category}
+                      </p>
                       <p className="text-xs text-ink-500 dark:text-ink-400">
                         {formatCurrency(m.prev)} → {formatCurrency(m.current)}
                       </p>
                     </div>
                   </div>
-                  <Badge tone={m.deltaAbs >= 0 ? "danger" : "success"}>{formatPct(m.deltaPct)}</Badge>
+                  <Badge tone={m.deltaAbs >= 0 ? "danger" : "success"}>
+                    {formatPct(m.deltaPct)}
+                  </Badge>
                 </div>
               ))
             )}
@@ -152,14 +167,21 @@ function InsightsPage() {
         >
           <div className="mt-4 space-y-3">
             {recurring.length === 0 ? (
-              <p className="text-sm text-ink-500 dark:text-ink-400">Add a few months of data to surface subscriptions.</p>
+              <p className="text-sm text-ink-500 dark:text-ink-400">
+                Add a few months of data to surface subscriptions.
+              </p>
             ) : (
               recurring.slice(0, 5).map((r) => (
-                <div key={r.merchant} className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60">
+                <div
+                  key={r.merchant}
+                  className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60"
+                >
                   <div className="flex items-center gap-3 min-w-0">
                     <CategoryDot category={r.category} />
                     <div className="min-w-0">
-                      <p className="truncate font-bold text-ink-900 dark:text-ink-50">{r.merchant}</p>
+                      <p className="truncate font-bold text-ink-900 dark:text-ink-50">
+                        {r.merchant}
+                      </p>
                       <p className="text-xs text-ink-500 dark:text-ink-400">
                         ~{formatCurrency(r.avg)} / month · {r.cadence} months seen
                       </p>
@@ -181,12 +203,19 @@ function InsightsPage() {
         >
           <div className="mt-4 space-y-3">
             {anomalies.length === 0 ? (
-              <p className="text-sm text-ink-500 dark:text-ink-400">Nothing unusual stands out. Nice.</p>
+              <p className="text-sm text-ink-500 dark:text-ink-400">
+                Nothing unusual stands out. Nice.
+              </p>
             ) : (
               anomalies.map((a) => (
-                <div key={a.id} className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60">
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60"
+                >
                   <div className="min-w-0">
-                    <p className="truncate font-bold text-ink-900 dark:text-ink-50">{a.merchant_normalized}</p>
+                    <p className="truncate font-bold text-ink-900 dark:text-ink-50">
+                      {a.merchant_normalized}
+                    </p>
                     <p className="text-xs text-ink-500 dark:text-ink-400">
                       {formatDate(a.date)} · usual ~{formatCurrency(a.median)}
                     </p>
@@ -210,18 +239,26 @@ function InsightsPage() {
         >
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
-              <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">Weekday</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+                Weekday
+              </p>
               <p className="tabular mt-1 text-2xl font-black text-ink-900 dark:text-ink-50">
                 {formatCurrency(week.weekday, { compact: true })}
               </p>
-              <p className="text-xs font-semibold text-ink-500 dark:text-ink-400">{week.weekdayPct.toFixed(0)}%</p>
+              <p className="text-xs font-semibold text-ink-500 dark:text-ink-400">
+                {week.weekdayPct.toFixed(0)}%
+              </p>
             </div>
             <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
-              <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">Weekend</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+                Weekend
+              </p>
               <p className="tabular mt-1 text-2xl font-black text-ink-900 dark:text-ink-50">
                 {formatCurrency(week.weekend, { compact: true })}
               </p>
-              <p className="text-xs font-semibold text-ink-500 dark:text-ink-400">{week.weekendPct.toFixed(0)}%</p>
+              <p className="text-xs font-semibold text-ink-500 dark:text-ink-400">
+                {week.weekendPct.toFixed(0)}%
+              </p>
             </div>
           </div>
         </NarrativeCard>

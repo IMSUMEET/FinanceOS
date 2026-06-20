@@ -6,12 +6,12 @@ The FinanceOS visual language is "soft glass": pastel surfaces, generous radii, 
 
 ### Color
 
-| Token | Use |
-| --- | --- |
-| `ink-50 → ink-950` | Neutrals. `ink-50/100/200` are light surfaces, `ink-700/800/900/950` are dark surfaces. `ink-950` (#080f1e) is the deepest background, used by `appFieldDark`. |
-| `brand-50 → brand-900` | Primary blue. `brand-600` is the canonical CTA, `brand-50/100` are subtle backgrounds, `brand-200/300` are borders for soft callouts. |
-| `accent-400/500/600` | Purple, used in gradients with brand. |
-| `category.{food, groceries, gas, transport, shopping, entertainment, travel, utilities, subscriptions, other}` | Per-category palette. Always reach for these instead of inventing new chart colors. |
+| Token                                                                                                          | Use                                                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ink-50 → ink-950`                                                                                             | Neutrals. `ink-50/100/200` are light surfaces, `ink-700/800/900/950` are dark surfaces. `ink-950` (#080f1e) is the deepest background, used by `appFieldDark`. |
+| `brand-50 → brand-900`                                                                                         | Primary blue. `brand-600` is the canonical CTA, `brand-50/100` are subtle backgrounds, `brand-200/300` are borders for soft callouts.                          |
+| `accent-400/500/600`                                                                                           | Purple, used in gradients with brand.                                                                                                                          |
+| `category.{food, groceries, gas, transport, shopping, entertainment, travel, utilities, subscriptions, other}` | Per-category palette. Always reach for these instead of inventing new chart colors.                                                                            |
 
 ### Shadow
 
@@ -51,23 +51,23 @@ The FinanceOS visual language is "soft glass": pastel surfaces, generous radii, 
 
 ## Component catalogue
 
-These are the primitives every page composes. See the [`ui-components`](../../skills/ui-components/SKILL.md) skill for the *when to use which* matrix, and read the source for full props.
+These are the primitives every page composes. See the [`ui-components`](../../skills/ui-components/SKILL.md) skill for the _when to use which_ matrix, and read the source for full props.
 
-| Component | Path | Notes |
-| --- | --- | --- |
-| `Button` | `components/ui/Button.jsx` | Primary / secondary / ghost variants |
-| `IconButton` | `components/ui/IconButton.jsx` | Square 36px target, requires `aria-label` |
-| `Card` | `components/ui/Card.jsx` | Base surface, dual-mode |
-| `KpiCard` | `components/ui/KpiCard.jsx` | Wraps `CountUp`, used on dashboard |
-| `Drawer` | `components/ui/Drawer.jsx` | Right-side sheet, portaled to `document.body` |
-| `Select` | `components/ui/Select.jsx` | Native select styled as a pill, optional `leadingIcon` |
-| `Skeleton` | `components/ui/Skeleton.jsx` | Loading placeholder |
-| `Avatar` | `components/common/Avatar.jsx` | DiceBear-backed, deterministic from `seed` |
-| `Logo` | `components/common/Logo.jsx` | App mark + name, dark-mode aware |
-| `NavbarActions` | `components/common/NavbarActions.jsx` | Notifications + settings + profile pill |
-| `ThemeToggle` | `components/common/ThemeToggle.jsx` | Light / dark switch |
-| `CountUp` | `components/effects/CountUp.jsx` | Counts to a value once per change, never on hover |
-| `Reveal`, `StaggerGroup` | `components/effects/` | Enter animations |
+| Component                | Path                                  | Notes                                                  |
+| ------------------------ | ------------------------------------- | ------------------------------------------------------ |
+| `Button`                 | `components/ui/Button.jsx`            | Primary / secondary / ghost variants                   |
+| `IconButton`             | `components/ui/IconButton.jsx`        | Square 36px target, requires `aria-label`              |
+| `Card`                   | `components/ui/Card.jsx`              | Base surface, dual-mode                                |
+| `KpiCard`                | `components/ui/KpiCard.jsx`           | Wraps `CountUp`, used on dashboard                     |
+| `Drawer`                 | `components/ui/Drawer.jsx`            | Right-side sheet, portaled to `document.body`          |
+| `Select`                 | `components/ui/Select.jsx`            | Native select styled as a pill, optional `leadingIcon` |
+| `Skeleton`               | `components/ui/Skeleton.jsx`          | Loading placeholder                                    |
+| `Avatar`                 | `components/common/Avatar.jsx`        | DiceBear-backed, deterministic from `seed`             |
+| `Logo`                   | `components/common/Logo.jsx`          | App mark + name, dark-mode aware                       |
+| `NavbarActions`          | `components/common/NavbarActions.jsx` | Notifications + settings + profile pill                |
+| `ThemeToggle`            | `components/common/ThemeToggle.jsx`   | Light / dark switch                                    |
+| `CountUp`                | `components/effects/CountUp.jsx`      | Counts to a value once per change, never on hover      |
+| `Reveal`, `StaggerGroup` | `components/effects/`                 | Enter animations                                       |
 
 ## Dark mode
 

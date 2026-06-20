@@ -54,13 +54,13 @@ The legacy top-level `app/routers/` and `app/services/` folders exist for backwa
 
 The frontend already publishes the URL surface in [`frontend/web/src/api/endpoints.js`](../../frontend/web/src/api/endpoints.js). The backend should mount routes that satisfy the same paths and the shapes in [`frontend/web/src/types/schema.json`](../../frontend/web/src/types/schema.json).
 
-| Frontend `ENDPOINTS.*` | Backend feature | Status |
-| --- | --- | --- |
-| `transactions.list`, `transactions.create`, `transactions.update`, `transactions.remove` | `features/spend_analyzer/routers/transactions.py` | partial — extend to cover the contract |
-| `transactions.importBatch` | `features/spend_analyzer/routers/transactions.py` | TODO |
-| `insights.summary`, `insights.movers`, `insights.recurring`, `insights.anomalies` | `features/spend_analyzer/routers/analytics.py` | partial — implement four insight endpoints |
-| `notifications.list`, `notifications.markRead` | TODO — new feature `notifications/` | not started |
-| `profile.get`, `profile.update` | TODO — new feature `account/` or `profile/` | not started |
+| Frontend `ENDPOINTS.*`                                                                   | Backend feature                                   | Status                                     |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------ |
+| `transactions.list`, `transactions.create`, `transactions.update`, `transactions.remove` | `features/spend_analyzer/routers/transactions.py` | partial — extend to cover the contract     |
+| `transactions.importBatch`                                                               | `features/spend_analyzer/routers/transactions.py` | TODO                                       |
+| `insights.summary`, `insights.movers`, `insights.recurring`, `insights.anomalies`        | `features/spend_analyzer/routers/analytics.py`    | partial — implement four insight endpoints |
+| `notifications.list`, `notifications.markRead`                                           | TODO — new feature `notifications/`               | not started                                |
+| `profile.get`, `profile.update`                                                          | TODO — new feature `account/` or `profile/`       | not started                                |
 
 ## Workflow when adding an endpoint
 

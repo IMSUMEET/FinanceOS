@@ -1,14 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { createElement } from "react";
 
-function Select({
-  value,
-  onChange,
-  options,
-  className = "",
-  leadingIcon,
-  ...rest
-}) {
+function Select({ value, onChange, options, className = "", leadingIcon, ...rest }) {
   function handleChange(e) {
     onChange?.(e);
     e.currentTarget.blur();

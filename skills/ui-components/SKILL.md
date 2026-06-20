@@ -14,18 +14,18 @@ All shared UI lives under [`frontend/web/src/components/`](../../frontend/web/sr
 
 ## Pick the right primitive
 
-| You want... | Use | From |
-| --- | --- | --- |
-| A surface (panel / section) | `Card` | `components/ui/Card` |
-| A KPI tile with a number that animates in | `KpiCard` | `components/ui/KpiCard` |
-| Side sheet (profile, filters, details) | `Drawer` | `components/ui/Drawer` |
-| Inline icon-only action | `IconButton` | `components/ui/IconButton` |
-| Primary / secondary text button | `Button` | `components/ui/Button` |
-| Native dropdown styled like the app | `Select` | `components/ui/Select` |
-| Loading state | `Skeleton` | `components/ui/Skeleton` |
-| User avatar (deterministic, static) | `Avatar` | `components/common/Avatar` |
-| Number that counts up on first paint | `CountUp` | `components/effects/CountUp` |
-| Slide / fade in on enter | `Reveal`, `StaggerGroup` | `components/effects/` |
+| You want...                               | Use                      | From                         |
+| ----------------------------------------- | ------------------------ | ---------------------------- |
+| A surface (panel / section)               | `Card`                   | `components/ui/Card`         |
+| A KPI tile with a number that animates in | `KpiCard`                | `components/ui/KpiCard`      |
+| Side sheet (profile, filters, details)    | `Drawer`                 | `components/ui/Drawer`       |
+| Inline icon-only action                   | `IconButton`             | `components/ui/IconButton`   |
+| Primary / secondary text button           | `Button`                 | `components/ui/Button`       |
+| Native dropdown styled like the app       | `Select`                 | `components/ui/Select`       |
+| Loading state                             | `Skeleton`               | `components/ui/Skeleton`     |
+| User avatar (deterministic, static)       | `Avatar`                 | `components/common/Avatar`   |
+| Number that counts up on first paint      | `CountUp`                | `components/effects/CountUp` |
+| Slide / fade in on enter                  | `Reveal`, `StaggerGroup` | `components/effects/`        |
 
 ## Hard-won rules
 
@@ -34,6 +34,7 @@ All shared UI lives under [`frontend/web/src/components/`](../../frontend/web/sr
 `Drawer` already calls `createPortal(node, document.body)`. **Do not** render its content inside another portal or inside any element that uses `filter:`, `transform:`, or `backdrop-filter:` — those create a containing block and clip `position: fixed`. The Topbar and AppShell both use filters, which is why portaling is mandatory.
 
 If you make a new sheet-style component, follow the same recipe:
+
 - Render via portal to `document.body`
 - Lock `body.style.overflow` while open
 - Sticky header inside the panel
@@ -53,7 +54,7 @@ import { Calendar } from "lucide-react";
 <Select value={month} onChange={setMonth} leadingIcon={Calendar}>
   <option value="all">All months</option>
   {/* ... */}
-</Select>
+</Select>;
 ```
 
 Don't reach for headless dropdown libraries unless you actually need search / multi-select — `Select` with native `<option>` is keyboard-accessible for free.

@@ -6,7 +6,7 @@
 
 ## Context
 
-FinanceOS is a personal-finance tool. The single most valuable interaction is *"upload my statement, see where my money goes"*. Forcing users through a sign-up flow before they can do that loses most of them.
+FinanceOS is a personal-finance tool. The single most valuable interaction is _"upload my statement, see where my money goes"_. Forcing users through a sign-up flow before they can do that loses most of them.
 
 At the same time, several planned features genuinely need a stable user identity: an AI coach that personalises advice over time, server-side budget alerts, multi-device sync. Those features will eventually require an account.
 

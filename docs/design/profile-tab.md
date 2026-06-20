@@ -12,7 +12,7 @@ The profile drawer is the primary surface for the guest-first profile model (see
 
 1. **Hero banner** — gradient strip + circular Avatar + role pill (`FinanceOS Member` or `Guest access`) + display name + personality badge.
 2. **Condensed stats** — three pills: total spend, transaction count, annualised recurring spend. Compact format so the whole hero fits at the top of the panel without scrolling on a phone.
-3. **Profile-creation form** *(guest only)* — first name + last name inputs; submit sets `profileCompleted: true` and unlocks gated features.
+3. **Profile-creation form** _(guest only)_ — first name + last name inputs; submit sets `profileCompleted: true` and unlocks gated features.
 4. **Profile details** — email (derived), region, plan, average monthly spend.
 5. **Quick actions** — 2-column grid: theme toggle, switch avatar, export CSV, reset data, sign out. The AI coach action was deliberately removed; it's surfaced where it belongs (Insights page).
 
@@ -43,15 +43,15 @@ Hovering the donut chart on the dashboard would re-key the KPIs and replay the c
 
 ## Guest vs member states
 
-| Element | Guest | Member |
-| --- | --- | --- |
-| Role pill | "Guest access" | "FinanceOS Member" |
-| Display name | "Create your profile" | `<First> <Last>` |
-| Personality badge | "Unlock AI coach" | computed from `classifyPersonality()` |
-| Email row | "—" | derived from name + handle |
-| Plan row | "Guest" | "FinanceOS Pro" |
-| Profile-creation form | shown | hidden |
-| Footer note | "Create your profile to enable AI coach…" | "Advanced AI coach features are enabled…" |
+| Element               | Guest                                     | Member                                    |
+| --------------------- | ----------------------------------------- | ----------------------------------------- |
+| Role pill             | "Guest access"                            | "FinanceOS Member"                        |
+| Display name          | "Create your profile"                     | `<First> <Last>`                          |
+| Personality badge     | "Unlock AI coach"                         | computed from `classifyPersonality()`     |
+| Email row             | "—"                                       | derived from name + handle                |
+| Plan row              | "Guest"                                   | "FinanceOS Pro"                           |
+| Profile-creation form | shown                                     | hidden                                    |
+| Footer note           | "Create your profile to enable AI coach…" | "Advanced AI coach features are enabled…" |
 
 The mapping is computed inline in `ProfilePanel` from `useProfile().hasProfile`. Keep the same one-liner instead of branching across two component trees — the diff between the two states is small.
 

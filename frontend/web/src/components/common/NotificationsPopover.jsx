@@ -2,11 +2,7 @@ import { Link } from "react-router-dom";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { ArrowUpRight, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { useTransactions } from "../../context/useTransactions";
-import {
-  detectRecurring,
-  topAnomalies,
-  topCategoryMovers,
-} from "../../utils/insights";
+import { detectRecurring, topAnomalies, topCategoryMovers } from "../../utils/insights";
 import { formatAmountSpend, formatCurrency, formatPct } from "../../utils/format";
 
 function buildNotifications(transactions) {

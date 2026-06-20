@@ -11,7 +11,8 @@
         try {
           var stored = localStorage.getItem("financeos.theme");
           var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-          var theme = stored === "dark" || stored === "light" ? stored : prefersDark ? "dark" : "light";
+          var theme =
+            stored === "dark" || stored === "light" ? stored : prefersDark ? "dark" : "light";
           if (theme === "dark") document.documentElement.classList.add("dark");
           var meta = document.querySelector('meta[name="theme-color"]');
           if (meta) meta.setAttribute("content", theme === "dark" ? "#080f1e" : "#edf4ff");

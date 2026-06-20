@@ -32,10 +32,12 @@ The app code uses **Hono** with `hono/aws-lambda` (see `src/lambda.ts` and `src/
 1. **Install AWS CLI**  
    Follow: [Installing the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
-2. **Configure credentials**  
+2. **Configure credentials**
+
    ```bash
    aws configure
-   ```  
+   ```
+
    Set access key, secret, default region (e.g. `us-east-1`), and output format. Alternatively use environment variables or profiles your organization supports.
 
 3. **Node.js** (v20+ recommended) for local `npm` and CDK.
@@ -52,7 +54,7 @@ If you use **AWS SSO “PowerUser”** (or similar) and bootstrap fails with `ia
 
 If a failed bootstrap left **`CDKToolkit` in `ROLLBACK_FAILED`**, delete that stack in the **CloudFormation** console (or have an admin clean it up) before retrying bootstrap.
 
-If **`CDKToolkit` is in `DELETE_FAILED`** (common after a partial bootstrap/rollback), `cdk bootstrap` will error with *“can not be updated”*. Fix it before deploying:
+If **`CDKToolkit` is in `DELETE_FAILED`** (common after a partial bootstrap/rollback), `cdk bootstrap` will error with _“can not be updated”_. Fix it before deploying:
 
 1. Open **AWS Console → CloudFormation →** same **region** as your profile (e.g. `us-east-2`) → stack **`CDKToolkit`**.
 2. Open the **Events** / **Resources** tab and note which resources failed to delete (often IAM roles named like `cdk-hnb659fds-*`).
@@ -64,14 +66,14 @@ If **`CDKToolkit` is in `DELETE_FAILED`** (common after a partial bootstrap/roll
 
 After `cdk synth` / `cdk deploy`, the stack should contain:
 
-| Resource | Purpose |
-|----------|---------|
-| **One** `AWS::Lambda::Function` | Runs the bundled Hono app (`src/lambda.ts` → handler `handler`; synthesized asset uses `index.handler`). Handles **GET `/health`**, **POST `/api/analyze`**, and all routes via HTTP API proxy. |
-| **One** `AWS::ApiGatewayV2::Api` (+ default stage + routes + integrations) | **HTTP API** (not REST). Routes: **ANY /** and **ANY /{proxy+}** → same Lambda. |
-| **IAM role** (+ inline policy) for the Lambda | `AWSLambdaBasicExecutionRole` so the function can write to CloudWatch Logs. |
-| **`AWS::Logs::LogGroup`** | 7-day retention for the API Lambda logs. |
-| **`AWS::Lambda::Permission`** (×2) | Allow API Gateway to invoke the Lambda for `/` and `/{proxy+}`. |
-| **`AWS::CDK::Metadata`** | CDK metadata (optional; small). |
+| Resource                                                                   | Purpose                                                                                                                                                                                         |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **One** `AWS::Lambda::Function`                                            | Runs the bundled Hono app (`src/lambda.ts` → handler `handler`; synthesized asset uses `index.handler`). Handles **GET `/health`**, **POST `/api/analyze`**, and all routes via HTTP API proxy. |
+| **One** `AWS::ApiGatewayV2::Api` (+ default stage + routes + integrations) | **HTTP API** (not REST). Routes: **ANY /** and **ANY /{proxy+}** → same Lambda.                                                                                                                 |
+| **IAM role** (+ inline policy) for the Lambda                              | `AWSLambdaBasicExecutionRole` so the function can write to CloudWatch Logs.                                                                                                                     |
+| **`AWS::Logs::LogGroup`**                                                  | 7-day retention for the API Lambda logs.                                                                                                                                                        |
+| **`AWS::Lambda::Permission`** (×2)                                         | Allow API Gateway to invoke the Lambda for `/` and `/{proxy+}`.                                                                                                                                 |
+| **`AWS::CDK::Metadata`**                                                   | CDK metadata (optional; small).                                                                                                                                                                 |
 
 **Not deployed by this stack:** RDS, DynamoDB, VPC, NAT Gateway, S3 (app buckets), SQS, SNS, EventBridge rules, Step Functions, extra Lambdas, REST API Gateway, or ElastiCache.
 
@@ -140,12 +142,12 @@ Run **[CDK validation](#cdk-validation-before-deploy)** first. From your machine
 
 ## Useful commands
 
-| Script | Purpose |
-|--------|---------|
+| Script                  | Purpose                               |
+| ----------------------- | ------------------------------------- |
 | `npm run cdk:bootstrap` | `cdk bootstrap` (default CLI profile) |
-| `npm run cdk:diff` | `cdk diff` (default profile) |
-| `npm run cdk:deploy` | `cdk deploy` (default profile) |
-| `npm run cdk:destroy` | `cdk destroy` (default profile) |
+| `npm run cdk:diff`      | `cdk diff` (default profile)          |
+| `npm run cdk:deploy`    | `cdk deploy` (default profile)        |
+| `npm run cdk:destroy`   | `cdk destroy` (default profile)       |
 
 With a named profile (e.g. `financeos-admin-amsborse-dev`), prefer the `npx cdk … --profile financeos-admin-amsborse-dev` commands in the validation section above.
 

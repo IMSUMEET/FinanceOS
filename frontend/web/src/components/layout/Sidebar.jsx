@@ -41,7 +41,9 @@ function SidebarComingSoonItem({ label, icon }) {
           />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-ink-700 dark:text-ink-100">{label}</span>
+          <span className="block text-sm font-semibold text-ink-700 dark:text-ink-100">
+            {label}
+          </span>
           <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-brand-600 to-violet-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-brand">
             <Sparkles size={10} strokeWidth={2.5} aria-hidden />
             Appear soon
@@ -69,43 +71,43 @@ function Sidebar() {
               comingSoon ? (
                 <SidebarComingSoonItem key={to} label={label} icon={icon} />
               ) : (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                className={({ isActive }) =>
-                  [
-                    "group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition",
-                    isActive
-                      ? "text-white"
-                      : "text-ink-600 hover:bg-white hover:text-brand-700 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-brand-300",
-                  ].join(" ")
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive ? (
-                      <Motion.span
-                        layoutId="sidebar-active-pill"
-                        transition={{ type: "spring", stiffness: 360, damping: 30 }}
-                        className="absolute inset-0 rounded-2xl bg-brand shadow-brand"
-                        aria-hidden
-                      />
-                    ) : null}
-                    <span
-                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-xl ${
-                        isActive
-                          ? "bg-white/20 text-white"
-                          : "bg-brand-50 text-brand-600 group-hover:bg-brand-100 dark:bg-ink-800 dark:text-brand-300 dark:group-hover:bg-ink-700"
-                      }`}
-                    >
-                      {createElement(icon, { size: 16 })}
-                    </span>
-                    <span className="relative z-10">{label}</span>
-                    {isActive ? <span className="sr-only">(current)</span> : null}
-                  </>
-                )}
-              </NavLink>
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) =>
+                    [
+                      "group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition",
+                      isActive
+                        ? "text-white"
+                        : "text-ink-600 hover:bg-white hover:text-brand-700 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-brand-300",
+                    ].join(" ")
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive ? (
+                        <Motion.span
+                          layoutId="sidebar-active-pill"
+                          transition={{ type: "spring", stiffness: 360, damping: 30 }}
+                          className="absolute inset-0 rounded-2xl bg-brand shadow-brand"
+                          aria-hidden
+                        />
+                      ) : null}
+                      <span
+                        className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-xl ${
+                          isActive
+                            ? "bg-white/20 text-white"
+                            : "bg-brand-50 text-brand-600 group-hover:bg-brand-100 dark:bg-ink-800 dark:text-brand-300 dark:group-hover:bg-ink-700"
+                        }`}
+                      >
+                        {createElement(icon, { size: 16 })}
+                      </span>
+                      <span className="relative z-10">{label}</span>
+                      {isActive ? <span className="sr-only">(current)</span> : null}
+                    </>
+                  )}
+                </NavLink>
               ),
             )}
           </div>
@@ -118,7 +120,8 @@ function Sidebar() {
         </p>
         <p className="mt-1 text-sm text-ink-700 dark:text-ink-300">
           You're exploring 6 months of synthetic transactions. Use{" "}
-          <span className="font-bold text-brand-700 dark:text-brand-300">Upload</span> to bring your own CSV.
+          <span className="font-bold text-brand-700 dark:text-brand-300">Upload</span> to bring your
+          own CSV.
         </p>
       </div>
     </aside>

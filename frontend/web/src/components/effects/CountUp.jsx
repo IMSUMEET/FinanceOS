@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { animate, useInView } from "framer-motion";
 
-function CountUp({
-  value,
-  duration = 1.1,
-  format = (n) => n.toLocaleString(),
-  className = "",
-}) {
+function CountUp({ value, duration = 1.1, format = (n) => n.toLocaleString(), className = "" }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, amount: 0.2 });
   // Keep latest format/duration in refs so changing prop identity (e.g. inline

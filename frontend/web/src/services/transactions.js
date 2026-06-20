@@ -29,7 +29,7 @@ function clone(rows) {
  * @returns {Promise<{ rows: import("../types").Transaction[] }>}
  * @example { "rows": [{ "id": 1, "date": "2026-04-12", ... }] }
  */
-export async function listTransactions(filters = {}) {
+export async function listTransactions(_filters = {}) {
   if (USE_MOCK) return { rows: clone(mockStore) };
   // Stateless Lambda: no persisted GET /transactions yet — session uses upload analysis only.
   return { rows: [] };

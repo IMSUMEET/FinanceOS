@@ -44,8 +44,7 @@ VITE_USE_MOCK=true
 The rule (from [`src/api/client.js`](../../frontend/web/src/api/client.js)):
 
 ```js
-export const USE_MOCK =
-  String(RAW_MOCK).toLowerCase() === "true" || API_BASE_URL === "";
+export const USE_MOCK = String(RAW_MOCK).toLowerCase() === "true" || API_BASE_URL === "";
 ```
 
 So the default behaviour with no env file is mock mode. Set both `VITE_API_BASE_URL` and `VITE_USE_MOCK=false` to hit a real backend.
@@ -67,6 +66,7 @@ Do all four in the same PR:
    };
    ```
 3. **Service** — add a function in `src/services/<domain>.js` with both branches:
+
    ```js
    import { apiClient, USE_MOCK } from "../api/client";
    import { ENDPOINTS } from "../api/endpoints";
@@ -76,6 +76,7 @@ Do all four in the same PR:
      return apiClient.get(ENDPOINTS.budgets.list, { query });
    }
    ```
+
 4. **Backend handoff** — update [`src/types/README.md`](../../frontend/web/src/types/README.md) so backend engineers see the new contract.
 
 ## Mutation pattern (optimistic updates)

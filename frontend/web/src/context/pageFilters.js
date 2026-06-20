@@ -39,7 +39,8 @@ export function applyFiltersToRows(rows, filters, { includeCategories = true } =
     }
     if (filters.search) {
       const q = filters.search.toLowerCase();
-      const hay = `${t.merchant_normalized ?? ""} ${t.merchant_raw ?? ""} ${t.description ?? ""}`.toLowerCase();
+      const hay =
+        `${t.merchant_normalized ?? ""} ${t.merchant_raw ?? ""} ${t.description ?? ""}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     const amt = Math.abs(Number(t.amount ?? 0));

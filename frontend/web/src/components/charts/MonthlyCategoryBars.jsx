@@ -6,8 +6,12 @@ function TooltipBox({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-2xl border border-white/70 bg-white/95 px-4 py-2 shadow-soft backdrop-blur dark:border-ink-700 dark:bg-ink-900/95">
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">{formatMonth(label)}</p>
-      <p className="tabular mt-1 text-sm font-black text-ink-900 dark:text-ink-50">{formatCurrency(payload[0].value)}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+        {formatMonth(label)}
+      </p>
+      <p className="tabular mt-1 text-sm font-black text-ink-900 dark:text-ink-50">
+        {formatCurrency(payload[0].value)}
+      </p>
     </div>
   );
 }
@@ -36,7 +40,10 @@ function MonthlyCategoryBars({ data, color = "#3b82f6", height = 220 }) {
             tickLine={false}
             width={56}
           />
-          <Tooltip content={<TooltipBox />} cursor={{ fill: isDark ? "rgba(59,130,246,0.12)" : "rgba(59,130,246,0.06)" }} />
+          <Tooltip
+            content={<TooltipBox />}
+            cursor={{ fill: isDark ? "rgba(59,130,246,0.12)" : "rgba(59,130,246,0.06)" }}
+          />
           <Bar dataKey="total" fill={color} radius={[10, 10, 0, 0]} barSize={28} />
         </BarChart>
       </ResponsiveContainer>

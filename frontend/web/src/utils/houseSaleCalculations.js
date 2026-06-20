@@ -176,8 +176,7 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
   if (canComputePriceTargets) {
     breakEvenSalePrice = (remainingBalance + totalInvested) / denom;
     minSalePriceNetProceedsZero = remainingBalance / denom;
-    targetSalePrice =
-      (remainingBalance + totalInvested + targetProfitSafe) / denom;
+    targetSalePrice = (remainingBalance + totalInvested + targetProfitSafe) / denom;
   }
 
   let roiPercent = null;
@@ -212,9 +211,7 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
     canComputePriceTargets,
     purchasePrice: Number.isFinite(purchasePrice) ? purchasePrice : 0,
     downPayment: Number.isFinite(downPayment) ? downPayment : 0,
-    expectedSalePrice: Number.isFinite(expectedSalePrice)
-      ? expectedSalePrice
-      : 0,
+    expectedSalePrice: Number.isFinite(expectedSalePrice) ? expectedSalePrice : 0,
     agentCommissionPct,
     closingCostsPct,
     repairsImprovements,
@@ -233,18 +230,10 @@ export function computeHouseSale(raw, asOf = new Date(), form = {}) {
 
 export function buildInsightLines(result) {
   const lines = [];
-  const {
-    netProceeds,
-    trueProfit,
-    totalInvested,
-    expectedSalePrice,
-    breakEvenSalePrice,
-  } = result;
+  const { netProceeds, trueProfit, totalInvested, expectedSalePrice, breakEvenSalePrice } = result;
 
   if (result.sellingCostBlocked && result.validationErrors.length === 0) {
-    return [
-      "Lower commission or closing cost percentages so their sum stays under 100%.",
-    ];
+    return ["Lower commission or closing cost percentages so their sum stays under 100%."];
   }
 
   if (!result.isValidModel) {
@@ -275,9 +264,7 @@ export function buildInsightLines(result) {
         `Your break-even sale price (true profit $0) is higher than your expected sale price by ${formatUsd(-diff)}.`,
       );
     } else if (Math.abs(diff) < 500) {
-      lines.push(
-        "Your expected sale price is very close to your true break-even price.",
-      );
+      lines.push("Your expected sale price is very close to your true break-even price.");
     }
   }
 

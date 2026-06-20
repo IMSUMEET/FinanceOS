@@ -31,9 +31,7 @@ function KpiCard({
               value
             )}
           </h3>
-          {change ? (
-            <p className={`mt-2 text-sm font-semibold ${toneClass}`}>{change}</p>
-          ) : null}
+          {change ? <p className={`mt-2 text-sm font-semibold ${toneClass}`}>{change}</p> : null}
         </div>
 
         {icon ? (

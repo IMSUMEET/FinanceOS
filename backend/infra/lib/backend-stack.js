@@ -57,11 +57,7 @@ class BackendStack extends Stack {
           apigwv2.CorsHttpMethod.DELETE,
           apigwv2.CorsHttpMethod.OPTIONS,
         ],
-        allowOrigins: [
-          "http://localhost:5173",
-          "http://localhost:3000",
-          "*",
-        ],
+        allowOrigins: ["http://localhost:5173", "http://localhost:3000", "*"],
         maxAge: Duration.seconds(300),
       },
     });

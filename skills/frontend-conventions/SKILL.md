@@ -95,21 +95,21 @@ Never assume a parent already provides the dark surface — components are reuse
 
 ## Folder map (`src/`)
 
-| Folder | What lives here |
-| --- | --- |
-| `api/` | Thin fetch wrapper + endpoint registry (see `backend-contract` skill) |
-| `services/` | Domain modules (`transactions`, `insights`, `profile`) — every UI data call goes through these |
-| `context/` | React Context providers (currently `TransactionsContext`) |
-| `hooks/` | Reusable hooks: `useProfile`, `useTheme`, `useDocumentTitle` |
-| `components/ui/` | Generic primitives (Button, Card, Drawer, Select, IconButton, KpiCard, Skeleton, …) |
-| `components/common/` | Project-specific primitives (Avatar, Logo, NavbarActions, …) |
-| `components/layout/` | AppShell, Sidebar, Topbar, MobileNav, MobileFab |
-| `components/charts/` | Recharts wrappers |
-| `components/profile/` | ProfilePanel + sub-components |
-| `pages/` | One file per route in [`App.jsx`](../../frontend/web/src/App.jsx) |
-| `utils/` | Pure functions (formatting, categorization, insights, personality) |
-| `data/` | Seed/mock data (only `mockTransactions.js` today) |
-| `types/` | API contract: `schema.json` + `examples.json` + `README.md` |
+| Folder                | What lives here                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------- |
+| `api/`                | Thin fetch wrapper + endpoint registry (see `backend-contract` skill)                          |
+| `services/`           | Domain modules (`transactions`, `insights`, `profile`) — every UI data call goes through these |
+| `context/`            | React Context providers (currently `TransactionsContext`)                                      |
+| `hooks/`              | Reusable hooks: `useProfile`, `useTheme`, `useDocumentTitle`                                   |
+| `components/ui/`      | Generic primitives (Button, Card, Drawer, Select, IconButton, KpiCard, Skeleton, …)            |
+| `components/common/`  | Project-specific primitives (Avatar, Logo, NavbarActions, …)                                   |
+| `components/layout/`  | AppShell, Sidebar, Topbar, MobileNav, MobileFab                                                |
+| `components/charts/`  | Recharts wrappers                                                                              |
+| `components/profile/` | ProfilePanel + sub-components                                                                  |
+| `pages/`              | One file per route in [`App.jsx`](../../frontend/web/src/App.jsx)                              |
+| `utils/`              | Pure functions (formatting, categorization, insights, personality)                             |
+| `data/`               | Seed/mock data (only `mockTransactions.js` today)                                              |
+| `types/`              | API contract: `schema.json` + `examples.json` + `README.md`                                    |
 
 ## Before you commit
 

@@ -2,7 +2,7 @@ import { monthKey } from "./format";
 
 const sumSpend = (rows) =>
   rows
-    .filter(r => r.category !== "Credit Card Payments")
+    .filter((r) => r.category !== "Credit Card Payments")
     .reduce((s, r) => s + Math.abs(Number(r.amount ?? 0)), 0);
 
 export function monthlyTotals(transactions) {
@@ -135,7 +135,12 @@ export function detectRecurring(transactions) {
     if (t.category === "Credit Card Payments") continue;
     const key = t.merchant_normalized || t.merchant_raw || "Unknown";
     const m = monthKey(t.date);
-    const cur = byMerchant.get(key) ?? { merchant: key, months: new Set(), amounts: [], category: t.category };
+    const cur = byMerchant.get(key) ?? {
+      merchant: key,
+      months: new Set(),
+      amounts: [],
+      category: t.category,
+    };
     cur.months.add(m);
     cur.amounts.push(Math.abs(Number(t.amount ?? 0)));
     byMerchant.set(key, cur);
@@ -144,8 +149,7 @@ export function detectRecurring(transactions) {
   for (const v of byMerchant.values()) {
     if (v.months.size < 3) continue;
     const avg = v.amounts.reduce((s, x) => s + x, 0) / v.amounts.length;
-    const variance =
-      v.amounts.reduce((s, x) => s + (x - avg) ** 2, 0) / v.amounts.length;
+    const variance = v.amounts.reduce((s, x) => s + (x - avg) ** 2, 0) / v.amounts.length;
     const stdev = Math.sqrt(variance);
     if (avg === 0) continue;
     if (stdev / avg <= 0.35) {
@@ -210,7 +214,7 @@ export function topAnomalies(transactions, n = 5) {
 }
 
 export function dailyAverage(transactions) {
-  const filtered = transactions.filter(t => t.category !== "Credit Card Payments");
+  const filtered = transactions.filter((t) => t.category !== "Credit Card Payments");
   if (!filtered.length) return 0;
   const dates = new Set(filtered.map((t) => t.date));
   const total = sumSpend(filtered);

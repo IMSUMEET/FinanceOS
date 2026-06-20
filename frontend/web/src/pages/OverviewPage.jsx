@@ -33,11 +33,19 @@ import {
   topCategoryMoversForMonth,
   totalSpend,
 } from "../utils/insights";
-import { formatAmountSpend, formatCurrency, formatDate, formatMonth, formatPct } from "../utils/format";
+import {
+  formatAmountSpend,
+  formatCurrency,
+  formatDate,
+  formatMonth,
+  formatPct,
+} from "../utils/format";
 
 function TopMerchantsList({ merchants }) {
   if (!merchants.length) {
-    return <p className="text-sm text-ink-500 dark:text-ink-400">No merchant activity in this period.</p>;
+    return (
+      <p className="text-sm text-ink-500 dark:text-ink-400">No merchant activity in this period.</p>
+    );
   }
   return (
     <div className="space-y-3">
@@ -55,7 +63,9 @@ function TopMerchantsList({ merchants }) {
               </p>
             </div>
           </div>
-          <p className="tabular shrink-0 font-black text-ink-900 dark:text-ink-50">{formatCurrency(m.total)}</p>
+          <p className="tabular shrink-0 font-black text-ink-900 dark:text-ink-50">
+            {formatCurrency(m.total)}
+          </p>
         </div>
       ))}
     </div>
@@ -76,7 +86,9 @@ function RecentTxStrip({ rows }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <CategoryDot category={r.category} size={9} />
-              <p className="truncate font-bold text-ink-900 dark:text-ink-50">{r.merchant_normalized}</p>
+              <p className="truncate font-bold text-ink-900 dark:text-ink-50">
+                {r.merchant_normalized}
+              </p>
             </div>
             <p className="mt-0.5 text-xs text-ink-500 dark:text-ink-400">
               {formatDate(r.date)} · {r.category}
@@ -107,9 +119,7 @@ function OverviewPage() {
   const recurring = detectRecurring(filtered);
   const topCategory = derived.categories[0];
   const annualizedRecurring = recurring.reduce((s, r) => s + r.annualized, 0);
-  const recentTx = [...filtered]
-    .sort((a, b) => (b.date < a.date ? -1 : 1))
-    .slice(0, 5);
+  const recentTx = [...filtered].sort((a, b) => (b.date < a.date ? -1 : 1)).slice(0, 5);
   const priorMonthLabel = isAllMonths ? "" : formatMonth(previousMonthKey(filters.month));
 
   const thisWeek = useMemo(() => {
@@ -207,9 +217,7 @@ function OverviewPage() {
             <SectionHeader
               eyebrow={isAllMonths ? "All time" : "What changed"}
               title={
-                isAllMonths
-                  ? "Top spending categories"
-                  : `Biggest movers vs ${priorMonthLabel}`
+                isAllMonths ? "Top spending categories" : `Biggest movers vs ${priorMonthLabel}`
               }
               action={
                 <Link to="/insights">
@@ -222,7 +230,9 @@ function OverviewPage() {
             <div className="mt-6 grid gap-3 md:grid-cols-2">
               {isAllMonths ? (
                 derived.categories.length === 0 ? (
-                  <p className="text-sm text-ink-500 dark:text-ink-400">No category activity yet.</p>
+                  <p className="text-sm text-ink-500 dark:text-ink-400">
+                    No category activity yet.
+                  </p>
                 ) : (
                   derived.categories.slice(0, 4).map((c) => {
                     const share = total ? (c.total / total) * 100 : 0;
@@ -234,7 +244,9 @@ function OverviewPage() {
                         <div className="flex items-center gap-3 min-w-0">
                           <CategoryDot category={c.category} size={10} />
                           <div className="min-w-0">
-                            <p className="truncate font-bold text-ink-900 dark:text-ink-50">{c.category}</p>
+                            <p className="truncate font-bold text-ink-900 dark:text-ink-50">
+                              {c.category}
+                            </p>
                             <p className="text-xs text-ink-500 dark:text-ink-400">
                               {c.count} {c.count === 1 ? "transaction" : "transactions"}
                             </p>
@@ -267,7 +279,9 @@ function OverviewPage() {
                       <div className="flex items-center gap-3 min-w-0">
                         <CategoryDot category={m.category} size={10} />
                         <div className="min-w-0">
-                          <p className="truncate font-bold text-ink-900 dark:text-ink-50">{m.category}</p>
+                          <p className="truncate font-bold text-ink-900 dark:text-ink-50">
+                            {m.category}
+                          </p>
                           <p className="text-xs text-ink-500 dark:text-ink-400">
                             {formatCurrency(m.prev)} → {formatCurrency(m.current)}
                           </p>
@@ -446,7 +460,9 @@ function OverviewPage() {
               <div className="flex h-full items-center justify-between rounded-xl2 bg-white/10 px-4 py-4 transition hover:bg-white/15">
                 <div>
                   <p className="text-sm text-ink-300">Open insights</p>
-                  <p className="mt-1 font-semibold text-white">Explore movers, anomalies & nudges</p>
+                  <p className="mt-1 font-semibold text-white">
+                    Explore movers, anomalies & nudges
+                  </p>
                 </div>
                 <ArrowUpRight />
               </div>

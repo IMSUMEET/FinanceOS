@@ -28,9 +28,7 @@ function WelcomeHero() {
   const personality = classifyPersonality(transactions);
 
   const momLabel =
-    mom.deltaPct == null
-      ? "First period of data"
-      : `${formatPct(mom.deltaPct)} vs last month`;
+    mom.deltaPct == null ? "First period of data" : `${formatPct(mom.deltaPct)} vs last month`;
   const momTone =
     mom.deltaPct == null
       ? "text-white/80"
@@ -77,7 +75,7 @@ function WelcomeHero() {
 
             <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold backdrop-blur">
               <span aria-hidden>{personality.emoji}</span>
-            {hasProfile ? personality.label : "Guest mode"}
+              {hasProfile ? personality.label : "Guest mode"}
             </span>
           </div>
 

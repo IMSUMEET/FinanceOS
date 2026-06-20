@@ -9,9 +9,7 @@ const Input = forwardRef(function Input(
       className={`flex items-center gap-2 rounded-full border border-ink-200 bg-white px-4 transition focus-within:border-brand-400 focus-within:shadow-ring dark:border-ink-700 dark:bg-ink-800 dark:focus-within:border-brand-500 ${wrapperClassName}`}
     >
       {icon ? (
-        <span className="text-ink-400 dark:text-ink-300">
-          {createElement(icon, { size: 16 })}
-        </span>
+        <span className="text-ink-400 dark:text-ink-300">{createElement(icon, { size: 16 })}</span>
       ) : null}
       <input
         ref={ref}

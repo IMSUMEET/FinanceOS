@@ -30,18 +30,18 @@ description: >-
 ...content...
 ```
 
-The `description` is the most important field — it is what an agent reads to decide whether to load the full skill, so write it in the form *"X. Use when Y."*.
+The `description` is the most important field — it is what an agent reads to decide whether to load the full skill, so write it in the form _"X. Use when Y."_.
 
 ## Skills in this repo
 
-| Skill | What it covers |
-| --- | --- |
-| [`frontend-conventions`](./frontend-conventions/SKILL.md) | React 19 + Vite + Tailwind + framer-motion patterns used across the web app |
-| [`backend-contract`](./backend-contract/SKILL.md) | The schema-first FE/BE contract (`schema.json`, services, `VITE_USE_MOCK`) |
-| [`ui-components`](./ui-components/SKILL.md) | When to use which component (Card, Drawer, Select, KpiCard, CountUp, Avatar) |
-| [`spend-analyzer-flow`](./spend-analyzer-flow/SKILL.md) | How transactions, filters, insights and charts wire together |
-| [`profile-gating`](./profile-gating/SKILL.md) | Guest-first model: gating advanced features behind `hasProfile` |
-| [`pr-workflow`](./pr-workflow/SKILL.md) | Lint, build, commit style and PR template |
+| Skill                                                     | What it covers                                                               |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`frontend-conventions`](./frontend-conventions/SKILL.md) | React 19 + Vite + Tailwind + framer-motion patterns used across the web app  |
+| [`backend-contract`](./backend-contract/SKILL.md)         | The schema-first FE/BE contract (`schema.json`, services, `VITE_USE_MOCK`)   |
+| [`ui-components`](./ui-components/SKILL.md)               | When to use which component (Card, Drawer, Select, KpiCard, CountUp, Avatar) |
+| [`spend-analyzer-flow`](./spend-analyzer-flow/SKILL.md)   | How transactions, filters, insights and charts wire together                 |
+| [`profile-gating`](./profile-gating/SKILL.md)             | Guest-first model: gating advanced features behind `hasProfile`              |
+| [`pr-workflow`](./pr-workflow/SKILL.md)                   | Lint, build, commit style and PR template                                    |
 
 ## Adding a new skill
 
