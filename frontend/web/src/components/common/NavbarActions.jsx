@@ -144,7 +144,7 @@ function NavbarActions() {
               {hasProfile ? displayName : "Create your profile"}
             </p>
             <p className="text-xs text-ink-500 dark:text-ink-400">
-              {hasProfile ? "View profile" : "Unlock AI insights"}
+              {hasProfile ? "View profile" : "Set up profile"}
             </p>
           </div>
           <ChevronDown

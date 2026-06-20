@@ -16,8 +16,14 @@ import {
 } from "../services/transactions";
 import { USE_MOCK } from "../api/client";
 import { ANALYSIS_SESSION_KEY } from "../constants/sessionAnalysis";
+import {
+  ALL_MONTHS_SENTINEL,
+  PAGE_KEYS,
+  applyFiltersToRows,
+  createInitialPageFilters,
+} from "./pageFilters.js";
 
-export const ALL_MONTHS_SENTINEL = "ALL";
+export { ALL_MONTHS_SENTINEL };
 // eslint-disable-next-line react-refresh/only-export-components
 export const TransactionsContext = createContext(null);
 
@@ -33,6 +39,15 @@ function readStoredAnalysis() {
   return null;
 }
 
+function buildDerived(filtered) {
+  return {
+    monthly: monthlyTotals(filtered),
+    monthlyByCategory: monthlyByCategory(filtered),
+    categories: categoryBreakdown(filtered),
+    merchants: merchantBreakdown(filtered),
+  };
+}
+
 export function TransactionsProvider({ children }) {
   const initialStored = readStoredAnalysis();
   const [transactions, setTransactions] = useState(() => {
@@ -40,13 +55,7 @@ export function TransactionsProvider({ children }) {
     return USE_MOCK ? seed : [];
   });
   const [restoredFromSession, setRestoredFromSession] = useState(Boolean(initialStored));
-  const [filters, setFilters] = useState({
-    month: ALL_MONTHS_SENTINEL,
-    categories: [],
-    search: "",
-    amountMin: null,
-    amountMax: null,
-  });
+  const [pageFilters, setPageFiltersState] = useState(createInitialPageFilters);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,35 +80,33 @@ export function TransactionsProvider({ children }) {
     return Array.from(set).filter(Boolean).sort();
   }, [transactions]);
 
-  const filtered = useMemo(() => {
-    return transactions.filter((t) => {
-      if (filters.month !== ALL_MONTHS_SENTINEL && monthKey(t.date) !== filters.month) {
-        return false;
-      }
-      if (filters.categories.length && !filters.categories.includes(t.category)) {
-        return false;
-      }
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        const hay = `${t.merchant_normalized ?? ""} ${t.merchant_raw ?? ""} ${t.description ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      const amt = Math.abs(Number(t.amount ?? 0));
-      if (filters.amountMin != null && amt < filters.amountMin) return false;
-      if (filters.amountMax != null && amt > filters.amountMax) return false;
-      return true;
+  const setPageFilters = useCallback((pageKey, updater) => {
+    setPageFiltersState((prev) => {
+      const current = prev[pageKey];
+      const next = typeof updater === "function" ? updater(current) : updater;
+      return { ...prev, [pageKey]: next };
     });
-  }, [transactions, filters]);
+  }, []);
 
-  const derived = useMemo(
-    () => ({
-      monthly: monthlyTotals(filtered),
-      monthlyByCategory: monthlyByCategory(filtered),
-      categories: categoryBreakdown(filtered),
-      merchants: merchantBreakdown(filtered),
-    }),
-    [filtered],
-  );
+  const resetAllPageFilters = useCallback(() => {
+    setPageFiltersState(createInitialPageFilters());
+  }, []);
+
+  const filteredByPage = useMemo(() => {
+    const out = {};
+    for (const key of PAGE_KEYS) {
+      out[key] = applyFiltersToRows(transactions, pageFilters[key]);
+    }
+    return out;
+  }, [transactions, pageFilters]);
+
+  const derivedByPage = useMemo(() => {
+    const out = {};
+    for (const key of PAGE_KEYS) {
+      out[key] = buildDerived(filteredByPage[key]);
+    }
+    return out;
+  }, [filteredByPage]);
 
   const addMany = useCallback(async (rows) => {
     try {
@@ -120,14 +127,14 @@ export function TransactionsProvider({ children }) {
 
   const applyAnalysisResult = useCallback(async (analysis) => {
     if (!analysis || analysis.status !== "success" || !Array.isArray(analysis.transactions)) return;
-    
+
     setTransactions((prev) => {
       const isSeed = prev.length === seed.length && prev.every((t, i) => t.merchant_raw === seed[i].merchant_raw && t.amount === seed[i].amount);
       const baseList = isSeed ? [] : prev;
-      
+
       const seen = new Set();
       const merged = [];
-      
+
       for (const t of baseList) {
         const key = `${t.date}|${t.merchant_raw}|${t.amount}|${t.card_identity || ""}`;
         if (!seen.has(key)) {
@@ -135,7 +142,7 @@ export function TransactionsProvider({ children }) {
           merged.push(t);
         }
       }
-      
+
       for (const t of analysis.transactions) {
         const key = `${t.date}|${t.merchant_raw}|${t.amount}|${t.card_identity || ""}`;
         if (!seen.has(key)) {
@@ -143,24 +150,24 @@ export function TransactionsProvider({ children }) {
           merged.push(t);
         }
       }
-      
+
       let nextId = 1;
       const stamped = merged.map((t) => ({ ...t, id: nextId++ }));
-      
+
       if (USE_MOCK) {
         _replaceAllMock(stamped).catch(console.error);
       }
-      
+
       const updatedAnalysis = { ...analysis, transactions: stamped };
       try {
         sessionStorage.setItem(ANALYSIS_SESSION_KEY, JSON.stringify(updatedAnalysis));
       } catch {
         // ignore
       }
-      
+
       return stamped;
     });
-    
+
     setRestoredFromSession(false);
   }, []);
 
@@ -199,11 +206,12 @@ export function TransactionsProvider({ children }) {
   const value = {
     ALL_MONTHS_SENTINEL,
     transactions,
-    filtered,
+    pageFilters,
+    setPageFilters,
+    resetAllPageFilters,
+    filteredByPage,
+    derivedByPage,
     months,
-    filters,
-    setFilters,
-    derived,
     addMany,
     replaceAll,
     updateCategory,

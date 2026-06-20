@@ -4,6 +4,7 @@ import { motion as Motion } from "framer-motion";
 import HeroCharacter from "./HeroCharacter";
 import CountUp from "../effects/CountUp";
 import { useTransactions } from "../../context/useTransactions";
+import { usePageFilters } from "../../context/usePageFilters";
 import { useProfile } from "../../hooks/useProfile";
 import { compareMonthOverMonth, totalSpend } from "../../utils/insights";
 import { classifyPersonality } from "../../utils/personality";
@@ -19,7 +20,8 @@ function greeting() {
 }
 
 function WelcomeHero() {
-  const { filtered, transactions } = useTransactions();
+  const { transactions } = useTransactions();
+  const { filtered } = usePageFilters("overview");
   const { profile, hasProfile } = useProfile();
   const total = totalSpend(filtered);
   const mom = compareMonthOverMonth(transactions);

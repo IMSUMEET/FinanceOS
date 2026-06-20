@@ -19,9 +19,38 @@ const NAV_SECTIONS = [
   {
     id: "real-estate",
     label: "Real estate",
-    items: [{ to: "/house-sale", label: "House Sale", icon: Home }],
+    items: [{ to: "/house-sale", label: "House Sale", icon: Home, comingSoon: true }],
   },
 ];
+
+function SidebarComingSoonItem({ label, icon }) {
+  return (
+    <span
+      aria-disabled="true"
+      title="House Sale — appear soon"
+      className="group relative block cursor-not-allowed select-none rounded-2xl p-[1px] bg-gradient-to-br from-brand-300/70 via-violet-300/50 to-brand-400/60 dark:from-brand-500/40 dark:via-violet-500/30 dark:to-brand-600/40"
+    >
+      <span className="relative flex items-center gap-3 rounded-[15px] bg-white/90 px-3 py-2.5 dark:bg-ink-900/90">
+        <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100 dark:bg-brand-950/50 dark:text-brand-300 dark:ring-brand-800/60">
+          {createElement(icon, { size: 16 })}
+          <Motion.span
+            aria-hidden
+            animate={{ scale: [1, 1.35, 1], opacity: [0.55, 0, 0.55] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-0 rounded-xl bg-brand-400/25"
+          />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-ink-700 dark:text-ink-100">{label}</span>
+          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-brand-600 to-violet-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-brand">
+            <Sparkles size={10} strokeWidth={2.5} aria-hidden />
+            Appear soon
+          </span>
+        </span>
+      </span>
+    </span>
+  );
+}
 
 function Sidebar() {
   return (
@@ -36,7 +65,10 @@ function Sidebar() {
             <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-ink-400 dark:text-ink-500">
               {section.label}
             </p>
-            {section.items.map(({ to, label, icon, end }) => (
+            {section.items.map(({ to, label, icon, end, comingSoon }) =>
+              comingSoon ? (
+                <SidebarComingSoonItem key={to} label={label} icon={icon} />
+              ) : (
               <NavLink
                 key={to}
                 to={to}
@@ -74,7 +106,8 @@ function Sidebar() {
                   </>
                 )}
               </NavLink>
-            ))}
+              ),
+            )}
           </div>
         ))}
       </nav>

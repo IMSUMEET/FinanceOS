@@ -11,13 +11,13 @@ import EmptyState from "../components/ui/EmptyState";
 import SectionHeader from "../components/ui/SectionHeader";
 import MiniSparkline from "../components/charts/MiniSparkline";
 import MonthlyCategoryBars from "../components/charts/MonthlyCategoryBars";
-import { useTransactions } from "../context/useTransactions";
+import { usePageFilters } from "../context/usePageFilters";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { categoryColor } from "../utils/categories";
 import { formatAmountSpend, formatCurrency, formatDate } from "../utils/format";
 
 function CategoryGrid() {
-  const { filtered, derived } = useTransactions();
+  const { derived } = usePageFilters("categories");
   const total = derived.categories.reduce((s, c) => s + c.total, 0);
 
   // Sparkline points per category (across months in current filter)
@@ -63,8 +63,7 @@ function CategoryGrid() {
                     {formatCurrency(c.total)}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-ink-500 dark:text-ink-400">
-                    {share.toFixed(1)}% of spend · {c.count} txns ·{" "}
-                    {filtered.filter((t) => t.category === c.category).length} in view
+                    {share.toFixed(1)}% of spend · {c.count} txns
                   </p>
                 </div>
                 <Badge tone="neutral">View</Badge>
@@ -81,7 +80,7 @@ function CategoryGrid() {
 }
 
 function CategoryDetail({ name }) {
-  const { filtered, derived } = useTransactions();
+  const { filtered, derived } = usePageFilters("categories");
 
   const monthlyForCat = useMemo(() => {
     return derived.monthlyByCategory.map((m) => ({ month: m.month, total: m[name] ?? 0 }));
@@ -210,7 +209,6 @@ function CategoriesPage() {
         <SectionHeader
           eyebrow="Categories"
           title="How your money is split"
-          action={<Pill tone="dark">All categories</Pill>}
         />
       </Card>
       <CategoryGrid />

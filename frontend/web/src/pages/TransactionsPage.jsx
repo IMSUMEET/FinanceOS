@@ -10,6 +10,7 @@ import CategoryDot from "../components/ui/CategoryDot";
 import EmptyState from "../components/ui/EmptyState";
 import Drawer from "../components/ui/Drawer";
 import Button from "../components/ui/Button";
+import { usePageFilters } from "../context/usePageFilters";
 import { useTransactions } from "../context/useTransactions";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { CATEGORIES } from "../utils/categories";
@@ -92,7 +93,8 @@ function CategoryChip({ active, label, onToggle }) {
 
 function TransactionsPage() {
   useDocumentTitle("Transactions");
-  const { filtered, filters, setFilters, updateCategory } = useTransactions();
+  const { filtered, filters, setFilters } = usePageFilters("transactions");
+  const { updateCategory } = useTransactions();
   const [openTx, setOpenTx] = useState(null);
 
   const sorted = useMemo(
