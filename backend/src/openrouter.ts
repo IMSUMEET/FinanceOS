@@ -185,29 +185,200 @@ export function buildReportData(transactions: any[]): ReportData {
   };
 }
 
-export function fallbackInsights(reportData: ReportData): AIInsights {
-  return {
-    summary: `You had $${reportData.totalIncome} income, $${reportData.totalExpenses} expenses, and $${reportData.netCashFlow} net cash flow during this period.`,
-    score: 70,
-    riskLevel: "low",
-    observations: [
-      {
-        title: "Net cash flow",
-        message: `Your net cash flow was $${reportData.netCashFlow}.`,
-        severity: "info",
-        category: "Cash Flow",
-      },
-    ],
-    recommendations: [
-      {
-        title: "Review top categories",
-        message: "Start by reviewing your largest spending categories.",
-        impact: "medium",
-        estimatedMonthlySavings: 0,
-      },
-    ],
-    anomalies: [],
+export function generateStaticInsights(reportData: ReportData): AIInsights {
+  const {
+    totalIncome,
+    totalExpenses,
+    netCashFlow,
+    savingsRate,
+    totalTransactions,
+    categoryTotals,
+    topMerchants,
+    largestTransactions,
+    period,
+  } = reportData;
+
+  if (!totalTransactions) {
+    return {
+      summary: "No transactions to summarize yet.",
+      score: 50,
+      riskLevel: "low",
+      observations: [
+        {
+          title: "No data",
+          message: "Upload transactions to generate a spending summary.",
+          severity: "info",
+          category: "General",
+        },
+      ],
+      recommendations: [
+        {
+          title: "Upload transactions",
+          message: "Import a CSV to unlock category and cash-flow insights.",
+          impact: "medium",
+          estimatedMonthlySavings: 0,
+        },
+      ],
+      anomalies: [],
+    };
+  }
+
+  const topCategories = Object.entries(categoryTotals)
+    .filter(([category, total]) => total > 0 && category !== "Income")
+    .sort((a, b) => b[1] - a[1]);
+  const topCat = topCategories[0];
+  const topCatName = topCat?.[0] ?? "Spending";
+  const topCatTotal = topCat?.[1] ?? 0;
+  const topCatShare = totalExpenses > 0 ? Math.round((topCatTotal / totalExpenses) * 100) : 0;
+
+  const score =
+    totalIncome <= 0
+      ? Math.max(35, Math.min(65, 50 - Math.round(totalExpenses / 100)))
+      : Math.min(100, Math.max(0, Math.round(40 + savingsRate * 0.6)));
+
+  const riskLevel: "low" | "medium" | "high" =
+    netCashFlow < 0 ? "high" : savingsRate < 10 ? "medium" : "low";
+
+  const periodLabel =
+    period.start && period.end ? `${period.start} to ${period.end}` : "this period";
+
+  const summary =
+    `From ${periodLabel}, you recorded $${totalIncome.toLocaleString()} income and ` +
+    `$${totalExpenses.toLocaleString()} expenses (${netCashFlow >= 0 ? "+" : ""}$${netCashFlow.toLocaleString()}). ` +
+    `Savings rate: ${savingsRate.toFixed(1)}%. Top spending category: ${topCatName}.`;
+
+  const observations: ObservationItem[] = [];
+
+  if (totalExpenses > 0 && topCat) {
+    observations.push({
+      title: `${topCatName} spending`,
+      message: `${topCatName} accounts for ${topCatShare}% of expenses ($${Math.round(topCatTotal).toLocaleString()}).`,
+      severity: topCatShare >= 40 ? "warning" : "info",
+      category: topCatName,
+    });
+  }
+
+  if (totalIncome > 0) {
+    observations.push({
+      title: "Savings rate",
+      message: `You kept ${savingsRate.toFixed(1)}% of income after expenses.`,
+      severity: savingsRate < 10 ? "warning" : "info",
+      category: "Savings",
+    });
+  }
+
+  if (topMerchants[0]) {
+    observations.push({
+      title: "Top merchant",
+      message:
+        `${topMerchants[0].merchant} had ${topMerchants[0].count} transaction(s) totaling ` +
+        `$${Math.round(topMerchants[0].total).toLocaleString()}.`,
+      severity: "info",
+      category: topCatName,
+    });
+  }
+
+  observations.push({
+    title: "Activity",
+    message: `${totalTransactions} transaction(s) were included in this summary.`,
+    severity: "info",
+    category: "General",
+  });
+
+  const categoryTips: Record<
+    string,
+    { title: string; message: string; impact: "low" | "medium" | "high"; estimatedMonthlySavings: number }
+  > = {
+    Food: {
+      title: "Trim food spend",
+      message: "Plan meals and limit delivery to reduce grocery and dining costs.",
+      impact: "medium",
+      estimatedMonthlySavings: Math.max(10, Math.round(topCatTotal * 0.1)),
+    },
+    Entertainment: {
+      title: "Audit subscriptions",
+      message: "Review streaming and subscription charges for services you rarely use.",
+      impact: "medium",
+      estimatedMonthlySavings: Math.max(10, Math.round(topCatTotal * 0.15)),
+    },
+    Shopping: {
+      title: "Pause impulse buys",
+      message: "Use a 48-hour rule before non-essential purchases.",
+      impact: "medium",
+      estimatedMonthlySavings: Math.max(10, Math.round(topCatTotal * 0.08)),
+    },
+    Transportation: {
+      title: "Optimize transport",
+      message: "Compare fuel, transit, and rideshare costs for your regular routes.",
+      impact: "low",
+      estimatedMonthlySavings: Math.max(5, Math.round(topCatTotal * 0.05)),
+    },
+    Housing: {
+      title: "Review housing costs",
+      message: "Check whether utilities or recurring housing fees can be reduced.",
+      impact: "high",
+      estimatedMonthlySavings: Math.max(25, Math.round(topCatTotal * 0.03)),
+    },
   };
+
+  const recommendations: RecommendationItem[] = [];
+  if (topCat && topCatShare >= 20) {
+    const tip = categoryTips[topCatName] ?? {
+      title: `Review ${topCatName}`,
+      message: `Focus on ${topCatName}, your largest spending category, for quick wins.`,
+      impact: "medium" as const,
+      estimatedMonthlySavings: Math.max(5, Math.round(topCatTotal * 0.05)),
+    };
+    recommendations.push(tip);
+  }
+
+  if (savingsRate < 20 && totalIncome > 0) {
+    recommendations.push({
+      title: "Boost savings",
+      message: "Automate a transfer to savings on each payday.",
+      impact: "high",
+      estimatedMonthlySavings: Math.max(10, Math.round(totalIncome * 0.05)),
+    });
+  }
+
+  if (!recommendations.length) {
+    recommendations.push({
+      title: "Review top categories",
+      message: "Start by reviewing your largest spending categories.",
+      impact: "medium",
+      estimatedMonthlySavings: 0,
+    });
+  }
+
+  const expenseCount = Math.max(1, largestTransactions.filter((t) => t.amount < 0).length);
+  const avgExpense = totalExpenses / expenseCount;
+  const anomalies: AnomalyItem[] = [];
+  for (const txn of largestTransactions) {
+    if (txn.amount >= 0 || avgExpense <= 0) continue;
+    if (Math.abs(txn.amount) <= avgExpense * 2.5) continue;
+    anomalies.push({
+      title: "Large expense",
+      message:
+        `${txn.merchant} on ${txn.date} was $${Math.abs(txn.amount).toLocaleString()}, above typical spend.`,
+      severity: "warning",
+      amount: Math.abs(txn.amount),
+    });
+    if (anomalies.length >= 3) break;
+  }
+
+  return {
+    summary,
+    score,
+    riskLevel,
+    observations: observations.slice(0, 5),
+    recommendations: recommendations.slice(0, 4),
+    anomalies,
+  };
+}
+
+/** @deprecated Use generateStaticInsights — kept for validateInsights fallback paths. */
+export function fallbackInsights(reportData: ReportData): AIInsights {
+  return generateStaticInsights(reportData);
 }
 
 export function safeJsonParse(text: string): any {

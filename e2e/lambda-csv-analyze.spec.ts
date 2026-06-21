@@ -36,12 +36,12 @@ test.describe("Lambda 1 — CSV analyze API", () => {
     const body = await res.json();
 
     expect(body.status).toBe("success");
-    expect(body.mode).toBe("local-categorization-ai-suggestions");
+    expect(body.mode).toBe("local-categorization-static-suggestions");
     expect(body.transactions.length).toBeGreaterThan(0);
     expect(body.reportData).toBeTruthy();
     expect(body.insights).toBeTruthy();
-    expect(body.aiStatus).toBeTruthy();
-    expect(body.insights.summary).toContain("Playwright mock");
+    expect(body.aiStatus).toBe("static");
+    expect(body.insights.summary).toContain("income");
   });
 
   test("POST /api/analyze rejects non-multipart requests", async ({ request }) => {

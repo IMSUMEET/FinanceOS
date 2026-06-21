@@ -3,6 +3,7 @@ import {
   buildReportData,
   validateInsights,
   generateInsightsWithOpenRouter,
+  generateStaticInsights,
   fallbackInsights,
   mapToAllowedCategory,
   safeJsonParse,
@@ -107,7 +108,7 @@ describe("generateInsightsWithOpenRouter branch coverage", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     const report = buildReportData([]);
     const insights = await generateInsightsWithOpenRouter(report);
-    expect(insights.summary).toContain("You had $");
+    expect(insights.summary).toContain("No transactions");
   });
 
   it("uses custom model and app url env vars", async () => {
@@ -139,14 +140,35 @@ describe("generateInsightsWithOpenRouter branch coverage", () => {
   });
 });
 
+describe("generateStaticInsights", () => {
+  it("builds a deterministic summary from reportData", () => {
+    const report = buildReportData([
+      { id: "1", date: "2026-06-01", amount: 3200, type: "income", finalCategory: "Income", merchant: "Employer" },
+      { id: "2", date: "2026-06-02", amount: -42.5, type: "expense", finalCategory: "Food", merchant: "Whole Foods" },
+    ]);
+    const insights = generateStaticInsights(report);
+    expect(insights.summary).toContain("income");
+    expect(insights.summary).toContain("Food");
+    expect(insights.observations.length).toBeGreaterThan(0);
+    expect(insights.recommendations.length).toBeGreaterThan(0);
+    expect(insights.score).toBeGreaterThan(0);
+  });
+
+  it("returns empty-state defaults", () => {
+    const insights = generateStaticInsights(buildReportData([]));
+    expect(insights.summary).toContain("No transactions");
+    expect(insights.score).toBe(50);
+  });
+});
+
 describe("fallbackInsights", () => {
-  it("returns structured defaults", () => {
+  it("delegates to generateStaticInsights", () => {
     const report = buildReportData([
       { id: "1", date: "2026-06-01", amount: 100, type: "income", finalCategory: "Income", merchant: "Job" },
     ]);
     const insights = fallbackInsights(report);
-    expect(insights.observations[0]?.category).toBe("Cash Flow");
-    expect(insights.recommendations[0]?.impact).toBe("medium");
+    expect(insights.observations[0]?.category).toBeTruthy();
+    expect(insights.recommendations[0]?.impact).toBeTruthy();
   });
 });
 

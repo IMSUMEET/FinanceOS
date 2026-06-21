@@ -5,8 +5,7 @@ import { categorize, normalizeMerchant } from "./categorize.js";
 import { parseToIsoDateString } from "./csvAnalyze.js";
 import {
   buildReportData,
-  generateInsightsWithOpenRouter,
-  fallbackInsights,
+  generateStaticInsights,
   mapToAllowedCategory,
   safeJsonParse,
   OPENROUTER_CHAT_COMPLETIONS_URL,
@@ -455,9 +454,9 @@ async function handleAiAnalyzeRequest(c: any) {
   // 6. Build reportData
   const reportData = buildReportData(finalTransactions);
 
-  // 7. Generate insights
-  const insights = await generateInsightsWithOpenRouter(reportData);
-  const aiStatusInsights = hasApiKey && !insights.summary.startsWith("You had $") ? "success" : "fallback";
+  // 7. Generate insights locally (OpenRouter reserved for categorization + profile coach)
+  const insights = generateStaticInsights(reportData);
+  const aiStatusInsights = "static";
 
   console.log(
     JSON.stringify({
@@ -474,7 +473,7 @@ async function handleAiAnalyzeRequest(c: any) {
 
   return c.json({
     status: "success",
-    mode: "ai-categorization-ai-suggestions",
+    mode: "ai-categorization-static-suggestions",
     transactions: finalTransactions,
     reportData,
     insights,

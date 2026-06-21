@@ -112,7 +112,7 @@ describe("backend routes", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe("success");
-    expect(body.mode).toBe("local-categorization-ai-suggestions");
+    expect(body.mode).toBe("local-categorization-static-suggestions");
     expect(body.transactions).toHaveLength(1);
     expect(body.transactions[0].merchant).toBe("Starbucks");
     expect(body.reportData.totalExpenses).toBe(5); // Rounded
@@ -208,29 +208,7 @@ describe("backend routes", () => {
     expect(res.status).toBe(200);
   });
 
-  it("reports ai success when insights are not fallback", async () => {
-    vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [{
-            message: {
-              content: JSON.stringify({
-                summary: "Custom insight",
-                score: 88,
-                riskLevel: "low",
-                observations: [],
-                recommendations: [],
-                anomalies: [],
-              }),
-            },
-          }],
-        }),
-      }),
-    );
-
+  it("reports static insights on analyze", async () => {
     const csvContent =
       "Details,Posting Date,Description,Amount,Type,Balance,Check or Slip #\r\n" +
       "DEBIT,06/15/2026,STARBUCKS,-4.50,DEBIT,1200.00,\r\n";
@@ -240,8 +218,9 @@ describe("backend routes", () => {
     const res = await app.request("/api/analyze", { method: "POST", body: formData });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.aiStatus).toBe("success");
-    expect(body.insights.summary).toBe("Custom insight");
+    expect(body.aiStatus).toBe("static");
+    expect(body.insights.summary).toContain("income");
+    expect(body.insights.observations.length).toBeGreaterThan(0);
   });
 
   it("returns coach suggestions from POST /api/coach/suggestions", async () => {

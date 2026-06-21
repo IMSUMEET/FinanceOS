@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fallbackInsights, buildReportData } from "../src/openrouter.js";
 
 function successAnalyzePayload(transactions: Record<string, unknown>[]) {
   return {
@@ -25,7 +24,7 @@ describe("index branch coverage via mocks", () => {
     vi.resetModules();
   });
 
-  it("maps sparse transactions and reports fallback ai status", async () => {
+  it("maps sparse transactions and reports static ai status", async () => {
     vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
     vi.doMock("../src/csvAnalyze.js", () => ({
       analyzeCsvBuffers: vi.fn().mockResolvedValue(
@@ -44,13 +43,6 @@ describe("index branch coverage via mocks", () => {
       MAX_CSV_BYTES: 5 * 1024 * 1024,
       isCsvFileName: (name: string) => /\.(csv|xlsx|xls)$/i.test(name),
     }));
-    vi.doMock("../src/openrouter.js", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("../src/openrouter.js")>();
-      return {
-        ...actual,
-        generateInsightsWithOpenRouter: vi.fn().mockResolvedValue(fallbackInsights(buildReportData([]))),
-      };
-    });
 
     const { app } = await import("../src/index.js");
     const formData = new FormData();
@@ -62,7 +54,7 @@ describe("index branch coverage via mocks", () => {
     expect(body.transactions[0].merchant).toBe("Unknown");
     expect(body.transactions[0].description).toBe("Raw Merchant");
     expect(body.transactions[0].localConfidence).toBe(0.5);
-    expect(body.aiStatus).toBe("fallback");
+    expect(body.aiStatus).toBe("static");
     vi.unstubAllEnvs();
   });
 

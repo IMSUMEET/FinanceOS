@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { parseCsvToTransactions, getLocalCategoryHint, mergeAiCategories, aiApp, transactionCreatedAt } from "../src/aiAnalyzer.js";
-import { buildReportData, fallbackInsights, safeJsonParse, validateInsights, generateInsightsWithOpenRouter } from "../src/openrouter.js";
+import { buildReportData, generateStaticInsights, safeJsonParse, validateInsights, generateInsightsWithOpenRouter } from "../src/openrouter.js";
 
 describe("CSV Parser (Lambda 2)", () => {
   it("should parse amount column and detect type correctly", () => {
@@ -146,9 +146,10 @@ describe("AI Fallback and Parsing Safety", () => {
     const reportData = buildReportData([
       { id: "txn_001", date: "2026-06-01", amount: -50, type: "expense", finalCategory: "Food" }
     ]);
-    const insights = fallbackInsights(reportData);
-    expect(insights.summary).toContain("You had $0 income, $50 expenses");
-    expect(insights.score).toBe(70);
+    const insights = generateStaticInsights(reportData);
+    expect(insights.summary).toContain("income");
+    expect(insights.summary).toContain("expenses");
+    expect(insights.score).toBeGreaterThan(0);
   });
 
   it("safeJsonParse removes markdown fences and handles invalid JSON", () => {
@@ -172,7 +173,7 @@ describe("AI Fallback and Parsing Safety", () => {
 
     const validated = validateInsights(badInsights, reportData);
     expect(typeof validated.summary).toBe("string");
-    expect(validated.score).toBe(70);
+    expect(validated.score).toBe(50);
     expect(validated.riskLevel).toBe("low");
   });
 });
@@ -227,7 +228,7 @@ describe("OpenRouter Integration Mocks", () => {
 
     const report = buildReportData([]);
     const result = await generateInsightsWithOpenRouter(report);
-    expect(result.summary).toContain("You had $0 income");
+    expect(result.summary).toContain("No transactions");
   });
 
   it("handles empty choice content from fetch", async () => {
@@ -238,7 +239,7 @@ describe("OpenRouter Integration Mocks", () => {
     vi.stubGlobal("fetch", globalFetchMock);
     const report = buildReportData([]);
     const result = await generateInsightsWithOpenRouter(report);
-    expect(result.summary).toContain("You had $0 income");
+    expect(result.summary).toContain("No transactions");
   });
 
   it("handles unparseable json response content from fetch", async () => {
@@ -249,7 +250,7 @@ describe("OpenRouter Integration Mocks", () => {
     vi.stubGlobal("fetch", globalFetchMock);
     const report = buildReportData([]);
     const result = await generateInsightsWithOpenRouter(report);
-    expect(result.summary).toContain("You had $0 income");
+    expect(result.summary).toContain("No transactions");
   });
 });
 
@@ -307,30 +308,9 @@ describe("aiApp Hono Routing (Lambda 2)", () => {
       ]
     };
 
-    const mockInsightsResponse = {
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              summary: "Good savings",
-              score: 85,
-              riskLevel: "low",
-              observations: [],
-              recommendations: [],
-              anomalies: []
-            })
-          }
-        }
-      ]
-    };
-
-    let fetchCallCount = 0;
-    const globalFetchMock = vi.fn().mockImplementation(async () => {
-      fetchCallCount++;
-      return {
-        ok: true,
-        json: async () => (fetchCallCount === 1 ? mockCatResponse : mockInsightsResponse)
-      };
+    const globalFetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockCatResponse,
     });
     vi.stubGlobal("fetch", globalFetchMock);
 
@@ -344,6 +324,8 @@ describe("aiApp Hono Routing (Lambda 2)", () => {
     const body = await res.json();
     expect(body.status).toBe("success");
     expect(body.transactions[0].finalCategory).toBe("Food");
-    expect(body.insights.summary).toBe("Good savings");
+    expect(body.aiStatus.insights).toBe("static");
+    expect(body.insights.summary).toContain("expenses");
+    expect(globalFetchMock).toHaveBeenCalledOnce();
   });
 });

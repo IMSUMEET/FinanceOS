@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fallbackInsights, buildReportData } from "../src/openrouter.js";
 
 describe("index CSV parse error path", () => {
   beforeEach(() => {
@@ -12,13 +11,6 @@ describe("index CSV parse error path", () => {
       MAX_CSV_BYTES: 5 * 1024 * 1024,
       isCsvFileName: (name: string) => /\.(csv|xlsx|xls)$/i.test(name),
     }));
-    vi.doMock("../src/openrouter.js", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("../src/openrouter.js")>();
-      return {
-        ...actual,
-        generateInsightsWithOpenRouter: vi.fn().mockResolvedValue(fallbackInsights(buildReportData([]))),
-      };
-    });
 
     const { app } = await import("../src/index.js");
     const formData = new FormData();
@@ -42,13 +34,6 @@ describe("index generic analyze failure path", () => {
       MAX_CSV_BYTES: 5 * 1024 * 1024,
       isCsvFileName: (name: string) => /\.(csv|xlsx|xls)$/i.test(name),
     }));
-    vi.doMock("../src/openrouter.js", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("../src/openrouter.js")>();
-      return {
-        ...actual,
-        generateInsightsWithOpenRouter: vi.fn().mockResolvedValue(fallbackInsights(buildReportData([]))),
-      };
-    });
 
     const { app } = await import("../src/index.js");
     const formData = new FormData();

@@ -236,7 +236,7 @@ describe("validateInsights extended", () => {
   const report = buildReportData([]);
 
   it("returns fallback for null insights", () => {
-    expect(validateInsights(null, report).score).toBe(70);
+    expect(validateInsights(null, report).score).toBe(50);
   });
 
   it("clamps invalid score and risk level", () => {

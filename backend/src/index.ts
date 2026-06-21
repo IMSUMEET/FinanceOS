@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 import { analyzeCsvBuffers, MAX_CSV_BYTES, isCsvFileName } from "./csvAnalyze.js";
-import { buildReportData, generateInsightsWithOpenRouter, generateCoachSuggestionsWithOpenRouter, mapToAllowedCategory } from "./openrouter.js";
+import {
+  buildReportData,
+  generateCoachSuggestionsWithOpenRouter,
+  generateStaticInsights,
+  mapToAllowedCategory,
+} from "./openrouter.js";
 
 export const app = new Hono();
 
@@ -157,9 +162,7 @@ app.post("/api/analyze", async (c) => {
     });
 
     const reportData = buildReportData(mappedTransactions);
-    const insights = await generateInsightsWithOpenRouter(reportData);
-    const hasApiKey = !!process.env.OPENROUTER_API_KEY;
-    const insightsUsedOpenRouter = hasApiKey && !insights.summary.startsWith("You had $");
+    const insights = generateStaticInsights(reportData);
 
     console.log(
       JSON.stringify({
@@ -168,20 +171,20 @@ app.post("/api/analyze", async (c) => {
         totalBytes,
         transactionCount: result.transactions.length,
         outcome: "success",
-        openrouterConfigured: hasApiKey,
+        openrouterConfigured: !!process.env.OPENROUTER_API_KEY,
         aiStatus: {
-          insights: insightsUsedOpenRouter ? "success" : "fallback",
+          insights: "static",
         },
       }),
     );
 
     return c.json({
       status: "success",
-      mode: "local-categorization-ai-suggestions",
+      mode: "local-categorization-static-suggestions",
       transactions: mappedTransactions,
       reportData,
       insights,
-      aiStatus: insightsUsedOpenRouter ? "success" : "fallback"
+      aiStatus: "static",
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";

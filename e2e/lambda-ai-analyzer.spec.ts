@@ -6,7 +6,7 @@ import { fetchOpenRouterMockRequests } from "./helpers/openrouter-mock.js";
 const sampleCsvPath = path.resolve("e2e/fixtures/sample.csv");
 
 test.describe("Lambda 2 — AI analyzer API", () => {
-  test("POST /api/ai-analyze categorizes CSV and returns AI insights", async ({ request }) => {
+  test("POST /api/ai-analyze categorizes CSV and returns static insights", async ({ request }) => {
     const csv = await fs.readFile(sampleCsvPath, "utf8");
 
     const res = await request.post("/api/ai-analyze", {
@@ -18,18 +18,18 @@ test.describe("Lambda 2 — AI analyzer API", () => {
     const body = await res.json();
 
     expect(body.status).toBe("success");
-    expect(body.mode).toBe("ai-categorization-ai-suggestions");
+    expect(body.mode).toBe("ai-categorization-static-suggestions");
     expect(body.transactions).toHaveLength(3);
     expect(body.aiStatus.categorization).toBe("success");
-    expect(body.aiStatus.insights).toBe("success");
+    expect(body.aiStatus.insights).toBe("static");
 
     const foodTxn = body.transactions.find(
       (t: { description: string }) => t.description.includes("Whole Foods"),
     );
     expect(foodTxn?.finalCategory ?? foodTxn?.category).toBe("Food");
 
-    expect(body.insights.summary).toContain("Playwright mock");
-    expect(body.insights.score).toBe(82);
+    expect(body.insights.summary).toContain("income");
+    expect(typeof body.insights.score).toBe("number");
   });
 
   test("POST /api/ai-analyze accepts JSON body with csv field", async ({ request }) => {
@@ -59,7 +59,7 @@ test.describe("Lambda 2 — AI analyzer API", () => {
 });
 
 test.describe("OpenRouter integration (mocked)", () => {
-  test("backend calls OpenRouter for categorization and insights", async ({ request }) => {
+  test("backend calls OpenRouter for categorization only", async ({ request }) => {
     const csv = await fs.readFile(sampleCsvPath, "utf8");
 
     const before = await fetchOpenRouterMockRequests();
@@ -72,7 +72,7 @@ test.describe("OpenRouter integration (mocked)", () => {
     expect(res.ok()).toBeTruthy();
 
     const after = await fetchOpenRouterMockRequests();
-    expect(after.count - startCount).toBeGreaterThanOrEqual(2);
+    expect(after.count - startCount).toBe(1);
 
     const newBodies = after.bodies.slice(startCount);
     const prompts = newBodies.map((raw) => {
@@ -81,6 +81,6 @@ test.describe("OpenRouter integration (mocked)", () => {
     });
 
     expect(prompts.some((p) => p.includes("transaction categorization engine"))).toBe(true);
-    expect(prompts.some((p) => p.includes("reportData"))).toBe(true);
+    expect(prompts.some((p) => p.includes("reportData"))).toBe(false);
   });
 });

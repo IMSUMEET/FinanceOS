@@ -229,13 +229,13 @@ describe("coverage100 openrouter", () => {
     );
 
     const insights = await generateInsightsWithOpenRouter(buildReportData([]));
-    expect(insights.score).toBe(70);
+    expect(insights.score).toBe(50);
   });
 
   it("generateInsightsWithOpenRouter handles non-Error rejections", async () => {
     vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue("plain failure"));
     const insights = await generateInsightsWithOpenRouter(buildReportData([]));
-    expect(insights.summary).toContain("You had $");
+    expect(insights.summary).toContain("No transactions");
   });
 });
