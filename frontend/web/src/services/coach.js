@@ -1,11 +1,11 @@
 import { API_BASE_URL, USE_MOCK } from "../api/client";
 import { ENDPOINTS } from "../api/endpoints";
 import { buildCoachSummary, fallbackCoachSuggestions } from "../utils/coachSummary";
-import { ANALYSIS_SESSION_KEY } from "../constants/sessionAnalysis";
+import { ANALYSIS_STORAGE_KEY } from "../constants/storage";
 
-function readSessionRecommendations() {
+function readStoredRecommendations() {
   try {
-    const raw = sessionStorage.getItem(ANALYSIS_SESSION_KEY);
+    const raw = localStorage.getItem(ANALYSIS_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     const recs = parsed?.insights?.recommendations;
@@ -34,7 +34,7 @@ export async function getCoachSuggestions(transactions, { personalityLabel, pref
   const summary = buildCoachSummary(transactions, { personalityLabel });
 
   if (!preferFresh) {
-    const cached = readSessionRecommendations();
+    const cached = readStoredRecommendations();
     if (cached?.length) {
       return { suggestions: cached, source: "analysis" };
     }

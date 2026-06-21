@@ -14,6 +14,7 @@ import Badge from "../components/ui/Badge";
 import CategoryDot from "../components/ui/CategoryDot";
 import SectionHeader from "../components/ui/SectionHeader";
 import AnalysisInsightsPanel from "../components/insights/AnalysisInsightsPanel";
+import { usePageFilters } from "../context/usePageFilters";
 import { useTransactions } from "../context/useTransactions";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { useProfile } from "../hooks/useProfile";
@@ -56,7 +57,8 @@ function NarrativeCard({ icon, eyebrow, title, body, tone = "neutral", children 
 
 function InsightsPage() {
   useDocumentTitle("Insights");
-  const { filtered, latestAnalysis } = useTransactions();
+  const { latestAnalysis } = useTransactions();
+  const { filtered } = usePageFilters("insights");
   const { hasProfile } = useProfile();
 
   const mom = compareMonthOverMonth(filtered);
