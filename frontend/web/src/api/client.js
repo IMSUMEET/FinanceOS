@@ -17,12 +17,13 @@ const RAW_AI_BASE = import.meta.env.VITE_AI_ANALYZER_URL ?? "";
 const RAW_MOCK = import.meta.env.VITE_USE_MOCK ?? "";
 
 export const API_BASE_URL = String(RAW_BASE).replace(/\/+$/, "");
-/** Lambda 2 (OpenRouter categorization + insights). Falls back to API_BASE_URL for local dev. */
-export const AI_ANALYZER_BASE_URL = String(RAW_AI_BASE || RAW_BASE).replace(/\/+$/, "");
+/** FinanceOsAiCsvAnalyzerStack (Lambda 2) — required for AI analysis; never falls back to Lambda 1. */
+export const AI_ANALYZER_BASE_URL = String(RAW_AI_BASE).replace(/\/+$/, "");
 export const USE_MOCK =
   String(RAW_MOCK).toLowerCase() === "true" || API_BASE_URL === "";
-/** True when the AI analyzer endpoint can be called (separate URL or shared local server). */
-export const LLM_ANALYSIS_AVAILABLE = AI_ANALYZER_BASE_URL !== "";
+/** True when VITE_AI_ANALYZER_URL points at the dedicated AI analyzer API. */
+export const LLM_ANALYSIS_AVAILABLE =
+  !USE_MOCK && AI_ANALYZER_BASE_URL !== "";
 
 export class ApiError extends Error {
   constructor(message, { status, body } = {}) {

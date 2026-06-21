@@ -24,14 +24,18 @@ function throwIfNotOk(res, body) {
   throw err;
 }
 
-/** Resolve AI analyzer POST URL (dedicated API Gateway vs local combined server). */
+/** Resolve AI analyzer POST URL (Lambda 2 in prod; combined local server uses /api/ai-analyze). */
 export function resolveAiAnalyzeUrl() {
   const base = AI_ANALYZER_BASE_URL;
-  const dedicatedAi = Boolean(String(import.meta.env.VITE_AI_ANALYZER_URL ?? "").trim());
-  if (dedicatedAi && base !== API_BASE_URL) {
-    return `${base}/`;
+  if (!base) {
+    throw new Error(
+      "Set VITE_AI_ANALYZER_URL to the FinanceOsAiCsvAnalyzerStack API Gateway URL.",
+    );
   }
-  return `${base}${ENDPOINTS.aiAnalyze}`;
+  if (API_BASE_URL && base === API_BASE_URL) {
+    return `${base}${ENDPOINTS.aiAnalyze}`;
+  }
+  return `${base}/`;
 }
 
 export function normalizeAnalysisResponse(body) {
