@@ -12,7 +12,7 @@ function Select({ value, onChange, options, className = "", leadingIcon, ...rest
 
   return (
     <div
-      className={`relative inline-flex items-center rounded-full border border-ink-200 bg-white transition focus-within:border-brand-300 dark:border-ink-700 dark:bg-ink-800 dark:focus-within:border-brand-500 ${className}`}
+      className={`relative inline-flex items-center rounded-full transition focus-within:ring-2 focus-within:ring-brand-400/20 clay-input-light ${className}`}
     >
       {hasLeading ? (
         <span className="pointer-events-none absolute left-3 flex items-center text-ink-400 dark:text-ink-300">

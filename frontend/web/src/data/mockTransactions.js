@@ -2,6 +2,13 @@
 // Shape mirrors backend: { date, merchant_raw, merchant_normalized, description, amount, currency, category, source }
 // Months covered (ending most recent): Nov 2025 -> Apr 2026.
 
+const CARD_BY_SOURCE = {
+  chase: "Chase Credit Card",
+  amex: "Amex Blue Cash",
+  venture: "Venture X",
+  checking: "Chase Checking",
+};
+
 let _id = 1;
 const t = (date, merchant, raw, description, amount, category, source = "chase") => ({
   id: _id++,
@@ -13,6 +20,7 @@ const t = (date, merchant, raw, description, amount, category, source = "chase")
   currency: "USD",
   category,
   source,
+  card_identity: CARD_BY_SOURCE[source] ?? "Chase Credit Card",
   created_at: new Date(`${date}T12:00:00Z`).toISOString(),
 });
 
@@ -177,5 +185,12 @@ const TRANSACTIONS = [
   t("2026-04-18", "Chevron", "CHEVRON", "Fuel", -49.0, "Gas"),
   t("2026-04-19", "AMC Theatres", "AMC CINEMA", "Saturday movie", -27.5, "Entertainment"),
 ];
+
+const SOURCE_CYCLE = ["chase", "amex", "venture", "checking"];
+for (let i = 0; i < TRANSACTIONS.length; i++) {
+  const source = SOURCE_CYCLE[i % SOURCE_CYCLE.length];
+  TRANSACTIONS[i].source = source;
+  TRANSACTIONS[i].card_identity = CARD_BY_SOURCE[source];
+}
 
 export default TRANSACTIONS;

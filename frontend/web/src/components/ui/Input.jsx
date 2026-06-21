@@ -6,7 +6,7 @@ const Input = forwardRef(function Input(
 ) {
   return (
     <div
-      className={`flex items-center gap-2 rounded-full border border-ink-200 bg-white px-4 transition focus-within:border-brand-400 focus-within:shadow-ring dark:border-ink-700 dark:bg-ink-800 dark:focus-within:border-brand-500 ${wrapperClassName}`}
+      className={`flex items-center gap-2 rounded-full px-4 transition focus-within:shadow-ring clay-input-light ${wrapperClassName}`}
     >
       {icon ? (
         <span className="text-ink-400 dark:text-ink-300">{createElement(icon, { size: 16 })}</span>

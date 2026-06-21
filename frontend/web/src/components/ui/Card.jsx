@@ -8,14 +8,12 @@ function Card({
   children,
   ...rest
 }) {
-  const base = "border transition-shadow";
+  const base = "transition-all duration-300";
   const variants = {
-    glass:
-      "rounded-xl3 border-white/60 bg-white/75 shadow-soft backdrop-blur-xl dark:border-ink-800 dark:bg-ink-900/70 dark:shadow-softDark",
-    solid:
-      "rounded-xl3 border-ink-200/70 bg-white shadow-soft dark:border-ink-800 dark:bg-ink-900 dark:shadow-softDark",
-    inset: "rounded-xl2 border-transparent bg-[#f6f9ff] dark:bg-ink-800/50",
-    dark: "rounded-xl3 border-white/10 bg-insight text-white shadow-dark dark:border-ink-800",
+    glass: "rounded-xl3 clay-card-light",
+    solid: "rounded-xl3 clay-card-light",
+    inset: "rounded-xl2 clay-input-light",
+    dark: "rounded-xl3 border-white/10 bg-insight text-white shadow-dark dark:border-ink-700",
     bare: "rounded-xl2 border-transparent bg-transparent",
   };
   const padders = {

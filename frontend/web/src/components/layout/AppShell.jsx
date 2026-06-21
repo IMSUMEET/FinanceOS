@@ -3,10 +3,14 @@ import { useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import MobileNav from "./MobileNav";
-import MobileFab from "./MobileFab";
+import UploadPromptModal from "../onboarding/UploadPromptModal";
+import { useTransactions } from "../../context/useTransactions";
 
 function AppShell({ children }) {
   const { pathname } = useLocation();
+  const { transactions, uploadPromptDismissed, dismissUploadPrompt } = useTransactions();
+
+  const showUploadPrompt = transactions.length === 0 && !uploadPromptDismissed;
 
   return (
     <div className="h-screen overflow-hidden bg-appField text-ink-900 dark:bg-ink-950 dark:text-ink-100 dark:bg-appFieldDark">
@@ -32,7 +36,7 @@ function AppShell({ children }) {
         </div>
       </div>
       <MobileNav />
-      <MobileFab />
+      <UploadPromptModal open={showUploadPrompt} onDismiss={dismissUploadPrompt} />
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import seed from "../data/mockTransactions";
 import { monthKey } from "../utils/format";
 import {
   categoryBreakdown,
@@ -9,13 +8,18 @@ import {
 } from "../utils/insights";
 import {
   importTransactions,
-  listTransactions,
   updateTransactionCategory,
   deleteTransaction,
   _replaceAllMock,
 } from "../services/transactions";
 import { USE_MOCK } from "../api/client";
-import { ANALYSIS_SESSION_KEY } from "../constants/sessionAnalysis";
+import {
+  ANALYSIS_STORAGE_KEY,
+  UPLOAD_PROMPT_DISMISSED_KEY,
+  clearLegacyAnalysisSessions,
+  migrateSessionAnalysisToLocal,
+} from "../constants/storage";
+import { clearSeenAlerts } from "../utils/alerts";
 import {
   ALL_MONTHS_SENTINEL,
   PAGE_KEYS,
@@ -28,15 +32,32 @@ export { ALL_MONTHS_SENTINEL };
 export const TransactionsContext = createContext(null);
 
 function readStoredAnalysis() {
+  clearLegacyAnalysisSessions();
+  migrateSessionAnalysisToLocal();
   try {
-    const raw = sessionStorage.getItem(ANALYSIS_SESSION_KEY);
+    const raw = localStorage.getItem(ANALYSIS_STORAGE_KEY);
     if (!raw) return null;
     const j = JSON.parse(raw);
-    if (j?.status === "success" && Array.isArray(j.transactions)) return j;
+    if (
+      j?.status === "success" &&
+      j?.origin === "import" &&
+      Array.isArray(j.transactions) &&
+      j.transactions.length > 0
+    ) {
+      return j;
+    }
   } catch {
-    /* ignore corrupt session */
+    /* ignore corrupt storage */
   }
   return null;
+}
+
+function persistAnalysis(analysis) {
+  try {
+    localStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(analysis));
+  } catch {
+    /* ignore quota errors */
+  }
 }
 
 function buildDerived(filtered) {
@@ -52,27 +73,18 @@ export function TransactionsProvider({ children }) {
   const initialStored = readStoredAnalysis();
   const [transactions, setTransactions] = useState(() => {
     if (initialStored) return initialStored.transactions;
-    return USE_MOCK ? seed : [];
+    return [];
   });
-  const [restoredFromSession, setRestoredFromSession] = useState(Boolean(initialStored));
+  const [restoredFromStorage, setRestoredFromStorage] = useState(Boolean(initialStored));
   const [pageFilters, setPageFiltersState] = useState(createInitialPageFilters);
+  const [uploadPromptDismissed, setUploadPromptDismissed] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    if (readStoredAnalysis()) return;
-    if (!USE_MOCK) return;
-    listTransactions()
-      .then((res) => {
-        if (cancelled) return;
-        const rows = Array.isArray(res?.rows) ? res.rows : [];
-        if (rows.length) setTransactions(rows);
-      })
-      .catch((err) => {
-        console.warn("[transactions] hydrate failed, using seed", err);
-      });
-    return () => {
-      cancelled = true;
-    };
+    try {
+      sessionStorage.removeItem(UPLOAD_PROMPT_DISMISSED_KEY);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const months = useMemo(() => {
@@ -85,6 +97,16 @@ export function TransactionsProvider({ children }) {
       const current = prev[pageKey];
       const next = typeof updater === "function" ? updater(current) : updater;
       return { ...prev, [pageKey]: next };
+    });
+  }, []);
+
+  const setAccountFilter = useCallback((accountId) => {
+    setPageFiltersState((prev) => {
+      const next = { ...prev };
+      for (const key of PAGE_KEYS) {
+        next[key] = { ...next[key], account: accountId || null };
+      }
+      return next;
     });
   }, []);
 
@@ -129,17 +151,10 @@ export function TransactionsProvider({ children }) {
     if (!analysis || analysis.status !== "success" || !Array.isArray(analysis.transactions)) return;
 
     setTransactions((prev) => {
-      const isSeed =
-        prev.length === seed.length &&
-        prev.every(
-          (t, i) => t.merchant_raw === seed[i].merchant_raw && t.amount === seed[i].amount,
-        );
-      const baseList = isSeed ? [] : prev;
-
       const seen = new Set();
       const merged = [];
 
-      for (const t of baseList) {
+      for (const t of prev) {
         const key = `${t.date}|${t.merchant_raw}|${t.amount}|${t.card_identity || ""}`;
         if (!seen.has(key)) {
           seen.add(key);
@@ -162,35 +177,52 @@ export function TransactionsProvider({ children }) {
         _replaceAllMock(stamped).catch(console.error);
       }
 
-      const updatedAnalysis = { ...analysis, transactions: stamped };
-      try {
-        sessionStorage.setItem(ANALYSIS_SESSION_KEY, JSON.stringify(updatedAnalysis));
-      } catch {
-        // ignore
-      }
+      const updatedAnalysis = {
+        ...analysis,
+        origin: "import",
+        transactions: stamped,
+      };
+      persistAnalysis(updatedAnalysis);
+      clearSeenAlerts();
 
       return stamped;
     });
 
-    setRestoredFromSession(false);
+    setRestoredFromStorage(false);
+  }, []);
+
+  const dismissUploadPrompt = useCallback(() => {
+    setUploadPromptDismissed(true);
+  }, []);
+
+  const resetUploadPrompt = useCallback(() => {
+    setUploadPromptDismissed(false);
   }, []);
 
   const clearSessionAnalysis = useCallback(async () => {
     try {
-      sessionStorage.removeItem(ANALYSIS_SESSION_KEY);
+      localStorage.removeItem(ANALYSIS_STORAGE_KEY);
     } catch {
       /* ignore */
     }
+    clearSeenAlerts();
+    setTransactions([]);
+    setUploadPromptDismissed(false);
     if (USE_MOCK) {
-      await replaceAll(seed);
-    } else {
-      setTransactions([]);
+      await _replaceAllMock([]);
     }
-    setRestoredFromSession(false);
-  }, [replaceAll]);
+    setRestoredFromStorage(false);
+  }, []);
 
   const updateCategory = useCallback(async (id, category) => {
-    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, category } : t)));
+    setTransactions((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, category } : t));
+      const stored = readStoredAnalysis();
+      if (stored) {
+        persistAnalysis({ ...stored, transactions: next, origin: "import" });
+      }
+      return next;
+    });
     try {
       await updateTransactionCategory(id, category);
     } catch (err) {
@@ -199,7 +231,14 @@ export function TransactionsProvider({ children }) {
   }, []);
 
   const removeOne = useCallback(async (id) => {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    setTransactions((prev) => {
+      const next = prev.filter((t) => t.id !== id);
+      const stored = readStoredAnalysis();
+      if (stored) {
+        persistAnalysis({ ...stored, transactions: next, origin: "import" });
+      }
+      return next;
+    });
     try {
       await deleteTransaction(id);
     } catch (err) {
@@ -212,6 +251,7 @@ export function TransactionsProvider({ children }) {
     transactions,
     pageFilters,
     setPageFilters,
+    setAccountFilter,
     resetAllPageFilters,
     filteredByPage,
     derivedByPage,
@@ -222,7 +262,12 @@ export function TransactionsProvider({ children }) {
     removeOne,
     applyAnalysisResult,
     clearSessionAnalysis,
-    restoredFromSession,
+    uploadPromptDismissed,
+    dismissUploadPrompt,
+    resetUploadPrompt,
+    restoredFromStorage,
+    /** @deprecated use restoredFromStorage */
+    restoredFromSession: restoredFromStorage,
   };
 
   return <TransactionsContext.Provider value={value}>{children}</TransactionsContext.Provider>;
