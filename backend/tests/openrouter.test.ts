@@ -175,6 +175,10 @@ describe("coach suggestions", () => {
     vi.restoreAllMocks();
   });
 
+  beforeEach(() => {
+    vi.stubEnv("OPENROUTER_API_KEY", "");
+  });
+
   it("returns three fallback suggestions", () => {
     const result = fallbackCoachSuggestions(sampleSummary);
     expect(result.suggestions).toHaveLength(3);

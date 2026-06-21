@@ -1,7 +1,15 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { app } from "../src/index.js";
 
 describe("backend routes", () => {
+  beforeEach(() => {
+    vi.stubEnv("OPENROUTER_API_KEY", "");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
   it("should return root info", async () => {
     const res = await app.request("/");
     expect(res.status).toBe(200);
@@ -267,9 +275,4 @@ describe("backend routes", () => {
     });
     expect(res.status).toBe(400);
   });
-});
-
-afterEach(() => {
-  vi.unstubAllEnvs();
-  vi.restoreAllMocks();
 });
