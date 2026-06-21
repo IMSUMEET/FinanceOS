@@ -6,11 +6,11 @@ const SIZE_CLASS = {
   md: "gap-2 px-3 py-1.5 text-sm",
 };
 
-function CategoryBadge({ category, size = "sm", className = "", as: Tag = "span" }) {
+function CategoryBadge({ category, size = "sm", className = "" }) {
   const pill = categoryPillStyle(category);
 
   return (
-    <Tag
+    <span
       className={[
         "inline-flex max-w-full min-w-0 items-center rounded-full border font-bold uppercase tracking-wide",
         pill.bg,
@@ -26,7 +26,7 @@ function CategoryBadge({ category, size = "sm", className = "", as: Tag = "span"
       <span className="truncate" title={category}>
         {categoryDisplayLabel(category)}
       </span>
-    </Tag>
+    </span>
   );
 }
 
