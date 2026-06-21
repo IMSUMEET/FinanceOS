@@ -2,36 +2,29 @@ import { createElement } from "react";
 import {
   Activity,
   AlertTriangle,
+  Bot,
   CalendarClock,
+  Lock,
   Repeat,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import NoDataYet from "../components/common/NoDataYet";
-import MonthFilterSelect from "../components/filters/MonthFilterSelect";
 import Card from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
-import CategoryBadge from "../components/ui/CategoryBadge";
+import CategoryDot from "../components/ui/CategoryDot";
 import SectionHeader from "../components/ui/SectionHeader";
-import { usePageFilters } from "../context/usePageFilters";
+import AnalysisInsightsPanel from "../components/insights/AnalysisInsightsPanel";
 import { useTransactions } from "../context/useTransactions";
-import { ALL_MONTHS_SENTINEL } from "../context/pageFilters";
 import useDocumentTitle from "../hooks/useDocumentTitle";
+import { useProfile } from "../hooks/useProfile";
 import {
-  compareSelectedMonthToPrevious,
+  compareMonthOverMonth,
   detectRecurring,
-  previousMonthKey,
   topAnomalies,
-  topCategoryMoversForMonth,
+  topCategoryMovers,
   weekdayVsWeekend,
 } from "../utils/insights";
-import {
-  formatAmountSpend,
-  formatCurrency,
-  formatDate,
-  formatMonth,
-  formatPct,
-} from "../utils/format";
+import { formatAmountSpend, formatCurrency, formatDate, formatPct } from "../utils/format";
 
 function NarrativeCard({ icon, eyebrow, title, body, tone = "neutral", children }) {
   const tones = {
@@ -50,9 +43,7 @@ function NarrativeCard({ icon, eyebrow, title, body, tone = "neutral", children 
             {createElement(icon, { size: 18 })}
           </span>
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">
-              {eyebrow}
-            </p>
+            <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">{eyebrow}</p>
             <h3 className="mt-0.5 text-lg font-black text-ink-900 dark:text-ink-50">{title}</h3>
           </div>
         </div>
@@ -65,56 +56,35 @@ function NarrativeCard({ icon, eyebrow, title, body, tone = "neutral", children 
 
 function InsightsPage() {
   useDocumentTitle("Insights");
-  const { transactions } = useTransactions();
-  const { filtered, filters } = usePageFilters("insights");
+  const { filtered, latestAnalysis } = useTransactions();
+  const { hasProfile } = useProfile();
 
-  if (transactions.length === 0) {
-    return (
-      <section className="space-y-5 pt-2">
-        <NoDataYet
-          title="No insights yet"
-          description="Import bank statements to unlock spending trends, recurring charges, and anomaly detection."
-        />
-      </section>
-    );
-  }
-
-  const isAllMonths = filters.month === ALL_MONTHS_SENTINEL;
-  const mom = isAllMonths
-    ? { deltaPct: null, deltaAbs: 0, current: null, previous: null }
-    : compareSelectedMonthToPrevious(transactions, filters.month);
-  const movers = isAllMonths ? [] : topCategoryMoversForMonth(transactions, filters.month);
+  const mom = compareMonthOverMonth(filtered);
+  const movers = topCategoryMovers(filtered);
   const recurring = detectRecurring(filtered);
   const anomalies = topAnomalies(filtered, 5);
   const week = weekdayVsWeekend(filtered);
-  const priorMonthLabel = isAllMonths ? "" : formatMonth(previousMonthKey(filters.month));
 
   const annualizedRecurring = recurring.reduce((s, r) => s + r.annualized, 0);
-  const momCopy = isAllMonths
-    ? "Use the month filter above to compare spending vs the prior month."
-    : mom.deltaPct == null
-      ? `No data for the month before ${formatMonth(filters.month)}.`
+  const momCopy =
+    mom.deltaPct == null
+      ? "Need at least 2 months to compare."
       : `You spent ${formatCurrency(Math.abs(mom.deltaAbs))} ${
           mom.deltaAbs >= 0 ? "more" : "less"
-        } in ${formatMonth(filters.month)} than ${priorMonthLabel} (${formatPct(mom.deltaPct)}).`;
+        } this month than last (${formatPct(mom.deltaPct)}).`;
 
   return (
     <section className="space-y-5 pt-2">
-      <div className="flex justify-end">
-        <MonthFilterSelect pageKey="insights" />
-      </div>
       <Card variant="dark">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm text-ink-300">Spending summary</p>
+            <p className="text-sm text-ink-300">Insight Engine</p>
             <h2 className="mt-2 text-2xl font-black md:text-3xl">
-              {isAllMonths
-                ? "All months in view"
-                : mom.deltaPct == null
-                  ? "Build a baseline"
-                  : mom.deltaAbs >= 0
-                    ? `Spend up ${formatPct(mom.deltaPct)} in ${formatMonth(filters.month)}`
-                    : `Spend down ${formatPct(mom.deltaPct)} in ${formatMonth(filters.month)}`}
+              {mom.deltaPct == null
+                ? "Build a baseline"
+                : mom.deltaAbs >= 0
+                  ? `Spend up ${formatPct(mom.deltaPct)} this month`
+                  : `Spend down ${formatPct(mom.deltaPct)} this month`}
             </h2>
             <p className="mt-2 text-ink-300 max-w-2xl">{momCopy}</p>
           </div>
@@ -126,41 +96,32 @@ function InsightsPage() {
         </div>
       </Card>
 
+      <AnalysisInsightsPanel latestAnalysis={latestAnalysis} />
+
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         <NarrativeCard
           icon={Activity}
           eyebrow="Movers"
-          title={isAllMonths ? "Month-over-month" : "Biggest swings"}
+          title="Biggest swings"
           tone={movers[0]?.deltaAbs > 0 ? "danger" : "success"}
-          body={
-            isAllMonths
-              ? "Pick a month above to see which categories moved most vs the prior month."
-              : `Categories that moved most in ${formatMonth(filters.month)} vs ${priorMonthLabel}.`
-          }
+          body="Categories that moved most vs the previous month."
         >
           <div className="mt-4 space-y-3">
             {movers.length === 0 ? (
               <p className="text-sm text-ink-500 dark:text-ink-400">No comparison available yet.</p>
             ) : (
               movers.slice(0, 4).map((m) => (
-                <div
-                  key={m.category}
-                  className="surface-muted flex items-center justify-between px-4 py-3"
-                >
+                <div key={m.category} className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60">
                   <div className="flex items-center gap-3 min-w-0">
-                    <CategoryBadge category={m.category} size="sm" />
+                    <CategoryDot category={m.category} />
                     <div className="min-w-0">
-                      <p className="truncate font-bold text-ink-900 dark:text-ink-50">
-                        {m.category}
-                      </p>
+                      <p className="truncate font-bold text-ink-900 dark:text-ink-50">{m.category}</p>
                       <p className="text-xs text-ink-500 dark:text-ink-400">
                         {formatCurrency(m.prev)} → {formatCurrency(m.current)}
                       </p>
                     </div>
                   </div>
-                  <Badge tone={m.deltaAbs >= 0 ? "danger" : "success"}>
-                    {formatPct(m.deltaPct)}
-                  </Badge>
+                  <Badge tone={m.deltaAbs >= 0 ? "danger" : "success"}>{formatPct(m.deltaPct)}</Badge>
                 </div>
               ))
             )}
@@ -179,21 +140,14 @@ function InsightsPage() {
         >
           <div className="mt-4 space-y-3">
             {recurring.length === 0 ? (
-              <p className="text-sm text-ink-500 dark:text-ink-400">
-                Add a few months of data to surface subscriptions.
-              </p>
+              <p className="text-sm text-ink-500 dark:text-ink-400">Add a few months of data to surface subscriptions.</p>
             ) : (
               recurring.slice(0, 5).map((r) => (
-                <div
-                  key={r.merchant}
-                  className="surface-muted flex items-center justify-between px-4 py-3"
-                >
+                <div key={r.merchant} className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60">
                   <div className="flex items-center gap-3 min-w-0">
-                    <CategoryBadge category={r.category} size="sm" />
+                    <CategoryDot category={r.category} />
                     <div className="min-w-0">
-                      <p className="truncate font-bold text-ink-900 dark:text-ink-50">
-                        {r.merchant}
-                      </p>
+                      <p className="truncate font-bold text-ink-900 dark:text-ink-50">{r.merchant}</p>
                       <p className="text-xs text-ink-500 dark:text-ink-400">
                         ~{formatCurrency(r.avg)} / month · {r.cadence} months seen
                       </p>
@@ -215,19 +169,12 @@ function InsightsPage() {
         >
           <div className="mt-4 space-y-3">
             {anomalies.length === 0 ? (
-              <p className="text-sm text-ink-500 dark:text-ink-400">
-                Nothing unusual stands out. Nice.
-              </p>
+              <p className="text-sm text-ink-500 dark:text-ink-400">Nothing unusual stands out. Nice.</p>
             ) : (
               anomalies.map((a) => (
-                <div
-                  key={a.id}
-                  className="surface-muted flex items-center justify-between px-4 py-3"
-                >
+                <div key={a.id} className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60">
                   <div className="min-w-0">
-                    <p className="truncate font-bold text-ink-900 dark:text-ink-50">
-                      {a.merchant_normalized}
-                    </p>
+                    <p className="truncate font-bold text-ink-900 dark:text-ink-50">{a.merchant_normalized}</p>
                     <p className="text-xs text-ink-500 dark:text-ink-400">
                       {formatDate(a.date)} · usual ~{formatCurrency(a.median)}
                     </p>
@@ -250,27 +197,19 @@ function InsightsPage() {
           )}% of your spend — adjust the lens via filters above.`}
         >
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="surface-muted p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">
-                Weekday
-              </p>
+            <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
+              <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">Weekday</p>
               <p className="tabular mt-1 text-2xl font-black text-ink-900 dark:text-ink-50">
                 {formatCurrency(week.weekday, { compact: true })}
               </p>
-              <p className="text-xs font-semibold text-ink-500 dark:text-ink-400">
-                {week.weekdayPct.toFixed(0)}%
-              </p>
+              <p className="text-xs font-semibold text-ink-500 dark:text-ink-400">{week.weekdayPct.toFixed(0)}%</p>
             </div>
-            <div className="surface-muted p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">
-                Weekend
-              </p>
+            <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
+              <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">Weekend</p>
               <p className="tabular mt-1 text-2xl font-black text-ink-900 dark:text-ink-50">
                 {formatCurrency(week.weekend, { compact: true })}
               </p>
-              <p className="text-xs font-semibold text-ink-500 dark:text-ink-400">
-                {week.weekendPct.toFixed(0)}%
-              </p>
+              <p className="text-xs font-semibold text-ink-500 dark:text-ink-400">{week.weekendPct.toFixed(0)}%</p>
             </div>
           </div>
         </NarrativeCard>
@@ -288,6 +227,31 @@ function InsightsPage() {
               : "Once we see a few recurring charges, we'll show specific cancellation savings."
           }
         />
+
+        <NarrativeCard
+          icon={Bot}
+          eyebrow="OpenRouter coach"
+          title={hasProfile ? "Live coach in profile" : "Profile required"}
+          tone={hasProfile ? "success" : "neutral"}
+          body={
+            hasProfile
+              ? "Open the profile tab (top right) for fresh OpenRouter coach suggestions. The section above shows static suggestions from your last CSV analysis."
+              : "Create a profile from the top-right profile tab to unlock live OpenRouter coach suggestions in addition to the analysis above."
+          }
+        >
+          <div className="mt-4 rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60">
+            {hasProfile ? (
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                AI coach status: ready
+              </p>
+            ) : (
+              <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-600 dark:text-ink-300">
+                <Lock size={14} />
+                Locked until profile is created
+              </p>
+            )}
+          </div>
+        </NarrativeCard>
       </div>
     </section>
   );

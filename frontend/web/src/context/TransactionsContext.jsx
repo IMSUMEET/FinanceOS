@@ -1,4 +1,5 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
+import seed from "../data/mockTransactions";
 import { monthKey } from "../utils/format";
 import {
   categoryBreakdown,
@@ -8,83 +9,96 @@ import {
 } from "../utils/insights";
 import {
   importTransactions,
+  listTransactions,
   updateTransactionCategory,
   deleteTransaction,
   _replaceAllMock,
 } from "../services/transactions";
 import { USE_MOCK } from "../api/client";
-import {
-  ANALYSIS_STORAGE_KEY,
-  UPLOAD_PROMPT_DISMISSED_KEY,
-  clearLegacyAnalysisSessions,
-  migrateSessionAnalysisToLocal,
-} from "../constants/storage";
-import { clearSeenAlerts } from "../utils/alerts";
-import {
-  ALL_MONTHS_SENTINEL,
-  PAGE_KEYS,
-  applyFiltersToRows,
-  createInitialPageFilters,
-} from "./pageFilters.js";
+import { ANALYSIS_SESSION_KEY } from "../constants/sessionAnalysis";
 
-export { ALL_MONTHS_SENTINEL };
+export const ALL_MONTHS_SENTINEL = "ALL";
 // eslint-disable-next-line react-refresh/only-export-components
 export const TransactionsContext = createContext(null);
 
 function readStoredAnalysis() {
-  clearLegacyAnalysisSessions();
-  migrateSessionAnalysisToLocal();
   try {
-    const raw = localStorage.getItem(ANALYSIS_STORAGE_KEY);
+    const raw = sessionStorage.getItem(ANALYSIS_SESSION_KEY);
     if (!raw) return null;
     const j = JSON.parse(raw);
-    if (
-      j?.status === "success" &&
-      j?.origin === "import" &&
-      Array.isArray(j.transactions) &&
-      j.transactions.length > 0
-    ) {
-      return j;
-    }
+    if (j?.status === "success" && Array.isArray(j.transactions)) return j;
   } catch {
-    /* ignore corrupt storage */
+    /* ignore corrupt session */
   }
   return null;
 }
 
-function persistAnalysis(analysis) {
-  try {
-    localStorage.setItem(ANALYSIS_STORAGE_KEY, JSON.stringify(analysis));
-  } catch {
-    /* ignore quota errors */
-  }
-}
+function mergeAnalysisIntoState(prevTransactions, analysis) {
+  const isSeed =
+    prevTransactions.length === seed.length &&
+    prevTransactions.every(
+      (t, i) => t.merchant_raw === seed[i].merchant_raw && t.amount === seed[i].amount,
+    );
+  const baseList = isSeed ? [] : prevTransactions;
 
-function buildDerived(filtered) {
-  return {
-    monthly: monthlyTotals(filtered),
-    monthlyByCategory: monthlyByCategory(filtered),
-    categories: categoryBreakdown(filtered),
-    merchants: merchantBreakdown(filtered),
-  };
+  const seen = new Set();
+  const merged = [];
+
+  for (const t of baseList) {
+    const key = `${t.date}|${t.merchant_raw}|${t.amount}|${t.card_identity || ""}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(t);
+    }
+  }
+
+  for (const t of analysis.transactions) {
+    const key = `${t.date}|${t.merchant_raw}|${t.amount}|${t.card_identity || ""}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(t);
+    }
+  }
+
+  let nextId = 1;
+  const stamped = merged.map((t) => ({ ...t, id: nextId++ }));
+  const updatedAnalysis = { ...analysis, transactions: stamped };
+
+  return { stamped, updatedAnalysis };
 }
 
 export function TransactionsProvider({ children }) {
   const initialStored = readStoredAnalysis();
   const [transactions, setTransactions] = useState(() => {
     if (initialStored) return initialStored.transactions;
-    return [];
+    return USE_MOCK ? seed : [];
   });
-  const [restoredFromStorage, setRestoredFromStorage] = useState(Boolean(initialStored));
-  const [pageFilters, setPageFiltersState] = useState(createInitialPageFilters);
-  const [uploadPromptDismissed, setUploadPromptDismissed] = useState(false);
+  const [latestAnalysis, setLatestAnalysis] = useState(initialStored);
+  const [restoredFromSession, setRestoredFromSession] = useState(Boolean(initialStored));
+  const [filters, setFilters] = useState({
+    month: ALL_MONTHS_SENTINEL,
+    categories: [],
+    search: "",
+    amountMin: null,
+    amountMax: null,
+  });
 
   useEffect(() => {
-    try {
-      sessionStorage.removeItem(UPLOAD_PROMPT_DISMISSED_KEY);
-    } catch {
-      /* ignore */
-    }
+    let cancelled = false;
+    if (readStoredAnalysis()) return;
+    if (!USE_MOCK) return;
+    listTransactions()
+      .then((res) => {
+        if (cancelled) return;
+        const rows = Array.isArray(res?.rows) ? res.rows : [];
+        if (rows.length) setTransactions(rows);
+      })
+      .catch((err) => {
+        console.warn("[transactions] hydrate failed, using seed", err);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const months = useMemo(() => {
@@ -92,43 +106,35 @@ export function TransactionsProvider({ children }) {
     return Array.from(set).filter(Boolean).sort();
   }, [transactions]);
 
-  const setPageFilters = useCallback((pageKey, updater) => {
-    setPageFiltersState((prev) => {
-      const current = prev[pageKey];
-      const next = typeof updater === "function" ? updater(current) : updater;
-      return { ...prev, [pageKey]: next };
-    });
-  }, []);
-
-  const setAccountFilter = useCallback((accountId) => {
-    setPageFiltersState((prev) => {
-      const next = { ...prev };
-      for (const key of PAGE_KEYS) {
-        next[key] = { ...next[key], account: accountId || null };
+  const filtered = useMemo(() => {
+    return transactions.filter((t) => {
+      if (filters.month !== ALL_MONTHS_SENTINEL && monthKey(t.date) !== filters.month) {
+        return false;
       }
-      return next;
+      if (filters.categories.length && !filters.categories.includes(t.category)) {
+        return false;
+      }
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        const hay = `${t.merchant_normalized ?? ""} ${t.merchant_raw ?? ""} ${t.description ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      const amt = Math.abs(Number(t.amount ?? 0));
+      if (filters.amountMin != null && amt < filters.amountMin) return false;
+      if (filters.amountMax != null && amt > filters.amountMax) return false;
+      return true;
     });
-  }, []);
+  }, [transactions, filters]);
 
-  const resetAllPageFilters = useCallback(() => {
-    setPageFiltersState(createInitialPageFilters());
-  }, []);
-
-  const filteredByPage = useMemo(() => {
-    const out = {};
-    for (const key of PAGE_KEYS) {
-      out[key] = applyFiltersToRows(transactions, pageFilters[key]);
-    }
-    return out;
-  }, [transactions, pageFilters]);
-
-  const derivedByPage = useMemo(() => {
-    const out = {};
-    for (const key of PAGE_KEYS) {
-      out[key] = buildDerived(filteredByPage[key]);
-    }
-    return out;
-  }, [filteredByPage]);
+  const derived = useMemo(
+    () => ({
+      monthly: monthlyTotals(filtered),
+      monthlyByCategory: monthlyByCategory(filtered),
+      categories: categoryBreakdown(filtered),
+      merchants: merchantBreakdown(filtered),
+    }),
+    [filtered],
+  );
 
   const addMany = useCallback(async (rows) => {
     try {
@@ -150,79 +156,45 @@ export function TransactionsProvider({ children }) {
   const applyAnalysisResult = useCallback(async (analysis) => {
     if (!analysis || analysis.status !== "success" || !Array.isArray(analysis.transactions)) return;
 
+    let nextAnalysis = null;
     setTransactions((prev) => {
-      const seen = new Set();
-      const merged = [];
-
-      for (const t of prev) {
-        const key = `${t.date}|${t.merchant_raw}|${t.amount}|${t.card_identity || ""}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          merged.push(t);
-        }
-      }
-
-      for (const t of analysis.transactions) {
-        const key = `${t.date}|${t.merchant_raw}|${t.amount}|${t.card_identity || ""}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          merged.push(t);
-        }
-      }
-
-      let nextId = 1;
-      const stamped = merged.map((t) => ({ ...t, id: nextId++ }));
+      const { stamped, updatedAnalysis } = mergeAnalysisIntoState(prev, analysis);
+      nextAnalysis = updatedAnalysis;
 
       if (USE_MOCK) {
         _replaceAllMock(stamped).catch(console.error);
       }
 
-      const updatedAnalysis = {
-        ...analysis,
-        origin: "import",
-        transactions: stamped,
-      };
-      persistAnalysis(updatedAnalysis);
-      clearSeenAlerts();
+      try {
+        sessionStorage.setItem(ANALYSIS_SESSION_KEY, JSON.stringify(updatedAnalysis));
+      } catch {
+        // ignore
+      }
 
       return stamped;
     });
 
-    setRestoredFromStorage(false);
-  }, []);
-
-  const dismissUploadPrompt = useCallback(() => {
-    setUploadPromptDismissed(true);
-  }, []);
-
-  const resetUploadPrompt = useCallback(() => {
-    setUploadPromptDismissed(false);
+    if (nextAnalysis) setLatestAnalysis(nextAnalysis);
+    setRestoredFromSession(false);
   }, []);
 
   const clearSessionAnalysis = useCallback(async () => {
     try {
-      localStorage.removeItem(ANALYSIS_STORAGE_KEY);
+      sessionStorage.removeItem(ANALYSIS_SESSION_KEY);
     } catch {
       /* ignore */
     }
-    clearSeenAlerts();
-    setTransactions([]);
-    setUploadPromptDismissed(false);
+    setLatestAnalysis(null);
     if (USE_MOCK) {
-      await _replaceAllMock([]);
+      await replaceAll(seed);
+    } else {
+      setTransactions([]);
     }
-    setRestoredFromStorage(false);
-  }, []);
+    setRestoredFromSession(false);
+  }, [replaceAll]);
 
   const updateCategory = useCallback(async (id, category) => {
-    setTransactions((prev) => {
-      const next = prev.map((t) => (t.id === id ? { ...t, category } : t));
-      const stored = readStoredAnalysis();
-      if (stored) {
-        persistAnalysis({ ...stored, transactions: next, origin: "import" });
-      }
-      return next;
-    });
+    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, category } : t)));
     try {
       await updateTransactionCategory(id, category);
     } catch (err) {
@@ -231,14 +203,7 @@ export function TransactionsProvider({ children }) {
   }, []);
 
   const removeOne = useCallback(async (id) => {
-    setTransactions((prev) => {
-      const next = prev.filter((t) => t.id !== id);
-      const stored = readStoredAnalysis();
-      if (stored) {
-        persistAnalysis({ ...stored, transactions: next, origin: "import" });
-      }
-      return next;
-    });
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
     try {
       await deleteTransaction(id);
     } catch (err) {
@@ -249,26 +214,24 @@ export function TransactionsProvider({ children }) {
   const value = {
     ALL_MONTHS_SENTINEL,
     transactions,
-    pageFilters,
-    setPageFilters,
-    setAccountFilter,
-    resetAllPageFilters,
-    filteredByPage,
-    derivedByPage,
+    filtered,
     months,
+    filters,
+    setFilters,
+    derived,
     addMany,
     replaceAll,
     updateCategory,
     removeOne,
     applyAnalysisResult,
     clearSessionAnalysis,
-    uploadPromptDismissed,
-    dismissUploadPrompt,
-    resetUploadPrompt,
-    restoredFromStorage,
-    /** @deprecated use restoredFromStorage */
-    restoredFromSession: restoredFromStorage,
+    latestAnalysis,
+    restoredFromSession,
   };
 
-  return <TransactionsContext.Provider value={value}>{children}</TransactionsContext.Provider>;
+  return (
+    <TransactionsContext.Provider value={value}>
+      {children}
+    </TransactionsContext.Provider>
+  );
 }
