@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
+import { Treemap, Tooltip } from "recharts";
+import SafeResponsiveContainer from "../charts/SafeResponsiveContainer";
 
 function TreemapReport({ transactions }) {
   const data = useMemo(() => {
@@ -80,9 +81,8 @@ function TreemapReport({ transactions }) {
         </div>
       </div>
 
-      <div className="h-[380px] w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <Treemap
+      <SafeResponsiveContainer className="h-[380px] w-full">
+        <Treemap
             data={data}
             dataKey="value"
             stroke="#fff"
@@ -92,9 +92,8 @@ function TreemapReport({ transactions }) {
             <Tooltip
               formatter={(value, name, props) => [`$${value.toLocaleString()}`, "Amount"]}
             />
-          </Treemap>
-        </ResponsiveContainer>
-      </div>
+        </Treemap>
+      </SafeResponsiveContainer>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7 pt-2">
         {data.map((item, idx) => (

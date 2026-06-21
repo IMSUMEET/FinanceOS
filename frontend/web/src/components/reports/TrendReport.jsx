@@ -7,8 +7,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
 } from "recharts";
+import SafeResponsiveContainer from "../charts/SafeResponsiveContainer";
 
 function TrendReport({ transactions }) {
   const [activeLines, setActiveLines] = useState({
@@ -178,9 +178,8 @@ function TrendReport({ transactions }) {
         </div>
       </div>
 
-      <div className="h-[360px] w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+      <SafeResponsiveContainer className="h-[360px] w-full">
+        <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="name" stroke="#888" fontSize={11} tickLine={false} />
             <YAxis stroke="#888" fontSize={11} tickLine={false} />
@@ -198,9 +197,8 @@ function TrendReport({ transactions }) {
             {showMovingAverage && activeLines.expenses && (
               <Line type="monotone" dataKey="expenseMovingAvg" stroke="#EC4899" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Moving Avg (Exp)" />
             )}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+        </LineChart>
+      </SafeResponsiveContainer>
 
       {expenseMoMInsight ? (
         <div className="rounded-xl bg-brand-50/50 p-4.5 text-xs font-semibold text-brand-900 border border-brand-100 dark:bg-brand-950/20 dark:text-brand-300 dark:border-brand-950">

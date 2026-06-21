@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import SafeResponsiveContainer from "../charts/SafeResponsiveContainer";
 
 function SavingsReport({ transactions }) {
   const data = useMemo(() => {
@@ -95,18 +96,16 @@ function SavingsReport({ transactions }) {
         <p className="text-xs text-ink-500">Dual chart plotting monthly saved cash vs overall savings rate</p>
       </div>
 
-      <div className="h-[320px] w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <ComposedChart data={data}>
+      <SafeResponsiveContainer className="h-[320px] w-full">
+        <ComposedChart data={data}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" stroke="#888" fontSize={10} />
             <YAxis stroke="#888" fontSize={10} />
             <Tooltip />
             <Bar dataKey="saved" fill="#3B82F6" name="Amount Saved ($)" radius={[4, 4, 0, 0]} />
             <Line type="monotone" dataKey="rate" stroke="#10B981" strokeWidth={2.5} name="Savings Rate (%)" />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
+        </ComposedChart>
+      </SafeResponsiveContainer>
     </div>
   );
 }

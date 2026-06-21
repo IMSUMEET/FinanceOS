@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import SafeResponsiveContainer from "../charts/SafeResponsiveContainer";
 
 function IncomeReport({ transactions }) {
   const data = useMemo(() => {
@@ -68,16 +69,14 @@ function IncomeReport({ transactions }) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 items-center">
-        <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <BarChart data={data} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+        <SafeResponsiveContainer className="h-[250px] w-full">
+          <BarChart data={data} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
               <XAxis type="number" stroke="#888" fontSize={10} />
               <YAxis dataKey="name" type="category" stroke="#888" fontSize={10} width={70} />
               <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
               <Bar dataKey="value" fill="#10B981" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+          </BarChart>
+        </SafeResponsiveContainer>
 
         {/* Legend listing */}
         <div className="space-y-3">

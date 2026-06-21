@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
+import SafeResponsiveContainer from "../charts/SafeResponsiveContainer";
 
 function NetWorthReport({ transactions }) {
   const [timeRange, setTimeRange] = useState("all");
@@ -104,16 +105,14 @@ function NetWorthReport({ transactions }) {
       </div>
 
       {/* Chart */}
-      <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <AreaChart data={data}>
+      <SafeResponsiveContainer className="h-[300px] w-full">
+        <AreaChart data={data}>
             <XAxis dataKey="date" stroke="#888" fontSize={10} />
             <YAxis stroke="#888" fontSize={10} />
             <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
             <Area type="monotone" dataKey="netWorth" stroke="#6366F1" fillOpacity={0.15} fill="#6366F1" name="Net Worth ($)" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+        </AreaChart>
+      </SafeResponsiveContainer>
     </div>
   );
 }

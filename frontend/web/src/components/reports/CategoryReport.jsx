@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip } from "recharts";
+import SafeResponsiveContainer from "../charts/SafeResponsiveContainer";
 
 function CategoryReport({ transactions }) {
   const [selectedCat, setSelectedCat] = useState(null);
@@ -44,9 +45,8 @@ function CategoryReport({ transactions }) {
       </div>
 
       <div className="flex flex-col md:flex-row items-center gap-6">
-        <div className="h-[300px] w-full md:w-[45%]">
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <PieChart>
+        <SafeResponsiveContainer className="h-[300px] w-full md:w-[45%]">
+          <PieChart>
               <Pie
                 data={data}
                 cx="50%"
@@ -68,9 +68,8 @@ function CategoryReport({ transactions }) {
                 ))}
               </Pie>
               <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+          </PieChart>
+        </SafeResponsiveContainer>
 
         {/* Legend table */}
         <div className="flex-1 w-full max-h-[300px] overflow-y-auto pr-2">

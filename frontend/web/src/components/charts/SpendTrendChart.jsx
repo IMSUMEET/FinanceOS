@@ -1,14 +1,7 @@
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { formatCurrency, formatMonth } from "../../utils/format";
 import { useTheme } from "../../hooks/useTheme";
+import SafeResponsiveContainer from "./SafeResponsiveContainer";
 
 function TooltipBox({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -31,45 +24,40 @@ function SpendTrendChart({ data, height = 240 }) {
   const tickFill = isDark ? "#64748b" : "#94a3b8";
   const dotFill = isDark ? "#0b1326" : "#fff";
   return (
-    <div className="min-w-0 select-none" style={{ width: "100%", height }}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="4 6" stroke={gridStroke} vertical={false} />
-          <XAxis
-            dataKey="month"
-            tickFormatter={formatMonth}
-            tick={{ fontSize: 12, fill: tickFill, fontWeight: 600 }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tickFormatter={(v) => formatCurrency(v, { compact: true })}
-            tick={{ fontSize: 12, fill: tickFill, fontWeight: 600 }}
-            axisLine={false}
-            tickLine={false}
-            width={56}
-          />
-          <Tooltip
-            content={<TooltipBox />}
-            cursor={{ stroke: "#3b82f6", strokeWidth: 1, strokeDasharray: "3 3" }}
-          />
-          <Area
-            type="monotone"
-            dataKey="total"
-            stroke="#3b82f6"
-            strokeWidth={3}
-            fill="url(#trendFill)"
-            activeDot={{ r: 6, stroke: "#3b82f6", strokeWidth: 3, fill: dotFill }}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
+    <SafeResponsiveContainer height={height} className="min-w-0 select-none">
+      <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.28} />
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="4 6" stroke={gridStroke} vertical={false} />
+        <XAxis
+          dataKey="month"
+          tickFormatter={formatMonth}
+          tick={{ fontSize: 12, fill: tickFill, fontWeight: 600 }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <YAxis
+          tickFormatter={(v) => formatCurrency(v, { compact: true })}
+          tick={{ fontSize: 12, fill: tickFill, fontWeight: 600 }}
+          axisLine={false}
+          tickLine={false}
+          width={56}
+        />
+        <Tooltip content={<TooltipBox />} cursor={{ stroke: "#3b82f6", strokeWidth: 1, strokeDasharray: "3 3" }} />
+        <Area
+          type="monotone"
+          dataKey="total"
+          stroke="#3b82f6"
+          strokeWidth={3}
+          fill="url(#trendFill)"
+          activeDot={{ r: 6, stroke: "#3b82f6", strokeWidth: 3, fill: dotFill }}
+        />
+      </AreaChart>
+    </SafeResponsiveContainer>
   );
 }
 
