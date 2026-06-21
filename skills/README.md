@@ -33,15 +33,15 @@ The `description` is the most important field — write it in the form _"X. Use 
 
 ## Skills in this repo
 
-| Skill                                                     | What it covers                                                               |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [`frontend-conventions`](./frontend-conventions/SKILL.md) | React 19 + Vite + Tailwind + framer-motion patterns used across the web app  |
-| [`backend-contract`](./backend-contract/SKILL.md)         | The schema-first FE/BE contract (`schema.json`, services, `VITE_USE_MOCK`)   |
-| [`ui-components`](./ui-components/SKILL.md)               | When to use which component (Card, Drawer, Select, KpiCard, CountUp, Avatar) |
-| [`spend-analyzer-flow`](./spend-analyzer-flow/SKILL.md)   | How transactions, filters, insights and charts wire together                 |
-| [`profile-gating`](./profile-gating/SKILL.md)             | Guest-first model: gating advanced features behind `hasProfile`              |
+| Skill                                                     | What it covers                                                                |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [`frontend-conventions`](./frontend-conventions/SKILL.md) | React 19 + Vite + Tailwind + framer-motion patterns used across the web app   |
+| [`backend-contract`](./backend-contract/SKILL.md)         | The schema-first FE/BE contract (`schema.json`, services, `VITE_USE_MOCK`)    |
+| [`ui-components`](./ui-components/SKILL.md)               | When to use which component (Card, Drawer, Select, KpiCard, CountUp, Avatar)  |
+| [`spend-analyzer-flow`](./spend-analyzer-flow/SKILL.md)   | How transactions, filters, insights and charts wire together                  |
+| [`profile-gating`](./profile-gating/SKILL.md)             | Guest-first model: gating advanced features behind `hasProfile`               |
 | [`code-standards`](./code-standards/SKILL.md)             | Local setup (`npm install`), Prettier, Husky, `npm run ci`, branch protection |
-| [`pr-workflow`](./pr-workflow/SKILL.md)                   | Lint, build, commit style and PR template                                    |
+| [`pr-workflow`](./pr-workflow/SKILL.md)                   | Lint, build, commit style and PR template                                     |
 
 ## Adding a new skill
 

@@ -25,7 +25,7 @@ From the **repo root**:
 npm run ci
 ```
 
-This runs Prettier check, frontend ESLint + build, and backend TypeScript typecheck — the same gates as GitHub Actions (`CI / check`).
+This runs Prettier check, frontend ESLint + build, and backend TypeScript typecheck — the same gates as the GitHub Actions `check` job.
 
 Individual steps:
 
@@ -42,8 +42,8 @@ On commit, Husky runs `lint-staged`, which auto-formats staged files with Pretti
 
 `main` is protected by the **Protect main** ruleset:
 
-- **No direct pushes to `main`** — use a PR (repo admins can bypass in emergencies)
-- **`CI / check` must pass** before merge
+- **No direct pushes to `main`** — use a PR
+- **The `check` CI job must pass** before merge
 - **No force push** or branch deletion on `main`
 
 Typical workflow:
@@ -57,29 +57,29 @@ Details: [`.github/BRANCH_PROTECTION.md`](.github/BRANCH_PROTECTION.md)
 
 ## Skills by topic
 
-| Topic | Guide |
-| ----- | ----- |
-| Local setup, formatting, CI, branch rules | [`skills/code-standards/SKILL.md`](skills/code-standards/SKILL.md) |
-| Commit, push, open PR | [`skills/pr-workflow/SKILL.md`](skills/pr-workflow/SKILL.md) |
-| React / Tailwind frontend | [`skills/frontend-conventions/SKILL.md`](skills/frontend-conventions/SKILL.md) |
-| API contract / mock flag | [`skills/backend-contract/SKILL.md`](skills/backend-contract/SKILL.md) |
-| UI component choice | [`skills/ui-components/SKILL.md`](skills/ui-components/SKILL.md) |
-| Transactions, filters, charts | [`skills/spend-analyzer-flow/SKILL.md`](skills/spend-analyzer-flow/SKILL.md) |
-| Profile gating | [`skills/profile-gating/SKILL.md`](skills/profile-gating/SKILL.md) |
+| Topic                                     | Guide                                                                          |
+| ----------------------------------------- | ------------------------------------------------------------------------------ |
+| Local setup, formatting, CI, branch rules | [`skills/code-standards/SKILL.md`](skills/code-standards/SKILL.md)             |
+| Commit, push, open PR                     | [`skills/pr-workflow/SKILL.md`](skills/pr-workflow/SKILL.md)                   |
+| React / Tailwind frontend                 | [`skills/frontend-conventions/SKILL.md`](skills/frontend-conventions/SKILL.md) |
+| API contract / mock flag                  | [`skills/backend-contract/SKILL.md`](skills/backend-contract/SKILL.md)         |
+| UI component choice                       | [`skills/ui-components/SKILL.md`](skills/ui-components/SKILL.md)               |
+| Transactions, filters, charts             | [`skills/spend-analyzer-flow/SKILL.md`](skills/spend-analyzer-flow/SKILL.md)   |
+| Profile gating                            | [`skills/profile-gating/SKILL.md`](skills/profile-gating/SKILL.md)             |
 
 ## Repo layout
 
-| Path | Purpose |
-| ---- | ------- |
-| `frontend/web/` | React + Vite app |
-| `backend/` | Hono API (Lambda + local dev) |
-| `package.json` (root) | Prettier, Husky, `npm run ci` |
-| `.github/workflows/ci.yml` | PR checks |
-| `skills/` | Project conventions and workflow guides |
+| Path                       | Purpose                                 |
+| -------------------------- | --------------------------------------- |
+| `frontend/web/`            | React + Vite app                        |
+| `backend/`                 | Hono API (Lambda + local dev)           |
+| `package.json` (root)      | Prettier, Husky, `npm run ci`           |
+| `.github/workflows/ci.yml` | PR checks                               |
+| `skills/`                  | Project conventions and workflow guides |
 
 ## Do not
 
-- Push directly to `main` (unless you are bypassing as a repo admin)
+- Push directly to `main`
 - Skip hooks (`git commit --no-verify`) to bypass formatting or lint
 - Commit `.env` or secrets (only `.env.example` is tracked)
 - Add vendor or tool branding to commit messages or PR descriptions

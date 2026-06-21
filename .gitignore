@@ -38,6 +38,7 @@ Thumbs.db
 
 # Editors & IDEs
 .idea/
+.cursor/
 *.suo
 *.ntvs*
 *.njsproj

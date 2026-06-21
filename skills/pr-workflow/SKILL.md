@@ -29,7 +29,7 @@ From the **repo root**, run the full CI pipeline:
 npm run ci
 ```
 
-This matches GitHub Actions (`CI / check`): Prettier check, frontend lint + build, backend typecheck.
+This matches the GitHub Actions `check` job: Prettier check, frontend lint + build, backend typecheck.
 
 Husky auto-formats staged files on commit; still run `npm run ci` before push to catch issues early.
 
