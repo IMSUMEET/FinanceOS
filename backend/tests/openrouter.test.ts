@@ -4,6 +4,7 @@ import {
   validateInsights,
   generateInsightsWithOpenRouter,
   generateStaticInsights,
+  buildStaticInsightsPrompt,
   fallbackInsights,
   mapToAllowedCategory,
   safeJsonParse,
@@ -145,13 +146,28 @@ describe("generateStaticInsights", () => {
     const report = buildReportData([
       { id: "1", date: "2026-06-01", amount: 3200, type: "income", finalCategory: "Income", merchant: "Employer" },
       { id: "2", date: "2026-06-02", amount: -42.5, type: "expense", finalCategory: "Food", merchant: "Whole Foods" },
+      { id: "3", date: "2026-06-03", amount: -120, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
+      { id: "4", date: "2026-06-04", amount: -80, type: "expense", finalCategory: "Shopping", merchant: "Amazon" },
     ]);
     const insights = generateStaticInsights(report);
     expect(insights.summary).toContain("income");
-    expect(insights.summary).toContain("Food");
+    expect(insights.summary).toContain("Transportation");
     expect(insights.observations.length).toBeGreaterThan(0);
-    expect(insights.recommendations.length).toBeGreaterThan(0);
+    expect(insights.recommendations).toHaveLength(3);
+    expect(insights.recommendations[0]?.title).toContain("spend most");
+    expect(insights.recommendations[0]?.estimatedMonthlySavings).toBeLessThan(200);
     expect(insights.score).toBeGreaterThan(0);
+  });
+
+  it("buildStaticInsightsPrompt includes category ranks and month count", () => {
+    const report = buildReportData([
+      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
+      { id: "2", date: "2026-01-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      { id: "3", date: "2026-02-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+    ]);
+    const prompt = buildStaticInsightsPrompt(report);
+    expect(prompt).toContain("financialSummary");
+    expect(prompt).toContain("Food");
   });
 
   it("returns empty-state defaults", () => {

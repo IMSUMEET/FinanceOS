@@ -6,6 +6,8 @@ import { parseToIsoDateString } from "./csvAnalyze.js";
 import {
   buildReportData,
   generateStaticInsights,
+  buildStaticInsightsContext,
+  buildStaticInsightsPrompt,
   mapToAllowedCategory,
   safeJsonParse,
   OPENROUTER_CHAT_COMPLETIONS_URL,
@@ -453,6 +455,8 @@ async function handleAiAnalyzeRequest(c: any) {
   // 7. Static summary; OpenRouter reserved for profile coach suggestions
   const insights = generateStaticInsights(reportData);
   const aiStatusInsights = "static";
+  const staticInsightsPrompt = buildStaticInsightsPrompt(reportData);
+  const staticInsightsInput = buildStaticInsightsContext(reportData);
 
   console.log(
     JSON.stringify({
@@ -464,6 +468,17 @@ async function handleAiAnalyzeRequest(c: any) {
       aiStatus: {
         categorization: aiStatusCategorization,
         insights: aiStatusInsights,
+      },
+      staticInsightsPrompt,
+      staticInsightsInput,
+      insightsResponse: {
+        summary: insights.summary,
+        score: insights.score,
+        riskLevel: insights.riskLevel,
+        recommendationCount: insights.recommendations.length,
+        recommendations: insights.recommendations,
+        observations: insights.observations.slice(0, 5),
+        anomalies: insights.anomalies,
       },
     }),
   );

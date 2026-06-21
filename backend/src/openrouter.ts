@@ -185,6 +185,201 @@ export function buildReportData(transactions: any[]): ReportData {
   };
 }
 
+const SPENDING_CATEGORY_EXCLUDE = new Set(["Income", "Transfers", "Credit Card Payments"]);
+
+export function reportMonthCount(reportData: ReportData): number {
+  const months = reportData.monthlyTrend?.length ?? 0;
+  if (months > 0) return months;
+  if (reportData.period.start && reportData.period.end) {
+    const start = new Date(`${reportData.period.start}T00:00:00Z`);
+    const end = new Date(`${reportData.period.end}T00:00:00Z`);
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end >= start) {
+      return Math.max(
+        1,
+        (end.getUTCFullYear() - start.getUTCFullYear()) * 12 +
+          (end.getUTCMonth() - start.getUTCMonth()) +
+          1,
+      );
+    }
+  }
+  return 1;
+}
+
+function spendingCategories(categoryTotals: Record<string, number>) {
+  return Object.entries(categoryTotals)
+    .filter(([category, total]) => total > 0 && !SPENDING_CATEGORY_EXCLUDE.has(category))
+    .sort((a, b) => b[1] - a[1]);
+}
+
+/** Compact summary passed to the static insights rules (logged as the effective prompt input). */
+export function buildStaticInsightsContext(reportData: ReportData) {
+  const monthCount = reportMonthCount(reportData);
+  const topCategories = spendingCategories(reportData.categoryTotals).slice(0, 5).map(([category, total]) => ({
+    category,
+    periodTotal: Math.round(total),
+    monthlyAvg: Math.round(total / monthCount),
+    sharePct:
+      reportData.totalExpenses > 0 ? Math.round((total / reportData.totalExpenses) * 100) : 0,
+  }));
+
+  return {
+    period: reportData.period,
+    monthCount,
+    totalIncome: reportData.totalIncome,
+    totalExpenses: reportData.totalExpenses,
+    netCashFlow: reportData.netCashFlow,
+    savingsRate: reportData.savingsRate,
+    topCategories,
+    topMerchants: reportData.topMerchants.slice(0, 5),
+  };
+}
+
+/** Human-readable rules + JSON input (logged to CloudWatch as staticInsightsPrompt). */
+export function buildStaticInsightsPrompt(reportData: ReportData): string {
+  const ctx = buildStaticInsightsContext(reportData);
+  return (
+    "FinanceOS static insights engine (no LLM). Produce exactly 3 recommendations:\n" +
+    "1) Biggest spending category — monthly avg, % of expenses, ~10% savings target\n" +
+    "2) Second-biggest category (or top merchant if only one category dominates)\n" +
+    "3) Cash-flow or merchant-specific save opportunity\n" +
+    "Use only amounts from financialSummary. Savings must be monthly USD.\n\n" +
+    `financialSummary:\n${JSON.stringify(ctx, null, 2)}`
+  );
+}
+
+function monthlyFromPeriod(total: number, monthCount: number): number {
+  return Math.round(total / Math.max(1, monthCount));
+}
+
+function savingsFromMonthlyCut(monthlyAmount: number, cutPct = 0.1): number {
+  return Math.max(5, Math.round(monthlyAmount * cutPct));
+}
+
+function buildCategorySpendRecommendation(
+  category: string,
+  periodTotal: number,
+  sharePct: number,
+  monthCount: number,
+  rank: 1 | 2 | 3,
+): RecommendationItem {
+  const monthly = monthlyFromPeriod( periodTotal, monthCount);
+  const savings = savingsFromMonthlyCut(monthly);
+  const rankLabel =
+    rank === 1 ? "Where you spend most" : rank === 2 ? "Second-biggest category" : "Third-biggest category";
+
+  return {
+    title: `${rankLabel}: ${category}`,
+    message: `${category} averaged $${monthly.toLocaleString()}/mo (${sharePct}% of your expenses). Trimming this category by about 10% would free up ~$${savings}/mo.`,
+    impact: rank === 1 && sharePct >= 25 ? "high" : "medium",
+    estimatedMonthlySavings: savings,
+  };
+}
+
+function buildMerchantSpendRecommendation(
+  merchant: string,
+  periodTotal: number,
+  count: number,
+  monthCount: number,
+): RecommendationItem {
+  const monthly = monthlyFromPeriod( periodTotal, monthCount);
+  const savings = savingsFromMonthlyCut(monthly, 0.15);
+
+  return {
+    title: `Repeat spend: ${merchant}`,
+    message: `${merchant} appears ${count} time(s) for ~$${monthly.toLocaleString()}/mo. Compare alternatives or cut one recurring visit to save.`,
+    impact: "medium",
+    estimatedMonthlySavings: savings,
+  };
+}
+
+function buildCashFlowRecommendation(
+  reportData: ReportData,
+  monthCount: number,
+  topCategoryName: string,
+): RecommendationItem {
+  const monthlyGap = monthlyFromPeriod(Math.abs(reportData.netCashFlow), monthCount);
+  const monthlyExpenses = monthlyFromPeriod(reportData.totalExpenses, monthCount);
+  const monthlyIncome = monthlyFromPeriod(reportData.totalIncome, monthCount);
+
+  if (reportData.netCashFlow < 0) {
+    return {
+      title: "Close the cash-flow gap",
+      message: `Spending exceeded income by ~$${monthlyGap.toLocaleString()}/mo. Start by reducing ${topCategoryName} and other discretionary categories.`,
+      impact: "high",
+      estimatedMonthlySavings: Math.max(10, Math.round(monthlyExpenses * 0.05)),
+    };
+  }
+
+  if (reportData.savingsRate < 15 && reportData.totalIncome > 0) {
+    const saveTarget = Math.max(10, Math.round(monthlyIncome * 0.05));
+    return {
+      title: "Grow your savings rate",
+      message: `You kept ${reportData.savingsRate.toFixed(1)}% of income. Automate ~$${saveTarget.toLocaleString()}/mo to savings each payday.`,
+      impact: "high",
+      estimatedMonthlySavings: saveTarget,
+    };
+  }
+
+  return {
+    title: "Set monthly category caps",
+    message: `Track ${topCategoryName} and your next-largest categories with monthly budgets so overspending shows up early.`,
+    impact: "low",
+    estimatedMonthlySavings: Math.max(5, Math.round(monthlyExpenses * 0.03)),
+  };
+}
+
+function buildSpendingRecommendations(reportData: ReportData): RecommendationItem[] {
+  const monthCount = reportMonthCount(reportData);
+  const topCats = spendingCategories(reportData.categoryTotals);
+  const candidates: RecommendationItem[] = [];
+
+  for (let i = 0; i < Math.min(3, topCats.length); i++) {
+    const [category, total] = topCats[i]!;
+    const sharePct =
+      reportData.totalExpenses > 0 ? Math.round((total / reportData.totalExpenses) * 100) : 0;
+    candidates.push(
+      buildCategorySpendRecommendation(category, total, sharePct, monthCount, (i + 1) as 1 | 2 | 3),
+    );
+  }
+
+  const topMerchant = reportData.topMerchants[0];
+  if (topMerchant && candidates.length < 3) {
+    candidates.push(
+      buildMerchantSpendRecommendation(
+        topMerchant.merchant,
+        topMerchant.total,
+        topMerchant.count,
+        monthCount,
+      ),
+    );
+  }
+
+  if (candidates.length < 3) {
+    candidates.push(
+      buildCashFlowRecommendation(reportData, monthCount, topCats[0]?.[0] ?? "discretionary"),
+    );
+  }
+
+  const seen = new Set<string>();
+  const unique: RecommendationItem[] = [];
+  for (const item of candidates) {
+    if (seen.has(item.title)) continue;
+    seen.add(item.title);
+    unique.push(item);
+  }
+
+  while (unique.length < 3) {
+    unique.push({
+      title: "Review your import",
+      message: "Re-run AI analysis after adding another month of transactions for sharper category comparisons.",
+      impact: "low",
+      estimatedMonthlySavings: 0,
+    });
+  }
+
+  return unique.slice(0, 3);
+}
+
 export function generateStaticInsights(reportData: ReportData): AIInsights {
   const {
     totalIncome,
@@ -196,6 +391,7 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
     topMerchants,
     largestTransactions,
     period,
+    monthlyTrend,
   } = reportData;
 
   if (!totalTransactions) {
@@ -218,18 +414,29 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
           impact: "medium",
           estimatedMonthlySavings: 0,
         },
+        {
+          title: "Run AI analysis",
+          message: "Use the Import page AI analyzer to generate three personalized savings suggestions.",
+          impact: "low",
+          estimatedMonthlySavings: 0,
+        },
+        {
+          title: "Compare categories",
+          message: "After import, Insights will rank where you spend most and where to trim.",
+          impact: "low",
+          estimatedMonthlySavings: 0,
+        },
       ],
       anomalies: [],
     };
   }
 
-  const topCategories = Object.entries(categoryTotals)
-    .filter(([category, total]) => total > 0 && category !== "Income")
-    .sort((a, b) => b[1] - a[1]);
+  const topCategories = spendingCategories(categoryTotals);
   const topCat = topCategories[0];
   const topCatName = topCat?.[0] ?? "Spending";
   const topCatTotal = topCat?.[1] ?? 0;
   const topCatShare = totalExpenses > 0 ? Math.round((topCatTotal / totalExpenses) * 100) : 0;
+  const monthCount = reportMonthCount(reportData);
 
   const score =
     totalIncome <= 0
@@ -245,16 +452,30 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
   const summary =
     `From ${periodLabel}, you recorded $${totalIncome.toLocaleString()} income and ` +
     `$${totalExpenses.toLocaleString()} expenses (${netCashFlow >= 0 ? "+" : ""}$${netCashFlow.toLocaleString()}). ` +
-    `Savings rate: ${savingsRate.toFixed(1)}%. Top spending category: ${topCatName}.`;
+    `Savings rate: ${savingsRate.toFixed(1)}%. ` +
+    (topCat
+      ? `Your biggest category is ${topCatName} at ~$${monthlyFromPeriod(topCatTotal, monthCount).toLocaleString()}/mo (${topCatShare}% of spend).`
+      : `Top spending category: ${topCatName}.`);
 
   const observations: ObservationItem[] = [];
 
   if (totalExpenses > 0 && topCat) {
     observations.push({
       title: `${topCatName} spending`,
-      message: `${topCatName} accounts for ${topCatShare}% of expenses ($${Math.round(topCatTotal).toLocaleString()}).`,
+      message: `${topCatName} accounts for ${topCatShare}% of expenses (~$${monthlyFromPeriod(topCatTotal, monthCount).toLocaleString()}/mo).`,
       severity: topCatShare >= 40 ? "warning" : "info",
       category: topCatName,
+    });
+  }
+
+  if (topCategories[1]) {
+    const [name, total] = topCategories[1];
+    const share = totalExpenses > 0 ? Math.round((total / totalExpenses) * 100) : 0;
+    observations.push({
+      title: `${name} spending`,
+      message: `${name} is your #2 category at ~$${monthlyFromPeriod(total, monthCount).toLocaleString()}/mo (${share}%).`,
+      severity: "info",
+      category: name,
     });
   }
 
@@ -271,8 +492,7 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
     observations.push({
       title: "Top merchant",
       message:
-        `${topMerchants[0].merchant} had ${topMerchants[0].count} transaction(s) totaling ` +
-        `$${Math.round(topMerchants[0].total).toLocaleString()}.`,
+        `${topMerchants[0].merchant} had ${topMerchants[0].count} transaction(s), ~$${monthlyFromPeriod(topMerchants[0].total, monthCount).toLocaleString()}/mo.`,
       severity: "info",
       category: topCatName,
     });
@@ -280,75 +500,12 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
 
   observations.push({
     title: "Activity",
-    message: `${totalTransactions} transaction(s) were included in this summary.`,
+    message: `${totalTransactions} transaction(s) across ${monthCount} month(s) in this analysis.`,
     severity: "info",
     category: "General",
   });
 
-  const categoryTips: Record<
-    string,
-    { title: string; message: string; impact: "low" | "medium" | "high"; estimatedMonthlySavings: number }
-  > = {
-    Food: {
-      title: "Trim food spend",
-      message: "Plan meals and limit delivery to reduce grocery and dining costs.",
-      impact: "medium",
-      estimatedMonthlySavings: Math.max(10, Math.round(topCatTotal * 0.1)),
-    },
-    Entertainment: {
-      title: "Audit subscriptions",
-      message: "Review streaming and subscription charges for services you rarely use.",
-      impact: "medium",
-      estimatedMonthlySavings: Math.max(10, Math.round(topCatTotal * 0.15)),
-    },
-    Shopping: {
-      title: "Pause impulse buys",
-      message: "Use a 48-hour rule before non-essential purchases.",
-      impact: "medium",
-      estimatedMonthlySavings: Math.max(10, Math.round(topCatTotal * 0.08)),
-    },
-    Transportation: {
-      title: "Optimize transport",
-      message: "Compare fuel, transit, and rideshare costs for your regular routes.",
-      impact: "low",
-      estimatedMonthlySavings: Math.max(5, Math.round(topCatTotal * 0.05)),
-    },
-    Housing: {
-      title: "Review housing costs",
-      message: "Check whether utilities or recurring housing fees can be reduced.",
-      impact: "high",
-      estimatedMonthlySavings: Math.max(25, Math.round(topCatTotal * 0.03)),
-    },
-  };
-
-  const recommendations: RecommendationItem[] = [];
-  if (topCat && topCatShare >= 20) {
-    const tip = categoryTips[topCatName] ?? {
-      title: `Review ${topCatName}`,
-      message: `Focus on ${topCatName}, your largest spending category, for quick wins.`,
-      impact: "medium" as const,
-      estimatedMonthlySavings: Math.max(5, Math.round(topCatTotal * 0.05)),
-    };
-    recommendations.push(tip);
-  }
-
-  if (savingsRate < 20 && totalIncome > 0) {
-    recommendations.push({
-      title: "Boost savings",
-      message: "Automate a transfer to savings on each payday.",
-      impact: "high",
-      estimatedMonthlySavings: Math.max(10, Math.round(totalIncome * 0.05)),
-    });
-  }
-
-  if (!recommendations.length) {
-    recommendations.push({
-      title: "Review top categories",
-      message: "Start by reviewing your largest spending categories.",
-      impact: "medium",
-      estimatedMonthlySavings: 0,
-    });
-  }
+  const recommendations = buildSpendingRecommendations(reportData);
 
   const expenseCount = Math.max(1, largestTransactions.filter((t) => t.amount < 0).length);
   const avgExpense = totalExpenses / expenseCount;
@@ -371,7 +528,7 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
     score,
     riskLevel,
     observations: observations.slice(0, 5),
-    recommendations: recommendations.slice(0, 4),
+    recommendations: recommendations.slice(0, 3),
     anomalies,
   };
 }
