@@ -2,6 +2,7 @@ import {
   endpointLabel,
   isOpenRouterTimeoutError,
   logOpenRouter,
+  logOpenRouterResponse,
   openRouterErrorMessage,
   readOpenRouterErrorBody,
 } from "./openrouterLog.js";
@@ -398,6 +399,12 @@ ${JSON.stringify(reportData, null, 2)}`;
 
     const resJson: any = await res.json();
     const content = resJson?.choices?.[0]?.message?.content;
+    logOpenRouterResponse("insights", {
+      status: res.status,
+      resJson,
+      content: typeof content === "string" ? content : "",
+      durationMs: Date.now() - startedAt,
+    });
     if (!content) {
       return failInsights({ status: res.status, error: "empty_response" });
     }
@@ -620,6 +627,12 @@ ${JSON.stringify(summary, null, 2)}`;
 
     const resJson: any = await res.json();
     const content = resJson?.choices?.[0]?.message?.content;
+    logOpenRouterResponse("coach_suggestions", {
+      status: res.status,
+      resJson,
+      content: typeof content === "string" ? content : "",
+      durationMs: Date.now() - startedAt,
+    });
     if (!content) {
       return failCoach({ status: res.status, error: "empty_response" });
     }
