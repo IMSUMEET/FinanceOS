@@ -18,9 +18,9 @@ test.describe("Lambda 2 — AI analyzer API", () => {
     const body = await res.json();
 
     expect(body.status).toBe("success");
-    expect(body.mode).toBe("ai-categorization-static-suggestions");
+    expect(body.mode).toBe("local-categorization-static-suggestions");
     expect(body.transactions).toHaveLength(3);
-    expect(body.aiStatus.categorization).toBe("success");
+    expect(body.aiStatus.categorization).toBe("local");
     expect(body.aiStatus.insights).toBe("static");
 
     const foodTxn = body.transactions.find(
@@ -59,7 +59,7 @@ test.describe("Lambda 2 — AI analyzer API", () => {
 });
 
 test.describe("OpenRouter integration (mocked)", () => {
-  test("backend calls OpenRouter for categorization only", async ({ request }) => {
+  test("ai-analyze does not call OpenRouter (local categorization only)", async ({ request }) => {
     const csv = await fs.readFile(sampleCsvPath, "utf8");
 
     const before = await fetchOpenRouterMockRequests();
@@ -72,15 +72,6 @@ test.describe("OpenRouter integration (mocked)", () => {
     expect(res.ok()).toBeTruthy();
 
     const after = await fetchOpenRouterMockRequests();
-    expect(after.count - startCount).toBe(1);
-
-    const newBodies = after.bodies.slice(startCount);
-    const prompts = newBodies.map((raw) => {
-      const parsed = JSON.parse(raw) as { messages?: { content?: string }[] };
-      return parsed.messages?.[0]?.content ?? "";
-    });
-
-    expect(prompts.some((p) => p.includes("transaction categorization engine"))).toBe(true);
-    expect(prompts.some((p) => p.includes("reportData"))).toBe(false);
+    expect(after.count - startCount).toBe(0);
   });
 });

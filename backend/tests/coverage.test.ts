@@ -305,7 +305,7 @@ describe("aiApp additional routes", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe("success");
-    expect(body.aiStatus.categorization).toBe("fallback");
+    expect(body.aiStatus.categorization).toBe("local");
   });
 
   it("accepts multipart file upload", async () => {
@@ -328,9 +328,10 @@ describe("aiApp additional routes", () => {
     expect(res.status).toBe(400);
   });
 
-  it("processes large batches and marks categorization fallback when AI returns nothing", async () => {
+  it("processes large CSV batches with local categorization only", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+    vi.stubGlobal("fetch", fetchMock);
     vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
 
     const rows = ["Date,Description,Amount"];
     for (let i = 1; i <= 45; i++) {
@@ -345,7 +346,8 @@ describe("aiApp additional routes", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.transactions.length).toBe(45);
-    expect(body.aiStatus.categorization).toBe("fallback");
+    expect(body.aiStatus.categorization).toBe("local");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("accepts multipart string file field", async () => {

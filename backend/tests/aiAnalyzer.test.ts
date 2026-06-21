@@ -293,25 +293,8 @@ describe("aiApp Hono Routing (Lambda 2)", () => {
     expect(res.status).toBe(400);
   });
 
-  it("handles JSON payload containing csv field", async () => {
-    const mockCatResponse = {
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              categorizedTransactions: [
-                { id: "txn_001", aiCategory: "Food", aiConfidence: 0.95, reason: "grocery store" }
-              ]
-            })
-          }
-        }
-      ]
-    };
-
-    const globalFetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockCatResponse,
-    });
+  it("handles JSON payload containing csv field with local categorization", async () => {
+    const globalFetchMock = vi.fn();
     vi.stubGlobal("fetch", globalFetchMock);
 
     const res = await aiApp.request("/", {
@@ -323,9 +306,11 @@ describe("aiApp Hono Routing (Lambda 2)", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe("success");
+    expect(body.mode).toBe("local-categorization-static-suggestions");
     expect(body.transactions[0].finalCategory).toBe("Food");
+    expect(body.aiStatus.categorization).toBe("local");
     expect(body.aiStatus.insights).toBe("static");
     expect(body.insights.summary).toContain("expenses");
-    expect(globalFetchMock).toHaveBeenCalledOnce();
+    expect(globalFetchMock).not.toHaveBeenCalled();
   });
 });

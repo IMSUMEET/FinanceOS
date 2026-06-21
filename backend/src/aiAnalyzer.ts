@@ -21,6 +21,9 @@ import {
 
 export const aiApp = new Hono();
 
+/** Set true to re-enable OpenRouter batch categorization (Call 1). Kept off to stay under API Gateway 30s. */
+export const USE_OPENROUTER_CATEGORIZATION = false;
+
 // Custom CORS middleware for standalone Lambda 2
 aiApp.use("*", async (c, next) => {
   await next();
@@ -428,31 +431,26 @@ async function handleAiAnalyzeRequest(c: any) {
     };
   });
 
-  // 4. Batch LLM categorization
-  let aiStatusCategorization = "success";
+  // 4. Categories — local rules by default; OpenRouter batch optional (see USE_OPENROUTER_CATEGORIZATION)
+  let aiStatusCategorization: "local" | "success" | "fallback" = "local";
   let aiResults: any[] = [];
   const hasApiKey = !!process.env.OPENROUTER_API_KEY;
 
-  if (hasApiKey) {
-    // One OpenRouter batch per request — API Gateway times out at 30s.
+  if (USE_OPENROUTER_CATEGORIZATION && hasApiKey) {
     const batchSize = 40;
     const batch = transactionsWithHints.slice(0, batchSize);
     const batchResults = await categorizeTransactionsWithOpenRouter(batch);
     aiResults.push(...batchResults);
-    if (aiResults.length === 0) {
-      aiStatusCategorization = "fallback";
-    }
-  } else {
-    aiStatusCategorization = "fallback";
+    aiStatusCategorization = aiResults.length > 0 ? "success" : "fallback";
   }
 
-  // 5. Merge categories
+  // 5. Merge categories (empty aiResults → local hints win)
   const finalTransactions = mergeAiCategories(transactionsWithHints, aiResults);
 
   // 6. Build reportData
   const reportData = buildReportData(finalTransactions);
 
-  // 7. Generate insights locally (OpenRouter reserved for categorization + profile coach)
+  // 7. Static summary; OpenRouter reserved for profile coach suggestions
   const insights = generateStaticInsights(reportData);
   const aiStatusInsights = "static";
 
@@ -462,6 +460,7 @@ async function handleAiAnalyzeRequest(c: any) {
       transactionCount: rawTransactions.length,
       outcome: "success",
       openrouterConfigured: hasApiKey,
+      openrouterCategorizationEnabled: USE_OPENROUTER_CATEGORIZATION,
       aiStatus: {
         categorization: aiStatusCategorization,
         insights: aiStatusInsights,
@@ -471,7 +470,7 @@ async function handleAiAnalyzeRequest(c: any) {
 
   return c.json({
     status: "success",
-    mode: "ai-categorization-static-suggestions",
+    mode: "local-categorization-static-suggestions",
     transactions: finalTransactions,
     reportData,
     insights,

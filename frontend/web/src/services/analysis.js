@@ -102,7 +102,7 @@ export async function analyzeCsvFormData(formData) {
 }
 
 /**
- * Lambda 2 — OpenRouter LLM categorization + insights.
+ * AI analyze — local categorization + static summary (OpenRouter coach suggestions are separate).
  * @param {string} csvText — combined CSV export
  */
 export async function analyzeCsvWithLlm(csvText) {
