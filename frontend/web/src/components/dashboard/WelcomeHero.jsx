@@ -36,23 +36,26 @@ function buildHeroSnapshot(transactions) {
   };
 }
 
-function WelcomeHero({ compactGraphic = false }) {
+function WelcomeHero({ compactGraphic = false, fillHeight = false }) {
   const { transactions } = useTransactions();
   const hasData = transactions.length > 0;
   const snapshot = useMemo(() => buildHeroSnapshot(transactions), [transactions]);
-  const graphicSize = compactGraphic ? 300 : 320;
+  const graphicSize = compactGraphic ? 280 : 320;
 
   return (
     <Motion.section
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="relative overflow-hidden rounded-xl3 border border-white/10 bg-gradient-to-br from-[#121c2c] via-[#09101d] to-[#070b14] text-white shadow-dark"
+      className={[
+        "relative overflow-hidden rounded-xl3 border border-white/10 bg-gradient-to-br from-[#121c2c] via-[#09101d] to-[#070b14] text-white shadow-dark",
+        fillHeight ? "h-full" : "",
+      ].join(" ")}
     >
       <div className="pointer-events-none absolute -top-16 -left-16 h-64 w-64 rounded-full bg-teal-500/10 blur-[80px]" />
       <div className="pointer-events-none absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-brand-500/15 blur-[90px]" />
 
-      <div className="relative grid gap-6 p-6 md:p-8 lg:grid-cols-[1.25fr_minmax(280px,360px)] lg:items-stretch lg:gap-8 lg:p-9">
+      <div className="relative grid h-full min-h-[22rem] gap-6 p-6 md:p-8 lg:grid-cols-[1.25fr_minmax(220px,1fr)] lg:items-center lg:gap-8 lg:p-9">
         <div className="flex flex-col justify-center">
           <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider backdrop-blur">
             <Sparkles size={12} className="text-brand-300" />
@@ -97,13 +100,13 @@ function WelcomeHero({ compactGraphic = false }) {
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-          className="relative hidden lg:flex lg:h-full lg:flex-col lg:justify-end lg:pb-2"
+          className="relative hidden h-full min-h-0 lg:flex lg:items-center lg:justify-center"
         >
-          <div className="relative flex items-center justify-center pt-6">
-            <div className="absolute h-72 w-72 rounded-full bg-brand-500/10 blur-3xl md:h-80 md:w-80" />
+          <div className="relative flex items-center justify-center">
+            <div className="absolute h-64 w-64 rounded-full bg-brand-500/10 blur-3xl" />
             <ClayWalletGraphic
               size={graphicSize}
-              className="relative translate-y-4 drop-shadow-[0_24px_38px_rgba(0,0,0,0.4)]"
+              className="relative drop-shadow-[0_24px_38px_rgba(0,0,0,0.4)]"
             />
           </div>
         </Motion.div>

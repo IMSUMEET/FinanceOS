@@ -110,7 +110,7 @@ function OverviewPage() {
               : ""
           }
         >
-          <WelcomeHero compactGraphic={accounts.length > 0} />
+          <WelcomeHero compactGraphic={accounts.length > 0} fillHeight={accounts.length > 0} />
           {accounts.length > 0 ? (
             <AccountCardStack
               layout="sidebar"

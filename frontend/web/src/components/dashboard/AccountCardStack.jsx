@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Receipt, TrendingUp } from "lucide-react";
+import { AnimatePresence, motion as Motion } from "framer-motion";
+import { CalendarDays, Receipt, TrendingUp } from "lucide-react";
 import CategoryBadge from "../ui/CategoryBadge";
 import { themeForAccount } from "../../utils/accountCards";
 import { formatCurrency, formatDate } from "../../utils/format";
 
-const AUTO_CYCLE_MS = 5000;
+const AUTO_CYCLE_MS = 10000;
+const CARD_TRANSITION = { duration: 1.1, ease: [0.22, 1, 0.36, 1] };
 const CARD_ASPECT = "aspect-[86/54]";
+const MAX_DOTS = 8;
 
 function ClayCard({ account, active, className = "", compact = false }) {
   const theme = themeForAccount(account.label);
@@ -55,29 +58,6 @@ function ClayCard({ account, active, className = "", compact = false }) {
   );
 }
 
-function SpendShareRow({ account, active }) {
-  const theme = themeForAccount(account.label);
-
-  return (
-    <div className={`transition ${active ? "opacity-100" : "opacity-75"}`}>
-      <div className="mb-1 flex items-center justify-between gap-2 text-xs">
-        <span className="truncate font-semibold text-ink-700 dark:text-ink-200">
-          {account.label}
-        </span>
-        <span className="tabular shrink-0 font-bold text-ink-900 dark:text-ink-50">
-          {account.sharePct.toFixed(0)}%
-        </span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-ink-100 dark:bg-ink-800">
-        <div
-          className={`h-full rounded-full bg-gradient-to-r ${theme.gradient} transition-all`}
-          style={{ width: `${Math.max(account.sharePct, 4)}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function InsightTile({ label, value, sub }) {
   return (
     <div className="surface-muted rounded-xl2 p-3">
@@ -88,6 +68,165 @@ function InsightTile({ label, value, sub }) {
       {sub ? (
         <p className="mt-0.5 truncate text-[11px] text-ink-500 dark:text-ink-400">{sub}</p>
       ) : null}
+    </div>
+  );
+}
+
+function UsagePointer({ account }) {
+  const theme = themeForAccount(account.label);
+  const share = account.sharePct ?? 0;
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <Motion.div
+        key={account.id}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp size={14} className="text-brand-500" />
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-500 dark:text-ink-400">
+              Spend share
+            </span>
+          </div>
+          <span className="tabular text-xs font-bold text-ink-900 dark:text-ink-50">
+            {share.toFixed(0)}%
+          </span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-ink-200/70 dark:bg-ink-700/70">
+          <Motion.div
+            className={`h-full rounded-full bg-gradient-to-r ${theme.gradient}`}
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.max(share, 4)}%` }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          />
+        </div>
+        <p className="mt-1.5 truncate text-[11px] text-ink-500 dark:text-ink-400">
+          {formatCurrency(account.total, { compact: true })} on this card
+        </p>
+      </Motion.div>
+    </AnimatePresence>
+  );
+}
+
+function CardInsights({ account, grandTotal }) {
+  if (!account) return null;
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <Motion.div
+        key={account.id}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="flex items-center gap-2">
+          <Receipt size={14} className="text-brand-500" />
+          <p className="text-xs font-bold uppercase tracking-wider text-ink-500 dark:text-ink-400">
+            Card insights
+          </p>
+        </div>
+        <p className="mt-1 truncate text-sm font-semibold text-ink-800 dark:text-ink-100">
+          {account.label}
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <InsightTile
+            label="Avg txn"
+            value={formatCurrency(account.avgTxn ?? 0, { compact: true })}
+          />
+          <InsightTile
+            label="Share"
+            value={`${(account.sharePct ?? 0).toFixed(0)}%`}
+            sub={`${formatCurrency(account.total, { compact: true })} of ${formatCurrency(grandTotal, { compact: true })}`}
+          />
+          <InsightTile
+            label="Top category"
+            value={
+              account.topCategory ? (
+                <CategoryBadge category={account.topCategory} size="xs" />
+              ) : (
+                "—"
+              )
+            }
+            sub={
+              account.topCategoryTotal
+                ? formatCurrency(account.topCategoryTotal, { compact: true })
+                : undefined
+            }
+          />
+          <InsightTile
+            label="Last activity"
+            value={account.lastDate ? formatDate(account.lastDate) : "—"}
+            sub={
+              account.lastDate ? (
+                <span className="inline-flex items-center gap-1">
+                  <CalendarDays size={11} />
+                  Most recent txn
+                </span>
+              ) : undefined
+            }
+          />
+        </div>
+      </Motion.div>
+    </AnimatePresence>
+  );
+}
+
+function CardPager({ accounts, selectedIndex, onSelect }) {
+  if (accounts.length <= 1) return null;
+
+  const showDots = accounts.length <= MAX_DOTS;
+  const active = accounts[selectedIndex];
+  const go = (delta) => onSelect((selectedIndex + delta + accounts.length) % accounts.length);
+
+  return (
+    <div className="mt-2 flex flex-col items-center gap-1.5">
+      {showDots ? (
+        <div className="flex items-center justify-center gap-1.5">
+          {accounts.map((account, index) => (
+            <button
+              key={account.id}
+              type="button"
+              onClick={() => onSelect(index)}
+              aria-label={`Show ${account.label}`}
+              aria-current={index === selectedIndex ? "true" : undefined}
+              className={[
+                "h-2 rounded-full transition-all duration-500",
+                index === selectedIndex ? "w-5 bg-brand-500" : "w-2 bg-ink-300 dark:bg-ink-600",
+              ].join(" ")}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => go(-1)}
+            aria-label="Previous card"
+            className="rounded-full border border-ink-200 px-2.5 py-1 text-[11px] font-bold text-ink-600 transition hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800"
+          >
+            Prev
+          </button>
+          <span className="tabular rounded-full bg-ink-100 px-3 py-1 text-xs font-bold text-ink-700 dark:bg-ink-800 dark:text-ink-200">
+            {selectedIndex + 1} / {accounts.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => go(1)}
+            aria-label="Next card"
+            className="rounded-full border border-ink-200 px-2.5 py-1 text-[11px] font-bold text-ink-600 transition hover:bg-ink-50 dark:border-ink-700 dark:text-ink-300 dark:hover:bg-ink-800"
+          >
+            Next
+          </button>
+        </div>
+      )}
+      <p className="max-w-full truncate text-center text-[11px] text-ink-500 dark:text-ink-400">
+        {active?.label} · every {AUTO_CYCLE_MS / 1000}s
+      </p>
     </div>
   );
 }
@@ -111,10 +250,6 @@ function AccountCardStack({ accounts, selectedAccount, onSelectAccount, layout =
   }, [accounts.length, hasMultiple]);
 
   if (!accounts.length) return null;
-
-  function stepCard(delta) {
-    setPreviewIndex((current) => (current + delta + accounts.length) % accounts.length);
-  }
 
   if (!isSidebar) {
     return (
@@ -144,7 +279,7 @@ function AccountCardStack({ accounts, selectedAccount, onSelectAccount, layout =
   }
 
   return (
-    <div className="flex h-full flex-col rounded-xl3 border border-ink-200/70 bg-white/80 p-4 shadow-soft backdrop-blur-xl dark:border-ink-700 dark:bg-ink-900/85 dark:shadow-softDark md:p-5">
+    <div className="flex h-full min-h-[22rem] flex-col rounded-xl3 border border-ink-200/70 bg-white/80 p-4 shadow-soft backdrop-blur-xl dark:border-ink-700 dark:bg-ink-900/85 dark:shadow-softDark md:p-5">
       <div className="shrink-0">
         <div className="flex items-center gap-2">
           <p className="text-xs font-bold uppercase tracking-wider text-ink-500 dark:text-ink-400">
@@ -158,156 +293,36 @@ function AccountCardStack({ accounts, selectedAccount, onSelectAccount, layout =
         </div>
         <p className="mt-0.5 text-sm text-ink-600 dark:text-ink-300">
           {hasMultiple
-            ? "Your cards rotate automatically — use arrows to browse"
-            : "Summary for your linked card"}
+            ? "One card at a time — rotates automatically"
+            : `${formatCurrency(grandTotal, { compact: true })} · ${totalTxns} txns`}
         </p>
       </div>
 
-      <div className="mt-3 rounded-xl2 surface-muted px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink-500 dark:text-ink-400">
-              {hasMultiple ? "Now showing" : "Portfolio"}
-            </p>
-            <p className="tabular mt-0.5 text-xl font-black text-ink-900 dark:text-ink-50">
-              {formatCurrency(displayAccount.total, { compact: true })}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink-500 dark:text-ink-400">
-              {hasMultiple ? "All cards" : "Activity"}
-            </p>
-            <p className="mt-0.5 text-sm font-bold text-ink-700 dark:text-ink-200">
-              {hasMultiple
-                ? formatCurrency(grandTotal, { compact: true })
-                : `${accounts.length} card · ${totalTxns} txns`}
-            </p>
-          </div>
-        </div>
-      </div>
-
       <div className="mt-3 shrink-0">
-        <div className="relative flex items-center justify-center px-8">
-          {hasMultiple ? (
-            <>
-              <button
-                type="button"
-                onClick={() => stepCard(-1)}
-                aria-label="Previous card"
-                className="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-ink-200 bg-white p-1.5 text-ink-600 shadow-soft transition hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-200 dark:hover:bg-ink-700"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => stepCard(1)}
-                aria-label="Next card"
-                className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-ink-200 bg-white p-1.5 text-ink-600 shadow-soft transition hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-200 dark:hover:bg-ink-700"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </>
-          ) : null}
-
-          <ClayCard account={displayAccount} active />
+        <div
+          className={`relative w-full overflow-hidden rounded-[1.25rem] ${CARD_ASPECT}`}
+          aria-live="polite"
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <Motion.div
+              key={displayAccount.id}
+              initial={{ opacity: 0, scale: 0.96, filter: "blur(4px)" }}
+              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+              exit={{ opacity: 0, scale: 1.02, filter: "blur(4px)" }}
+              transition={CARD_TRANSITION}
+              className="absolute inset-0"
+            >
+              <ClayCard account={displayAccount} active />
+            </Motion.div>
+          </AnimatePresence>
         </div>
-
-        {hasMultiple ? (
-          <div className="mt-3 flex flex-col items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              {accounts.map((account, index) => (
-                <button
-                  key={account.id}
-                  type="button"
-                  onClick={() => setPreviewIndex(index)}
-                  aria-label={`Show ${account.label}`}
-                  aria-current={index === selectedIndex ? "true" : undefined}
-                  className={[
-                    "h-2 rounded-full transition-all",
-                    index === selectedIndex ? "w-5 bg-brand-500" : "w-2 bg-ink-300 dark:bg-ink-600",
-                  ].join(" ")}
-                />
-              ))}
-            </div>
-            <p className="text-center text-[11px] font-medium text-ink-500 dark:text-ink-400">
-              {displayAccount.label} · {selectedIndex + 1} of {accounts.length} · switches every{" "}
-              {AUTO_CYCLE_MS / 1000}s
-            </p>
-          </div>
-        ) : null}
+        <CardPager accounts={accounts} selectedIndex={selectedIndex} onSelect={setPreviewIndex} />
       </div>
 
       {displayAccount ? (
-        <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto border-t border-ink-200/70 pt-4 pr-0.5 scrollbar-thin dark:border-ink-700">
-          {hasMultiple ? (
-            <div>
-              <div className="flex items-center gap-2">
-                <TrendingUp size={14} className="text-brand-500" />
-                <p className="text-xs font-bold uppercase tracking-wider text-ink-500 dark:text-ink-400">
-                  Spend share
-                </p>
-              </div>
-              <div className="mt-3 max-h-36 space-y-2.5 overflow-y-auto pr-0.5 scrollbar-thin">
-                {accounts.map((account) => (
-                  <SpendShareRow
-                    key={account.id}
-                    account={account}
-                    active={account.id === displayAccount.id}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div>
-            <div className="flex items-center gap-2">
-              <Receipt size={14} className="text-brand-500" />
-              <p className="text-xs font-bold uppercase tracking-wider text-ink-500 dark:text-ink-400">
-                Card insights
-              </p>
-            </div>
-            <p className="mt-1 truncate text-sm font-semibold text-ink-800 dark:text-ink-100">
-              {displayAccount.label}
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <InsightTile
-                label="Avg txn"
-                value={formatCurrency(displayAccount.avgTxn ?? 0, { compact: true })}
-              />
-              <InsightTile
-                label="Share"
-                value={`${(displayAccount.sharePct ?? 0).toFixed(0)}%`}
-                sub="of total spend"
-              />
-              <InsightTile
-                label="Top category"
-                value={
-                  displayAccount.topCategory ? (
-                    <CategoryBadge category={displayAccount.topCategory} size="xs" />
-                  ) : (
-                    "—"
-                  )
-                }
-                sub={
-                  displayAccount.topCategoryTotal
-                    ? formatCurrency(displayAccount.topCategoryTotal, { compact: true })
-                    : undefined
-                }
-              />
-              <InsightTile
-                label="Last activity"
-                value={displayAccount.lastDate ? formatDate(displayAccount.lastDate) : "—"}
-                sub={
-                  displayAccount.lastDate ? (
-                    <span className="inline-flex items-center gap-1">
-                      <CalendarDays size={11} />
-                      Most recent txn
-                    </span>
-                  ) : undefined
-                }
-              />
-            </div>
-          </div>
+        <div className="mt-auto flex min-h-0 flex-1 flex-col justify-end gap-4 border-t border-ink-200/70 pt-4 dark:border-ink-700">
+          <UsagePointer account={displayAccount} />
+          <CardInsights account={displayAccount} grandTotal={grandTotal} />
         </div>
       ) : null}
     </div>
