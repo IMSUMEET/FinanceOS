@@ -66,7 +66,7 @@ function AISuggestionCard({ index, theme, suggestion, placeholder = false, featu
 
   return (
     <article
-      className={`group flex h-full ${featured ? "min-h-[280px]" : "min-h-[220px]"} flex-col overflow-hidden rounded-xl3 border border-white/60 ring-1 ${theme.ring} ${theme.shadow} transition-transform duration-300 hover:-translate-y-1 dark:border-ink-700/80`}
+      className={`group relative flex h-full ${featured ? "min-h-[280px]" : "min-h-[220px]"} flex-col overflow-hidden rounded-xl3 border border-white/60 ring-1 ${theme.ring} ${theme.shadow} transition-shadow duration-300 hover:shadow-lg dark:border-ink-700/80`}
     >
       <div className={`relative bg-gradient-to-br ${theme.header} px-5 py-4`}>
         <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />

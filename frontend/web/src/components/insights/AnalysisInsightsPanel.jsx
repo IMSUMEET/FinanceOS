@@ -81,8 +81,8 @@ function AnalysisInsightsPanel({ latestAnalysis }) {
         </Card>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-12">
-        <div className="space-y-4 xl:col-span-7">
+      <div className="relative isolate space-y-8">
+        <section className="space-y-4">
           <div className="flex items-center gap-2 px-1">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
               <Lightbulb size={16} />
@@ -104,7 +104,11 @@ function AnalysisInsightsPanel({ latestAnalysis }) {
             />
           ) : null}
 
-          <div className={`grid gap-4 ${suggestions[0]?.breakdown?.length > 1 ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-3"}`}>
+          <div
+            className={`grid gap-4 ${
+              suggestions[0]?.breakdown?.length > 1 ? "md:grid-cols-2" : "md:grid-cols-2 lg:grid-cols-3"
+            }`}
+          >
             {(suggestions[0]?.breakdown?.length > 1 ? [1, 2] : [0, 1, 2]).map((cardIndex) => (
               <AISuggestionCard
                 key={`action-${cardIndex}`}
@@ -115,9 +119,9 @@ function AnalysisInsightsPanel({ latestAnalysis }) {
               />
             ))}
           </div>
-        </div>
+        </section>
 
-        <div className="space-y-4 xl:col-span-5">
+        <section className="space-y-4">
           <div className="flex items-center gap-2 px-1">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
               <AlertTriangle size={16} />
@@ -129,7 +133,7 @@ function AnalysisInsightsPanel({ latestAnalysis }) {
               </p>
             </div>
           </div>
-          <div className="grid gap-4">
+          <div className={`grid gap-4 ${anomalies.length > 1 ? "md:grid-cols-2" : ""}`}>
             {insights && anomalies.length > 0 ? (
               anomalies.map((item, idx) => (
                 <AIAnomalyCard key={`${item.title}-${idx}`} anomaly={item} index={idx} />
@@ -138,7 +142,7 @@ function AnalysisInsightsPanel({ latestAnalysis }) {
               <AIAnomalyEmptyState />
             )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

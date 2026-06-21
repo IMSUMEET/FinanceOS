@@ -40,7 +40,7 @@ function AIAnomalyCard({ anomaly, index }) {
 
 export function AIAnomalyEmptyState() {
   return (
-    <div className="flex h-full min-h-[180px] flex-col items-center justify-center rounded-xl3 border border-dashed border-ink-200 bg-ink-50/50 px-6 py-8 text-center dark:border-ink-700 dark:bg-ink-900/40">
+    <div className="flex min-h-[180px] flex-col items-center justify-center rounded-xl3 border border-dashed border-ink-200 bg-ink-50 px-6 py-8 text-center dark:border-ink-700 dark:bg-ink-900/60">
       <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300">
         <ShieldCheck size={20} />
       </span>
