@@ -1,3 +1,11 @@
+import {
+  endpointLabel,
+  isOpenRouterTimeoutError,
+  logOpenRouter,
+  openRouterErrorMessage,
+  readOpenRouterErrorBody,
+} from "./openrouterLog.js";
+
 export interface ReportData {
   period: {
     start: string;
@@ -43,6 +51,10 @@ export interface AIInsights {
   recommendations: RecommendationItem[];
   anomalies: AnomalyItem[];
 }
+
+/** Override with OPENROUTER_API_URL in tests (Playwright mock server). */
+export const OPENROUTER_CHAT_COMPLETIONS_URL =
+  process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
 
 export function mapToAllowedCategory(cat: string): string {
   const c = (cat || "").toLowerCase().trim();
@@ -269,13 +281,37 @@ export function validateInsights(insights: any, reportData: ReportData): AIInsig
 
 export async function generateInsightsWithOpenRouter(reportData: ReportData): Promise<AIInsights> {
   const apiKey = process.env.OPENROUTER_API_KEY;
+  const model = process.env.OPENROUTER_MODEL || "openrouter/free";
+  const appUrl = process.env.APP_URL || "https://financeos.app";
+
   if (!apiKey) {
-    console.warn("OPENROUTER_API_KEY is missing, using fallback insights.");
+    logOpenRouter("openrouter_skipped", {
+      operation: "insights",
+      reason: "missing_api_key",
+      model,
+      outcome: "fallback",
+    });
     return fallbackInsights(reportData);
   }
 
-  const model = process.env.OPENROUTER_MODEL || "openrouter/free";
-  const appUrl = process.env.APP_URL || "https://financeos.app";
+  logOpenRouter("openrouter_start", {
+    operation: "insights",
+    model,
+    endpoint: endpointLabel(OPENROUTER_CHAT_COMPLETIONS_URL),
+    transactionCount: reportData.totalTransactions,
+  });
+
+  const startedAt = Date.now();
+  const failInsights = (fields: Record<string, unknown>) => {
+    logOpenRouter("openrouter_failure", {
+      operation: "insights",
+      model,
+      durationMs: Date.now() - startedAt,
+      outcome: "fallback",
+      ...fields,
+    });
+    return fallbackInsights(reportData);
+  };
 
   const prompt = `You are FinanceOS AI, a practical personal finance analyst.
 
@@ -333,7 +369,7 @@ ${JSON.stringify(reportData, null, 2)}`;
   const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -352,24 +388,46 @@ ${JSON.stringify(reportData, null, 2)}`;
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      throw new Error(`OpenRouter HTTP error: ${res.status}`);
+      const errorBody = await readOpenRouterErrorBody(res);
+      return failInsights({
+        status: res.status,
+        error: `HTTP ${res.status}`,
+        errorBody: errorBody || undefined,
+      });
     }
 
     const resJson: any = await res.json();
     const content = resJson?.choices?.[0]?.message?.content;
     if (!content) {
-      throw new Error("Empty response from OpenRouter");
+      return failInsights({ status: res.status, error: "empty_response" });
     }
 
     const parsed = safeJsonParse(content);
     if (!parsed) {
-      throw new Error("Failed to parse JSON response from AI");
+      return failInsights({
+        status: res.status,
+        error: "invalid_json",
+        contentLength: content.length,
+      });
     }
 
-    return validateInsights(parsed, reportData);
-  } catch (e: any) {
+    const insights = validateInsights(parsed, reportData);
+    logOpenRouter("openrouter_success", {
+      operation: "insights",
+      model,
+      status: res.status,
+      durationMs: Date.now() - startedAt,
+      score: insights.score,
+      riskLevel: insights.riskLevel,
+      observationCount: insights.observations.length,
+      outcome: "success",
+    });
+    return insights;
+  } catch (e: unknown) {
     clearTimeout(timeoutId);
-    console.error("OpenRouter insights generation failed:", e.message || e);
-    return fallbackInsights(reportData);
+    return failInsights({
+      error: openRouterErrorMessage(e),
+      timedOut: isOpenRouterTimeoutError(e),
+    });
   }
 }

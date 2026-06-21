@@ -36,6 +36,9 @@ class BackendStack extends Stack {
       logGroup: apiLogGroup,
       environment: {
         NODE_ENV: "production",
+        OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
+        OPENROUTER_MODEL: process.env.OPENROUTER_MODEL || "openrouter/free",
+        APP_URL: process.env.APP_URL || "https://financeos.app",
       },
       bundling: {
         minify: true,

@@ -8,7 +8,15 @@ import {
   fallbackInsights,
   mapToAllowedCategory,
   safeJsonParse,
+  OPENROUTER_CHAT_COMPLETIONS_URL,
 } from "./openrouter.js";
+import {
+  endpointLabel,
+  isOpenRouterTimeoutError,
+  logOpenRouter,
+  openRouterErrorMessage,
+  readOpenRouterErrorBody,
+} from "./openrouterLog.js";
 
 export const aiApp = new Hono();
 
@@ -126,13 +134,39 @@ export function getLocalCategoryHint(transaction: any) {
 // OpenRouter categorization batch call
 export async function categorizeTransactionsWithOpenRouter(transactions: any[]): Promise<any[]> {
   const apiKey = process.env.OPENROUTER_API_KEY;
+  const model = process.env.OPENROUTER_MODEL || "openrouter/free";
+  const appUrl = process.env.APP_URL || "https://financeos.app";
+
   if (!apiKey) {
-    console.warn("OPENROUTER_API_KEY missing during categorization");
+    logOpenRouter("openrouter_skipped", {
+      operation: "categorization",
+      reason: "missing_api_key",
+      model,
+      batchSize: transactions.length,
+      outcome: "fallback",
+    });
     return [];
   }
 
-  const model = process.env.OPENROUTER_MODEL || "openrouter/free";
-  const appUrl = process.env.APP_URL || "https://financeos.app";
+  logOpenRouter("openrouter_start", {
+    operation: "categorization",
+    model,
+    endpoint: endpointLabel(OPENROUTER_CHAT_COMPLETIONS_URL),
+    batchSize: transactions.length,
+  });
+
+  const startedAt = Date.now();
+  const failCategorization = (fields: Record<string, unknown>) => {
+    logOpenRouter("openrouter_failure", {
+      operation: "categorization",
+      model,
+      batchSize: transactions.length,
+      durationMs: Date.now() - startedAt,
+      outcome: "fallback",
+      ...fields,
+    });
+    return [] as any[];
+  };
 
   const prompt = `You are a transaction categorization engine for FinanceOS.
 
@@ -202,7 +236,7 @@ ${JSON.stringify(
   const timeoutId = setTimeout(() => controller.abort(), 25000);
 
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -221,19 +255,46 @@ ${JSON.stringify(
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      throw new Error(`OpenRouter categorization HTTP error: ${res.status}`);
+      const errorBody = await readOpenRouterErrorBody(res);
+      return failCategorization({
+        status: res.status,
+        error: `HTTP ${res.status}`,
+        errorBody: errorBody || undefined,
+      });
     }
 
     const resJson: any = await res.json();
     const content = resJson?.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Empty categorization response");
+    if (!content) {
+      return failCategorization({ status: res.status, error: "empty_response" });
+    }
 
     const parsed = safeJsonParse(content);
-    return parsed?.categorizedTransactions || [];
-  } catch (e: any) {
+    const categorized = parsed?.categorizedTransactions || [];
+    if (!categorized.length) {
+      return failCategorization({
+        status: res.status,
+        error: "no_categorized_transactions",
+        contentLength: content.length,
+      });
+    }
+
+    logOpenRouter("openrouter_success", {
+      operation: "categorization",
+      model,
+      status: res.status,
+      durationMs: Date.now() - startedAt,
+      batchSize: transactions.length,
+      resultCount: categorized.length,
+      outcome: "success",
+    });
+    return categorized;
+  } catch (e: unknown) {
     clearTimeout(timeoutId);
-    console.error("OpenRouter transaction categorization failed:", e.message || e);
-    return [];
+    return failCategorization({
+      error: openRouterErrorMessage(e),
+      timedOut: isOpenRouterTimeoutError(e),
+    });
   }
 }
 
@@ -373,6 +434,19 @@ aiApp.post("/", async (c) => {
   // 7. Generate insights
   const insights = await generateInsightsWithOpenRouter(reportData);
   const aiStatusInsights = hasApiKey && !insights.summary.startsWith("You had $") ? "success" : "fallback";
+
+  console.log(
+    JSON.stringify({
+      event: "ai-analyze",
+      transactionCount: rawTransactions.length,
+      outcome: "success",
+      openrouterConfigured: hasApiKey,
+      aiStatus: {
+        categorization: aiStatusCategorization,
+        insights: aiStatusInsights,
+      },
+    }),
+  );
 
   return c.json({
     status: "success",

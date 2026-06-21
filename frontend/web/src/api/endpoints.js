@@ -6,6 +6,7 @@
 
 export const ENDPOINTS = {
   analyze: "/api/analyze",
+  aiAnalyze: "/api/ai-analyze",
   transactions: {
     list: "/transactions",
     create: "/transactions",
