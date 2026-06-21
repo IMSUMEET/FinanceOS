@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { FileSpreadsheet, Trash2, UploadCloud, Wand2, Loader2, FolderOpen } from "lucide-react";
+import { FileSpreadsheet, Trash2, UploadCloud, Wand2, Loader2, FolderOpen, Sparkles, Zap } from "lucide-react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Pill from "../components/ui/Pill";
@@ -12,8 +12,12 @@ import EmptyState from "../components/ui/EmptyState";
 import { useTransactions } from "../context/useTransactions";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { categorize, normalizeMerchant } from "../utils/categorize";
-import { USE_MOCK } from "../api/client";
-import { analyzeCsvFormData } from "../services/analysis";
+import { USE_MOCK, LLM_ANALYSIS_AVAILABLE } from "../api/client";
+import {
+  analyzeCsvFormData,
+  analyzeCsvWithLlm,
+  buildCombinedCsvFromPendingFiles,
+} from "../services/analysis";
 import { summarizeTransactions } from "../utils/analysisSummary";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -412,17 +416,24 @@ function UploadPage() {
     useTransactions();
 
   const [phase, setPhase] = useState("idle");
+  const [runningMode, setRunningMode] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [pendingFiles, setPendingFiles] = useState([]);
   const [lastSummary, setLastSummary] = useState(null);
+  const [lastAnalysisMode, setLastAnalysisMode] = useState(null);
   const inputRef = useRef(null);
   const folderInputRef = useRef(null);
 
+  const isBusy = phase === "uploading" || phase === "analyzing";
+  const llmDisabled = USE_MOCK || !LLM_ANALYSIS_AVAILABLE;
+
   const resetFlow = useCallback(() => {
     setPhase("idle");
+    setRunningMode(null);
     setErrorMessage("");
     setPendingFiles([]);
     setLastSummary(null);
+    setLastAnalysisMode(null);
     if (inputRef.current) inputRef.current.value = "";
     if (folderInputRef.current) folderInputRef.current.value = "";
   }, []);
@@ -462,59 +473,91 @@ function UploadPage() {
     }
   }, []);
 
-  const runAnalysis = useCallback(async () => {
-    if (!pendingFiles.length) {
-      setPhase("error");
-      setErrorMessage("Choose at least one CSV file.");
-      return;
-    }
-
-    try {
-      if (!USE_MOCK) {
-        setPhase("uploading");
-        const fd = new FormData();
-        for (const pf of pendingFiles) {
-          fd.append("files", pf.file, pf.name);
-        }
-        setPhase("analyzing");
-        const result = await analyzeCsvFormData(fd);
-        if (result.status !== "success") {
-          throw new Error(result.message || "Analysis failed.");
-        }
-        await applyAnalysisResult(result);
-        setPendingFiles([]);
-        navigate("/");
+  const runAnalysis = useCallback(
+    async (mode) => {
+      if (!pendingFiles.length) {
+        setPhase("error");
+        setErrorMessage("Choose at least one CSV file.");
         return;
       }
 
-      setPhase("uploading");
-      // Short delay for UI feel
-      await new Promise((r) => setTimeout(r, 600));
-      setPhase("analyzing");
-      await new Promise((r) => setTimeout(r, 600));
+      setRunningMode(mode);
 
-      const fileMetas = [];
-      const allRows = [];
-      for (const pf of pendingFiles) {
-        const { mapped } = parseRows(pf.parsedData, pf.detectedFormat, pf.name);
-        allRows.push(...mapped);
-        fileMetas.push({
-          fileName: pf.name,
-          rowCount: mapped.length,
-          detectedFormat: pf.detectedFormat,
-        });
+      try {
+        if (!USE_MOCK && mode === "local") {
+          setPhase("uploading");
+          const fd = new FormData();
+          for (const pf of pendingFiles) {
+            fd.append("files", pf.file, pf.name);
+          }
+          setPhase("analyzing");
+          const result = await analyzeCsvFormData(fd);
+          if (result.status !== "success") {
+            throw new Error(result.message || "Analysis failed.");
+          }
+          await applyAnalysisResult(result);
+          setLastSummary(result.summary);
+          setLastAnalysisMode("local");
+          setPhase("success");
+          setPendingFiles([]);
+          navigate("/");
+          return;
+        }
+
+        if (!USE_MOCK && mode === "llm") {
+          if (!LLM_ANALYSIS_AVAILABLE) {
+            throw new Error("Set VITE_AI_ANALYZER_URL to use AI analysis.");
+          }
+          setPhase("uploading");
+          const csvText = buildCombinedCsvFromPendingFiles(pendingFiles);
+          setPhase("analyzing");
+          const result = await analyzeCsvWithLlm(csvText);
+          if (result.status !== "success") {
+            throw new Error(result.message || "AI analysis failed.");
+          }
+          await applyAnalysisResult(result);
+          setLastSummary(result.summary);
+          setLastAnalysisMode("llm");
+          setPhase("success");
+          setPendingFiles([]);
+          navigate("/insights");
+          return;
+        }
+
+        setPhase("uploading");
+        await new Promise((r) => setTimeout(r, 600));
+        setPhase("analyzing");
+        await new Promise((r) => setTimeout(r, 600));
+
+        const fileMetas = [];
+        const allRows = [];
+        for (const pf of pendingFiles) {
+          const { mapped } = parseRows(pf.parsedData, pf.detectedFormat, pf.name);
+          allRows.push(...mapped);
+          fileMetas.push({
+            fileName: pf.name,
+            rowCount: mapped.length,
+            detectedFormat: pf.detectedFormat,
+          });
+        }
+        const analysis = buildMockAnalysisFromRows(allRows, fileMetas);
+        await applyAnalysisResult(analysis);
+        setLastSummary(analysis.summary);
+        setLastAnalysisMode("local");
+        setPhase("success");
+        setPendingFiles([]);
+        navigate("/");
+      } catch (e) {
+        const msg =
+          e?.message || (typeof e === "string" ? e : "Something went wrong. Please try again.");
+        setPhase("error");
+        setErrorMessage(msg);
+      } finally {
+        setRunningMode(null);
       }
-      const analysis = buildMockAnalysisFromRows(allRows, fileMetas);
-      await applyAnalysisResult(analysis);
-      setPendingFiles([]);
-      navigate("/");
-    } catch (e) {
-      const msg =
-        e?.message || (typeof e === "string" ? e : "Something went wrong. Please try again.");
-      setPhase("error");
-      setErrorMessage(msg);
-    }
-  }, [pendingFiles, applyAnalysisResult, navigate]);
+    },
+    [pendingFiles, applyAnalysisResult, navigate],
+  );
 
   const onDrop = (e) => {
     e.preventDefault();
@@ -524,6 +567,24 @@ function UploadPage() {
 
   const dragOver = useRef(false);
   const [dragHighlight, setDragHighlight] = useState(false);
+
+  const localButtonLabel =
+    runningMode === "local"
+      ? phase === "uploading"
+        ? "Uploading…"
+        : phase === "analyzing"
+          ? "Analyzing…"
+          : "Local analysis"
+      : "Local analysis";
+
+  const llmButtonLabel =
+    runningMode === "llm"
+      ? phase === "uploading"
+        ? "Uploading…"
+        : phase === "analyzing"
+          ? "Analyzing with AI…"
+          : "AI analysis"
+      : "AI analysis";
 
   return (
     <section className="space-y-5 pt-2">
@@ -589,15 +650,15 @@ function UploadPage() {
             Drop CSV or Excel files here
           </p>
           <p className="max-w-md text-sm text-ink-500 dark:text-ink-400">
-            {!USE_MOCK
-              ? "Files are sent to your configured API (multipart) and analyzed on the server."
-              : "Mock mode: CSVs/Excel files are parsed in your browser only."}
+            {USE_MOCK
+              ? "Mock mode: choose Local analysis to parse in your browser."
+              : "After choosing files, pick Local (fast) or AI (OpenRouter insights)."}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button
               onClick={() => inputRef.current?.click()}
               icon={FileSpreadsheet}
-              disabled={phase === "uploading" || phase === "analyzing"}
+              disabled={isBusy}
             >
               Choose files
             </Button>
@@ -612,7 +673,7 @@ function UploadPage() {
             <Button
               onClick={() => folderInputRef.current?.click()}
               icon={FolderOpen}
-              disabled={phase === "uploading" || phase === "analyzing"}
+              disabled={isBusy}
             >
               Choose folder
             </Button>
@@ -625,22 +686,6 @@ function UploadPage() {
               className="hidden"
               onChange={(e) => onChooseFiles(e.target.files)}
             />
-            {pendingFiles.length ? (
-              <Button
-                onClick={runAnalysis}
-                icon={phase === "uploading" || phase === "analyzing" ? Loader2 : Wand2}
-                className={
-                  phase === "uploading" || phase === "analyzing" ? "[&_svg]:animate-spin" : ""
-                }
-                disabled={phase === "uploading" || phase === "analyzing"}
-              >
-                {phase === "uploading"
-                  ? "Uploading…"
-                  : phase === "analyzing"
-                    ? "Analyzing…"
-                    : "Run analysis"}
-              </Button>
-            ) : null}
           </div>
           {pendingFiles.length ? (
             <div className="mt-8 w-full max-w-2xl overflow-hidden rounded-xl border border-ink-200 bg-white dark:border-ink-800 dark:bg-ink-900/60">
@@ -685,6 +730,7 @@ function UploadPage() {
                             }}
                             className="text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-350 p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
                             title="Remove file"
+                            disabled={isBusy}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -696,15 +742,73 @@ function UploadPage() {
               </table>
             </div>
           ) : null}
+
+          {pendingFiles.length ? (
+            <div className="mt-6 grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-2 rounded-xl2 border border-ink-200 bg-white p-4 text-left dark:border-ink-700 dark:bg-ink-900/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+                  Lambda 1 · Local
+                </p>
+                <p className="text-sm text-ink-600 dark:text-ink-300">
+                  Rule-based categories on the server. Fast path for importing transactions.
+                </p>
+                <Button
+                  onClick={() => runAnalysis("local")}
+                  icon={runningMode === "local" && isBusy ? Loader2 : Zap}
+                  className={runningMode === "local" && isBusy ? "[&_svg]:animate-spin w-full" : "w-full"}
+                  disabled={isBusy}
+                >
+                  {localButtonLabel}
+                </Button>
+              </div>
+
+              <div className="flex flex-col gap-2 rounded-xl2 border border-ink-200 bg-white p-4 text-left dark:border-ink-700 dark:bg-ink-900/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+                  Lambda 2 · AI
+                </p>
+                <p className="text-sm text-ink-600 dark:text-ink-300">
+                  OpenRouter categorization plus deduplicated AI insights. Slower, richer results.
+                </p>
+                <Button
+                  variant="dark"
+                  onClick={() => runAnalysis("llm")}
+                  icon={runningMode === "llm" && isBusy ? Loader2 : Sparkles}
+                  className={runningMode === "llm" && isBusy ? "[&_svg]:animate-spin w-full" : "w-full"}
+                  disabled={isBusy || llmDisabled}
+                  title={
+                    llmDisabled
+                      ? "Configure VITE_USE_MOCK=false and VITE_AI_ANALYZER_URL"
+                      : undefined
+                  }
+                >
+                  {llmButtonLabel}
+                </Button>
+                {llmDisabled ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Requires{" "}
+                    <code className="rounded bg-ink-100 px-1 dark:bg-ink-800">VITE_AI_ANALYZER_URL</code> in
+                    production.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
       </Card>
 
       {phase === "success" && lastSummary ? (
         <Card>
           <EmptyState
-            icon={Wand2}
+            icon={lastAnalysisMode === "llm" ? Sparkles : Wand2}
             title={`${lastSummary.totalTransactions} transactions analyzed`}
-            description="Head to Overview, Transactions or Insights to explore results."
+            description={[
+              lastAnalysisMode === "llm"
+                ? "AI analysis — OpenRouter categories and insights."
+                : lastAnalysisMode === "local" && !USE_MOCK
+                  ? "Local analysis — server rule-based categories."
+                  : "Browser mock analysis.",
+              "Head to Overview, Transactions, or Insights to explore results.",
+            ].join(" ")}
             action={<Button onClick={resetFlow}>Analyze more</Button>}
           />
         </Card>
