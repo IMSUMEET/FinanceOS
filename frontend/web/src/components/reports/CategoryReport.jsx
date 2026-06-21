@@ -45,7 +45,7 @@ function CategoryReport({ transactions }) {
 
       <div className="flex flex-col md:flex-row items-center gap-6">
         <div className="h-[300px] w-full md:w-[45%]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <PieChart>
               <Pie
                 data={data}

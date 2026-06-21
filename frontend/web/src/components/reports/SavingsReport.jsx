@@ -96,7 +96,7 @@ function SavingsReport({ transactions }) {
       </div>
 
       <div className="h-[320px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <ComposedChart data={data}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" stroke="#888" fontSize={10} />

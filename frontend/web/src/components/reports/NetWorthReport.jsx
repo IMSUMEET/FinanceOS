@@ -105,7 +105,7 @@ function NetWorthReport({ transactions }) {
 
       {/* Chart */}
       <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <AreaChart data={data}>
             <XAxis dataKey="date" stroke="#888" fontSize={10} />
             <YAxis stroke="#888" fontSize={10} />

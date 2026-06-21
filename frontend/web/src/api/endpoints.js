@@ -28,4 +28,7 @@ export const ENDPOINTS = {
     get: "/profile",
     update: "/profile",
   },
+  coach: {
+    suggestions: "/api/coach/suggestions",
+  },
 };

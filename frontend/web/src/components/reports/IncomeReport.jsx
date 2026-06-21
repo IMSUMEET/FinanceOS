@@ -69,7 +69,7 @@ function IncomeReport({ transactions }) {
 
       <div className="grid gap-6 md:grid-cols-2 items-center">
         <div className="h-[250px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={data} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
               <XAxis type="number" stroke="#888" fontSize={10} />
               <YAxis dataKey="name" type="category" stroke="#888" fontSize={10} width={70} />

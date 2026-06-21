@@ -235,6 +235,38 @@ describe("backend routes", () => {
     expect(body.aiStatus).toBe("success");
     expect(body.insights.summary).toBe("Custom insight");
   });
+
+  it("returns coach suggestions from POST /api/coach/suggestions", async () => {
+    const res = await app.request("/api/coach/suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        summary: {
+          period: { start: "2026-01-01", end: "2026-06-01" },
+          totalTransactions: 5,
+          totalIncome: 4000,
+          totalExpenses: 2500,
+          netCashFlow: 1500,
+          savingsRate: 37.5,
+          topCategories: [{ category: "Food", total: 600 }],
+          topMerchants: [{ merchant: "Cafe", total: 200 }],
+        },
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("success");
+    expect(body.suggestions).toHaveLength(3);
+  });
+
+  it("rejects coach suggestions without summary", async () => {
+    const res = await app.request("/api/coach/suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
 });
 
 afterEach(() => {

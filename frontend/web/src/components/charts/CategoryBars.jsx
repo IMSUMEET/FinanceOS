@@ -24,7 +24,7 @@ function CategoryBars({ data, height = 260 }) {
   const tickFill = isDark ? "#cbd5e1" : "#475569";
   return (
     <div className="select-none" style={{ width: "100%", height }}>
-      <ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart layout="vertical" data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
           <XAxis type="number" hide />
           <YAxis

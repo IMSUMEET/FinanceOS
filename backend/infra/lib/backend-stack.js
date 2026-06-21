@@ -31,8 +31,8 @@ class BackendStack extends Stack {
       depsLockFilePath: path.join(backendRoot, "package-lock.json"),
       handler: "handler",
       runtime: lambda.Runtime.NODEJS_20_X,
-      memorySize: 512,
-      timeout: Duration.seconds(15),
+      memorySize: 1024,
+      timeout: Duration.seconds(60),
       logGroup: apiLogGroup,
       environment: {
         NODE_ENV: "production",

@@ -6,6 +6,9 @@ import {
   fallbackInsights,
   mapToAllowedCategory,
   safeJsonParse,
+  fallbackCoachSuggestions,
+  validateCoachSuggestions,
+  generateCoachSuggestionsWithOpenRouter,
 } from "../src/openrouter.js";
 
 describe("mapToAllowedCategory", () => {
@@ -150,5 +153,72 @@ describe("fallbackInsights", () => {
 describe("safeJsonParse branch coverage", () => {
   it("ignores malformed markdown fences", () => {
     expect(safeJsonParse("```not-json```")).toBeNull();
+  });
+});
+
+describe("coach suggestions", () => {
+  const sampleSummary = {
+    period: { start: "2026-01-01", end: "2026-06-01" },
+    totalTransactions: 12,
+    totalIncome: 5000,
+    totalExpenses: 3200,
+    netCashFlow: 1800,
+    savingsRate: 36,
+    topCategories: [{ category: "Food", total: 800 }],
+    topMerchants: [{ merchant: "Whole Foods", total: 400 }],
+    recurringAnnualized: 600,
+    personalityLabel: "Balanced Builder",
+  };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("returns three fallback suggestions", () => {
+    const result = fallbackCoachSuggestions(sampleSummary);
+    expect(result.suggestions).toHaveLength(3);
+    expect(result.source).toBe("fallback");
+  });
+
+  it("pads validateCoachSuggestions to three items", () => {
+    const suggestions = validateCoachSuggestions(
+      [{ title: "One", message: "Do it", impact: "high", estimatedMonthlySavings: 10 }],
+      sampleSummary,
+    );
+    expect(suggestions).toHaveLength(3);
+    expect(suggestions[0]?.title).toBe("One");
+  });
+
+  it("calls OpenRouter for coach suggestions when key is set", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                suggestions: [
+                  { title: "A", message: "First", impact: "high", estimatedMonthlySavings: 50 },
+                  { title: "B", message: "Second", impact: "medium", estimatedMonthlySavings: 30 },
+                  { title: "C", message: "Third", impact: "low", estimatedMonthlySavings: 10 },
+                ],
+              }),
+            },
+          }],
+        }),
+      }),
+    );
+
+    const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
+    expect(result.source).toBe("openrouter");
+    expect(result.suggestions[0]?.title).toBe("A");
+  });
+
+  it("skips OpenRouter without api key", async () => {
+    const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
+    expect(result.source).toBe("fallback");
   });
 });

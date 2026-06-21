@@ -431,3 +431,223 @@ ${JSON.stringify(reportData, null, 2)}`;
     });
   }
 }
+
+/** Compact summary sent from the profile coach UI. */
+export interface CoachSummary {
+  period: { start: string | null; end: string | null };
+  totalTransactions: number;
+  totalIncome: number;
+  totalExpenses: number;
+  netCashFlow: number;
+  savingsRate: number;
+  topCategories: { category: string; total: number }[];
+  topMerchants: { merchant: string; total: number }[];
+  recurringAnnualized?: number;
+  personalityLabel?: string;
+}
+
+export interface CoachSuggestion {
+  title: string;
+  message: string;
+  impact: "low" | "medium" | "high";
+  estimatedMonthlySavings: number;
+}
+
+export interface CoachSuggestionsResult {
+  suggestions: CoachSuggestion[];
+  source: "openrouter" | "fallback";
+}
+
+export function fallbackCoachSuggestions(summary: CoachSummary): CoachSuggestionsResult {
+  const topCat = summary.topCategories[0]?.category ?? "spending";
+  const topMerchant = summary.topMerchants[0]?.merchant;
+  const suggestions: CoachSuggestion[] = [
+    {
+      title: `Review ${topCat} spending`,
+      message: `${topCat} is your largest category. Set a monthly cap and track weekly to stay on target.`,
+      impact: "high",
+      estimatedMonthlySavings: Math.round(summary.totalExpenses * 0.05) || 25,
+    },
+    {
+      title: "Audit recurring charges",
+      message:
+        summary.recurringAnnualized && summary.recurringAnnualized > 0
+          ? `You have about $${Math.round(summary.recurringAnnualized)} in annual recurring spend. Cancel unused subscriptions.`
+          : "Review subscriptions and autopay charges you no longer use.",
+      impact: "medium",
+      estimatedMonthlySavings: summary.recurringAnnualized
+        ? Math.round(summary.recurringAnnualized / 12 / 4)
+        : 15,
+    },
+    {
+      title: summary.netCashFlow >= 0 ? "Grow your savings rate" : "Close the cash-flow gap",
+      message:
+        summary.netCashFlow >= 0
+          ? `Net cash flow is positive ($${summary.netCashFlow}). Automate transfers to savings on payday.`
+          : `Expenses exceed income by $${Math.abs(summary.netCashFlow)}. Trim discretionary ${topCat} purchases first.`,
+      impact: summary.netCashFlow >= 0 ? "medium" : "high",
+      estimatedMonthlySavings: summary.netCashFlow >= 0 ? 50 : Math.round(summary.totalExpenses * 0.08) || 40,
+    },
+  ];
+
+  if (topMerchant && topMerchant !== "Unknown") {
+    suggestions[0] = {
+      title: `Optimize ${topMerchant} spend`,
+      message: `${topMerchant} is a top merchant. Look for cheaper alternatives or bundle discounts.`,
+      impact: "medium",
+      estimatedMonthlySavings: Math.round((summary.topMerchants[0]?.total ?? 0) * 0.1) || 20,
+    };
+  }
+
+  return { suggestions: suggestions.slice(0, 3), source: "fallback" };
+}
+
+export function validateCoachSuggestions(raw: unknown, summary: CoachSummary): CoachSuggestion[] {
+  const fallback = fallbackCoachSuggestions(summary).suggestions;
+  if (!Array.isArray(raw)) return fallback;
+
+  const parsed: CoachSuggestion[] = raw
+    .filter((item) => item && typeof item === "object")
+    .map((item: any, idx) => ({
+      title: typeof item.title === "string" ? item.title : fallback[idx]?.title ?? "Suggestion",
+      message: typeof item.message === "string" ? item.message : fallback[idx]?.message ?? "",
+      impact: ["low", "medium", "high"].includes(item.impact) ? item.impact : fallback[idx]?.impact ?? "medium",
+      estimatedMonthlySavings:
+        typeof item.estimatedMonthlySavings === "number"
+          ? item.estimatedMonthlySavings
+          : fallback[idx]?.estimatedMonthlySavings ?? 0,
+    }))
+    .slice(0, 3);
+
+  while (parsed.length < 3) {
+    parsed.push(fallback[parsed.length] ?? fallback[0]!);
+  }
+  return parsed;
+}
+
+export async function generateCoachSuggestionsWithOpenRouter(
+  summary: CoachSummary,
+): Promise<CoachSuggestionsResult> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  const model = process.env.OPENROUTER_MODEL || "openrouter/free";
+  const appUrl = process.env.APP_URL || "https://financeos.app";
+
+  if (!apiKey) {
+    logOpenRouter("openrouter_skipped", {
+      operation: "coach_suggestions",
+      reason: "missing_api_key",
+      model,
+      outcome: "fallback",
+    });
+    return fallbackCoachSuggestions(summary);
+  }
+
+  logOpenRouter("openrouter_start", {
+    operation: "coach_suggestions",
+    model,
+    endpoint: endpointLabel(OPENROUTER_CHAT_COMPLETIONS_URL),
+    transactionCount: summary.totalTransactions,
+  });
+
+  const startedAt = Date.now();
+  const failCoach = (fields: Record<string, unknown>) => {
+    logOpenRouter("openrouter_failure", {
+      operation: "coach_suggestions",
+      model,
+      durationMs: Date.now() - startedAt,
+      outcome: "fallback",
+      ...fields,
+    });
+    return fallbackCoachSuggestions(summary);
+  };
+
+  const prompt = `You are FinanceOS AI Coach. Analyze the financial summary and return ONLY valid JSON.
+No markdown. No explanation.
+
+Use the summary as the source of truth. Do not invent merchants, categories, or dollar amounts.
+
+Return schema:
+{
+  "suggestions": [
+    {
+      "title": "string",
+      "message": "string",
+      "impact": "low | medium | high",
+      "estimatedMonthlySavings": 0
+    }
+  ]
+}
+
+Rules:
+- Return exactly 3 suggestions, ordered from highest to lowest impact.
+- Each message must be one practical sentence the user can act on this week.
+- estimatedMonthlySavings must be a realistic non-negative number in USD.
+- Tie at least one suggestion to the top spending category or merchant when present.
+
+financialSummary:
+${JSON.stringify(summary, null, 2)}`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+  try {
+    const res = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": appUrl,
+        "X-OpenRouter-Title": "FinanceOS",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const errorBody = await readOpenRouterErrorBody(res);
+      return failCoach({
+        status: res.status,
+        error: `HTTP ${res.status}`,
+        errorBody: errorBody || undefined,
+      });
+    }
+
+    const resJson: any = await res.json();
+    const content = resJson?.choices?.[0]?.message?.content;
+    if (!content) {
+      return failCoach({ status: res.status, error: "empty_response" });
+    }
+
+    const parsed = safeJsonParse(content);
+    if (!parsed) {
+      return failCoach({
+        status: res.status,
+        error: "invalid_json",
+        contentLength: content.length,
+      });
+    }
+
+    const suggestions = validateCoachSuggestions(parsed.suggestions, summary);
+    logOpenRouter("openrouter_success", {
+      operation: "coach_suggestions",
+      model,
+      status: res.status,
+      durationMs: Date.now() - startedAt,
+      suggestionCount: suggestions.length,
+      outcome: "success",
+    });
+    return { suggestions, source: "openrouter" };
+  } catch (e: unknown) {
+    clearTimeout(timeoutId);
+    return failCoach({
+      error: openRouterErrorMessage(e),
+      timedOut: isOpenRouterTimeoutError(e),
+    });
+  }
+}

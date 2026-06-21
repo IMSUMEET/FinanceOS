@@ -23,7 +23,7 @@ function MonthlyCategoryBars({ data, color = "#3b82f6", height = 220 }) {
   const tickFill = isDark ? "#64748b" : "#94a3b8";
   return (
     <div className="select-none" style={{ width: "100%", height }}>
-      <ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="4 6" stroke={gridStroke} vertical={false} />
           <XAxis
