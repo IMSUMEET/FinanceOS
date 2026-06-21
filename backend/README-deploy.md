@@ -32,12 +32,10 @@ The app code uses **Hono** with `hono/aws-lambda` (see `src/lambda.ts` and `src/
 1. **Install AWS CLI**  
    Follow: [Installing the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
-2. **Configure credentials**
-
+2. **Configure credentials**  
    ```bash
    aws configure
-   ```
-
+   ```  
    Set access key, secret, default region (e.g. `us-east-1`), and output format. Alternatively use environment variables or profiles your organization supports.
 
 3. **Node.js** (v20+ recommended) for local `npm` and CDK.
@@ -54,7 +52,7 @@ If you use **AWS SSO “PowerUser”** (or similar) and bootstrap fails with `ia
 
 If a failed bootstrap left **`CDKToolkit` in `ROLLBACK_FAILED`**, delete that stack in the **CloudFormation** console (or have an admin clean it up) before retrying bootstrap.
 
-If **`CDKToolkit` is in `DELETE_FAILED`** (common after a partial bootstrap/rollback), `cdk bootstrap` will error with _“can not be updated”_. Fix it before deploying:
+If **`CDKToolkit` is in `DELETE_FAILED`** (common after a partial bootstrap/rollback), `cdk bootstrap` will error with *“can not be updated”*. Fix it before deploying:
 
 1. Open **AWS Console → CloudFormation →** same **region** as your profile (e.g. `us-east-2`) → stack **`CDKToolkit`**.
 2. Open the **Events** / **Resources** tab and note which resources failed to delete (often IAM roles named like `cdk-hnb659fds-*`).
@@ -66,14 +64,14 @@ If **`CDKToolkit` is in `DELETE_FAILED`** (common after a partial bootstrap/roll
 
 After `cdk synth` / `cdk deploy`, the stack should contain:
 
-| Resource                                                                   | Purpose                                                                                                                                                                                         |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **One** `AWS::Lambda::Function`                                            | Runs the bundled Hono app (`src/lambda.ts` → handler `handler`; synthesized asset uses `index.handler`). Handles **GET `/health`**, **POST `/api/analyze`**, and all routes via HTTP API proxy. |
-| **One** `AWS::ApiGatewayV2::Api` (+ default stage + routes + integrations) | **HTTP API** (not REST). Routes: **ANY /** and **ANY /{proxy+}** → same Lambda.                                                                                                                 |
-| **IAM role** (+ inline policy) for the Lambda                              | `AWSLambdaBasicExecutionRole` so the function can write to CloudWatch Logs.                                                                                                                     |
-| **`AWS::Logs::LogGroup`**                                                  | 7-day retention for the API Lambda logs.                                                                                                                                                        |
-| **`AWS::Lambda::Permission`** (×2)                                         | Allow API Gateway to invoke the Lambda for `/` and `/{proxy+}`.                                                                                                                                 |
-| **`AWS::CDK::Metadata`**                                                   | CDK metadata (optional; small).                                                                                                                                                                 |
+| Resource | Purpose |
+|----------|---------|
+| **One** `AWS::Lambda::Function` | Runs the bundled Hono app (`src/lambda.ts`). **GET `/health`**, **POST `/api/analyze`**, **POST `/api/coach/suggestions`**. AI CSV analyze is **Lambda 2** only. |
+| **One** `AWS::ApiGatewayV2::Api` (+ default stage + routes + integrations) | **HTTP API** (not REST). Routes: **ANY /** and **ANY /{proxy+}** → same Lambda. |
+| **IAM role** (+ inline policy) for the Lambda | `AWSLambdaBasicExecutionRole` so the function can write to CloudWatch Logs. |
+| **`AWS::Logs::LogGroup`** | 7-day retention for the API Lambda logs. |
+| **`AWS::Lambda::Permission`** (×2) | Allow API Gateway to invoke the Lambda for `/` and `/{proxy+}`. |
+| **`AWS::CDK::Metadata`** | CDK metadata (optional; small). |
 
 **Not deployed by this stack:** RDS, DynamoDB, VPC, NAT Gateway, S3 (app buckets), SQS, SNS, EventBridge rules, Step Functions, extra Lambdas, REST API Gateway, or ElastiCache.
 
@@ -138,16 +136,24 @@ Run **[CDK validation](#cdk-validation-before-deploy)** first. From your machine
    Approve IAM capability prompts if shown. When finished, the **Outputs** section lists **ApiUrl** (your HTTP API base URL).
 
 6. **Frontend (Vercel)**  
-   In the Vercel project → **Settings → Environment Variables**: set **`VITE_API_BASE_URL`** to the stack output **ApiUrl** (no trailing slash). Set **`VITE_USE_MOCK`** to `false` so the Import page uses **POST `/api/analyze`**. Redeploy the frontend. See `frontend/web/.env.example` for local `.env.local` naming.
+   In the Vercel project → **Settings → Environment Variables** (Preview + Production):
+
+   | Variable | Value |
+   |----------|--------|
+   | `VITE_API_BASE_URL` | **File-Processing** stack **ApiUrl** (Lambda 1 — local analyze + coach) |
+   | `VITE_AI_ANALYZER_URL` | **FinanceOsAiCsvAnalyzerStack** **AiAnalyzerUrl** (Lambda 2 — AI analysis button) |
+   | `VITE_USE_MOCK` | `false` |
+
+   Redeploy the frontend after changing env vars. See `frontend/web/.env.example`.
 
 ## Useful commands
 
-| Script                  | Purpose                               |
-| ----------------------- | ------------------------------------- |
+| Script | Purpose |
+|--------|---------|
 | `npm run cdk:bootstrap` | `cdk bootstrap` (default CLI profile) |
-| `npm run cdk:diff`      | `cdk diff` (default profile)          |
-| `npm run cdk:deploy`    | `cdk deploy` (default profile)        |
-| `npm run cdk:destroy`   | `cdk destroy` (default profile)       |
+| `npm run cdk:diff` | `cdk diff` (default profile) |
+| `npm run cdk:deploy` | `cdk deploy` (default profile) |
+| `npm run cdk:destroy` | `cdk destroy` (default profile) |
 
 With a named profile (e.g. `financeos-admin-amsborse-dev`), prefer the `npx cdk … --profile financeos-admin-amsborse-dev` commands in the validation section above.
 
@@ -181,6 +187,187 @@ Open `http://localhost:3001/health` (expect `{"status":"ok"}`).
 cd frontend/web
 npm install
 cp .env.example .env.local
-# Set VITE_API_BASE_URL=http://localhost:3001 and VITE_USE_MOCK=false to exercise POST /api/analyze against local Hono.
+# Set VITE_API_BASE_URL=http://localhost:3001
+# Set VITE_AI_ANALYZER_URL=http://localhost:3001  (same host — uses /api/ai-analyze via local.ts)
+# Set VITE_USE_MOCK=false
 npm run dev
 ```
+
+## Deploying AI CSV Analyzer (financeos-ai-csv-analyzer)
+
+The project includes a second stack **`FinanceOsAiCsvAnalyzerStack`** that deploys `financeos-ai-csv-analyzer` Lambda. This stack uses the OpenRouter API to perform LLM-based transaction categorization and financial insights summary.
+
+### 1. Setting `OPENROUTER_API_KEY`
+Before deploying, set `OPENROUTER_API_KEY` as an environment variable in your shell so CDK can pass it to the Lambda function:
+
+```bash
+# On Linux/macOS
+export OPENROUTER_API_KEY="your-openrouter-key"
+
+# On Windows (PowerShell)
+$env:OPENROUTER_API_KEY="your-openrouter-key"
+
+# On Windows (CMD)
+set OPENROUTER_API_KEY="your-openrouter-key"
+```
+
+*Note: You can also specify `OPENROUTER_MODEL` (defaults to `openrouter/free`) and `APP_URL` (defaults to `https://financeos.app`).*
+
+### 2. How to Deploy
+Run the deploy script from the `backend` directory:
+```bash
+npm run deploy:ai-analyzer
+```
+*(Or directly from `backend/infra` by running `npm run deploy:ai-analyzer` / `npx cdk deploy FinanceOsAiCsvAnalyzerStack`)*
+
+Once completed, CDK will print the **`AiAnalyzerUrl`** output (the Function URL).
+
+### 3. How to Test with `curl`
+You can test the deployed function URL or local endpoint by sending a raw CSV or a JSON payload containing the CSV content:
+
+#### Option A: Sending JSON Payload
+```bash
+curl -X POST <FUNCTION_URL_OR_LOCALHOST> \
+  -H "Content-Type: application/json" \
+  -d '{"csv": "Date,Description,Amount\n2026-06-01,SAFEWAY #1234,-82.14\n2026-06-02,Direct Deposit,2500.00"}'
+```
+
+#### Option B: Sending Raw CSV Text
+```bash
+curl -X POST <FUNCTION_URL_OR_LOCALHOST> \
+  -H "Content-Type: text/csv" \
+  --data-binary "Date,Description,Amount
+2026-06-01,SAFEWAY #1234,-82.14
+2026-06-02,Direct Deposit,2500.00"
+```
+
+### 4. Example Response
+```json
+{
+  "status": "success",
+  "mode": "ai-categorization-ai-suggestions",
+  "transactions": [
+    {
+      "id": "txn_001",
+      "date": "2026-06-01",
+      "description": "SAFEWAY #1234",
+      "merchant": "Safeway",
+      "amount": -82.14,
+      "type": "expense",
+      "localCategory": "Food",
+      "localConfidence": 0.9,
+      "aiCategory": "Food",
+      "aiConfidence": 0.95,
+      "finalCategory": "Food",
+      "categorySource": "ai",
+      "merchant_raw": "SAFEWAY #1234",
+      "merchant_normalized": "Safeway",
+      "currency": "USD",
+      "category": "Food",
+      "source": "csv-analyze",
+      "card_identity": "Unknown",
+      "created_at": "2026-06-01T12:00:00.000Z"
+    },
+    {
+      "id": "txn_002",
+      "date": "2026-06-02",
+      "description": "Direct Deposit",
+      "merchant": "Direct Deposit",
+      "amount": 2500,
+      "type": "income",
+      "localCategory": "Income",
+      "localConfidence": 0.9,
+      "aiCategory": "Income",
+      "aiConfidence": 0.95,
+      "finalCategory": "Income",
+      "categorySource": "ai",
+      "merchant_raw": "Direct Deposit",
+      "merchant_normalized": "Direct Deposit",
+      "currency": "USD",
+      "category": "Income",
+      "source": "csv-analyze",
+      "card_identity": "Unknown",
+      "created_at": "2026-06-02T12:00:00.000Z"
+    }
+  ],
+  "reportData": {
+    "period": {
+      "start": "2026-06-01",
+      "end": "2026-06-02"
+    },
+    "totalTransactions": 2,
+    "totalIncome": 2500,
+    "totalExpenses": 82,
+    "netCashFlow": 2418,
+    "savingsRate": 96.72,
+    "categoryTotals": {
+      "Income": 2500,
+      "Housing": 0,
+      "Food": 82,
+      "Transportation": 0,
+      "Shopping": 0,
+      "Bills & Utilities": 0,
+      "Health": 0,
+      "Entertainment": 0,
+      "Transfers": 0,
+      "Other": 0
+    },
+    "topMerchants": [
+      {
+        "merchant": "Safeway",
+        "total": 82,
+        "count": 1
+      }
+    ],
+    "largestTransactions": [
+      {
+        "id": "txn_001",
+        "date": "2026-06-01",
+        "merchant": "Safeway",
+        "amount": 82
+      }
+    ],
+    "dailySpending": [
+      {
+        "date": "2026-06-01",
+        "amount": 82
+      }
+    ],
+    "monthlyTrend": [
+      {
+        "month": "2026-06",
+        "income": 2500,
+        "expenses": 82,
+        "netCashFlow": 2418
+      }
+    ]
+  },
+  "insights": {
+    "summary": "You had $2500 income, $82 expenses, and $2418 net cash flow during this period.",
+    "score": 70,
+    "riskLevel": "low",
+    "observations": [
+      {
+        "title": "Net cash flow",
+        "message": "Your net cash flow was $2418.",
+        "severity": "info",
+        "category": "Cash Flow"
+      }
+    ],
+    "recommendations": [
+      {
+        "title": "Review top categories",
+        "message": "Start by reviewing your largest spending categories.",
+        "impact": "medium",
+        "estimatedMonthlySavings": 0
+      }
+    ],
+    "anomalies": []
+  },
+  "aiStatus": {
+    "categorization": "success",
+    "insights": "success"
+  }
+}
+```
+

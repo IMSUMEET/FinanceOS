@@ -15,13 +15,13 @@ export type DetectedFormat =
   | "discover_credit_card"
   | "unknown";
 
-const COLUMN_HINTS = {
+export const COLUMN_HINTS = {
   date: ["date", "posted", "transaction date", "trans date", "posting date", "trans. date"],
   merchant: ["merchant", "description", "name", "details"],
   amount: ["amount", "debit", "value", "amt"],
 };
 
-function pickColumn(headers: string[], hints: string[]): string {
+export function pickColumn(headers: string[], hints: string[]): string {
   const lc = headers.map((h) => String(h).toLowerCase().trim());
   for (const hint of hints) {
     const idx = lc.findIndex((h) => h === hint);
@@ -34,7 +34,7 @@ function pickColumn(headers: string[], hints: string[]): string {
   return headers[0]!;
 }
 
-function detectFormat(headers: string[], name: string = ""): DetectedFormat {
+export function detectFormat(headers: string[], name: string = ""): DetectedFormat {
   const lc = headers.map((h) => String(h).toLowerCase().trim());
   const joined = lc.join("|");
   const has = (s: string) => joined.includes(s);
@@ -91,7 +91,7 @@ function detectFormat(headers: string[], name: string = ""): DetectedFormat {
   return "unknown";
 }
 
-function parseAmount(raw: unknown): number | null {
+export function parseAmount(raw: unknown): number | null {
   if (typeof raw === "number") return raw;
   const n = Number(String(raw ?? "").replace(/[$,]/g, ""));
   return Number.isFinite(n) ? n : null;
@@ -110,7 +110,7 @@ export type AnalyzedTransaction = {
   created_at: string;
 };
 
-function parseToIsoDateString(dateStr: string): string {
+export function parseToIsoDateString(dateStr: string): string {
   const match = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (match) {
     const [_, month, day, year] = match;
@@ -195,7 +195,7 @@ export function sheetToRows(worksheet: XLSX.WorkSheet): Record<string, unknown>[
   return resultRows;
 }
 
-function mapRows(
+export function mapRows(
   rows: Record<string, unknown>[],
   format: DetectedFormat,
   fileName: string = "",
@@ -330,7 +330,7 @@ function parseIsoDate(d: string): number | null {
   return Number.isFinite(t) ? t : null;
 }
 
-function buildSummary(transactions: Pick<AnalyzedTransaction, "amount" | "date" | "category">[]) {
+export function buildSummary(transactions: Pick<AnalyzedTransaction, "amount" | "date" | "category">[]) {
   let totalIncome = 0;
   let totalSpending = 0;
   const catMap = new Map<string, { category: string; total: number; count: number }>();

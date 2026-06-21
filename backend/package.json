@@ -8,7 +8,11 @@
   "scripts": {
     "dev": "tsx src/local.ts",
     "build": "esbuild src/lambda.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/lambda.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "deploy:ai-analyzer": "npm --prefix infra run deploy:ai-analyzer",
+    "destroy:ai-analyzer": "npm --prefix infra run destroy:ai-analyzer"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",
@@ -19,8 +23,10 @@
   "devDependencies": {
     "@types/node": "^20.17.0",
     "@types/papaparse": "^5.5.2",
+    "@vitest/coverage-v8": "^4.1.9",
     "esbuild": "^0.24.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.9"
   }
 }

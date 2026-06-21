@@ -31,11 +31,14 @@ class BackendStack extends Stack {
       depsLockFilePath: path.join(backendRoot, "package-lock.json"),
       handler: "handler",
       runtime: lambda.Runtime.NODEJS_20_X,
-      memorySize: 512,
-      timeout: Duration.seconds(15),
+      memorySize: 1024,
+      timeout: Duration.seconds(60),
       logGroup: apiLogGroup,
       environment: {
         NODE_ENV: "production",
+        OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
+        OPENROUTER_MODEL: process.env.OPENROUTER_MODEL || "openrouter/free",
+        APP_URL: process.env.APP_URL || "https://financeos.app",
       },
       bundling: {
         minify: true,
@@ -49,7 +52,7 @@ class BackendStack extends Stack {
     const httpApi = new apigwv2.HttpApi(this, "HttpApi", {
       description: "FinanceOS HTTP API (Hono Lambda)",
       corsPreflight: {
-        allowHeaders: ["content-type", "authorization"],
+        allowHeaders: ["content-type", "authorization", "accept"],
         allowMethods: [
           apigwv2.CorsHttpMethod.GET,
           apigwv2.CorsHttpMethod.POST,

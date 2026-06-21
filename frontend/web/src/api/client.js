@@ -13,10 +13,17 @@
  */
 
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+const RAW_AI_BASE = import.meta.env.VITE_AI_ANALYZER_URL ?? "";
 const RAW_MOCK = import.meta.env.VITE_USE_MOCK ?? "";
 
 export const API_BASE_URL = String(RAW_BASE).replace(/\/+$/, "");
-export const USE_MOCK = String(RAW_MOCK).toLowerCase() === "true" || API_BASE_URL === "";
+/** FinanceOsAiCsvAnalyzerStack (Lambda 2) — required for AI analysis; never falls back to Lambda 1. */
+export const AI_ANALYZER_BASE_URL = String(RAW_AI_BASE).replace(/\/+$/, "");
+export const USE_MOCK =
+  String(RAW_MOCK).toLowerCase() === "true" || API_BASE_URL === "";
+/** True when VITE_AI_ANALYZER_URL points at the dedicated AI analyzer API. */
+export const LLM_ANALYSIS_AVAILABLE =
+  !USE_MOCK && AI_ANALYZER_BASE_URL !== "";
 
 export class ApiError extends Error {
   constructor(message, { status, body } = {}) {

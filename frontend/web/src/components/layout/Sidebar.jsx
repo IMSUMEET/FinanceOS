@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { NavLink } from "react-router-dom";
 import { motion as Motion } from "framer-motion";
 import {
+  BarChart3,
   Home,
   HelpCircle,
   LayoutDashboard,
@@ -21,6 +22,7 @@ const NAV_SECTIONS = [
       { to: "/transactions", label: "Transactions", icon: ListOrdered },
       { to: "/categories", label: "Categories", icon: PieChart },
       { to: "/insights", label: "Insights", icon: Sparkles },
+      { to: "/reports", label: "Reports", icon: BarChart3 },
       { to: "/upload", label: "Upload", icon: Upload },
       { to: "/help", label: "Help & Support", icon: HelpCircle },
     ],

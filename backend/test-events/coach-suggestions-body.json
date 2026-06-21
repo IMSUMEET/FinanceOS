@@ -1,0 +1,14 @@
+{
+  "summary": {
+    "period": { "start": "2026-01-01", "end": "2026-06-01" },
+    "totalTransactions": 20,
+    "totalIncome": 5000,
+    "totalExpenses": 3500,
+    "netCashFlow": 1500,
+    "savingsRate": 30,
+    "topCategories": [{ "category": "Food", "total": 900 }],
+    "topMerchants": [{ "merchant": "Whole Foods", "total": 400 }],
+    "recurringAnnualized": 720,
+    "personalityLabel": "Balanced Builder"
+  }
+}

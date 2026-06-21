@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from "react";
+﻿import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { monthKey } from "../utils/format";
 import {
   categoryBreakdown,
@@ -75,6 +75,7 @@ export function TransactionsProvider({ children }) {
     if (initialStored) return initialStored.transactions;
     return [];
   });
+  const [latestAnalysis, setLatestAnalysis] = useState(initialStored);
   const [restoredFromStorage, setRestoredFromStorage] = useState(Boolean(initialStored));
   const [pageFilters, setPageFiltersState] = useState(createInitialPageFilters);
   const [uploadPromptDismissed, setUploadPromptDismissed] = useState(false);
@@ -150,6 +151,7 @@ export function TransactionsProvider({ children }) {
   const applyAnalysisResult = useCallback(async (analysis) => {
     if (!analysis || analysis.status !== "success" || !Array.isArray(analysis.transactions)) return;
 
+    let nextAnalysis = null;
     setTransactions((prev) => {
       const seen = new Set();
       const merged = [];
@@ -182,12 +184,14 @@ export function TransactionsProvider({ children }) {
         origin: "import",
         transactions: stamped,
       };
+      nextAnalysis = updatedAnalysis;
       persistAnalysis(updatedAnalysis);
       clearSeenAlerts();
 
       return stamped;
     });
 
+    if (nextAnalysis) setLatestAnalysis(nextAnalysis);
     setRestoredFromStorage(false);
   }, []);
 
@@ -206,6 +210,7 @@ export function TransactionsProvider({ children }) {
       /* ignore */
     }
     clearSeenAlerts();
+    setLatestAnalysis(null);
     setTransactions([]);
     setUploadPromptDismissed(false);
     if (USE_MOCK) {
@@ -262,6 +267,7 @@ export function TransactionsProvider({ children }) {
     removeOne,
     applyAnalysisResult,
     clearSessionAnalysis,
+    latestAnalysis,
     uploadPromptDismissed,
     dismissUploadPrompt,
     resetUploadPrompt,

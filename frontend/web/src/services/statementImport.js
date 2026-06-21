@@ -1,7 +1,11 @@
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { USE_MOCK } from "../api/client";
-import { analyzeCsvFormData } from "./analysis";
+import { USE_MOCK, LLM_ANALYSIS_AVAILABLE } from "../api/client";
+import {
+  analyzeCsvFormData,
+  analyzeCsvWithLlm,
+  buildCombinedCsvFromPendingFiles,
+} from "./analysis";
 import { categorize, normalizeMerchant } from "../utils/categorize";
 import { summarizeTransactions } from "../utils/analysisSummary";
 
@@ -382,37 +386,92 @@ function buildMockAnalysisFromRows(allRows, fileMetas) {
   };
 }
 
-export async function importStatementFiles(fileList) {
+export async function prepareStatementFiles(fileList) {
   const v = validateCsvFiles(fileList);
   if (!v.ok) throw new Error(v.message);
 
-  if (!USE_MOCK) {
+  return Promise.all(
+    v.files.map(async (file) => {
+      const parsed = await parseOneCsvFile(file);
+      const headers = parsed.data.length ? Object.keys(parsed.data[0]) : [];
+      const fmt = detectFormat(headers, file.name);
+      const { mapped } = parseRows(parsed.data, fmt, file.name);
+      return {
+        file,
+        name: file.name,
+        size: file.size,
+        detectedFormat: fmt,
+        rowCount: mapped.length,
+        parsedData: parsed.data,
+      };
+    }),
+  );
+}
+
+/**
+ * Run local or AI analysis on prepared pending files.
+ * @param {'local'|'llm'} mode
+ * @param {{ onPhase?: (phase: 'uploading'|'analyzing') => void }} [options]
+ */
+export async function runStatementAnalysis(pendingFiles, mode, options = {}) {
+  const { onPhase } = options;
+
+  if (!pendingFiles?.length) {
+    throw new Error("Choose at least one CSV or Excel file.");
+  }
+
+  if (!USE_MOCK && mode === "local") {
+    onPhase?.("uploading");
     const fd = new FormData();
-    for (const file of v.files) {
-      fd.append("files", file, file.name);
+    for (const pf of pendingFiles) {
+      fd.append("files", pf.file, pf.name);
     }
+    onPhase?.("analyzing");
     const result = await analyzeCsvFormData(fd);
     if (result.status !== "success") {
       throw new Error(result.message || "Analysis failed.");
     }
-    return result;
+    return { result, mode: "local" };
   }
+
+  if (!USE_MOCK && mode === "llm") {
+    if (!LLM_ANALYSIS_AVAILABLE) {
+      throw new Error("Set VITE_AI_ANALYZER_URL to use AI analysis.");
+    }
+    onPhase?.("uploading");
+    const csvText = buildCombinedCsvFromPendingFiles(pendingFiles);
+    onPhase?.("analyzing");
+    const result = await analyzeCsvWithLlm(csvText);
+    if (result.status !== "success") {
+      throw new Error(result.message || "AI analysis failed.");
+    }
+    return { result, mode: "llm" };
+  }
+
+  onPhase?.("uploading");
+  await new Promise((r) => setTimeout(r, 600));
+  onPhase?.("analyzing");
+  await new Promise((r) => setTimeout(r, 600));
 
   const fileMetas = [];
   const allRows = [];
-  for (const file of v.files) {
-    const parsed = await parseOneCsvFile(file);
-    const headers = parsed.data.length ? Object.keys(parsed.data[0]) : [];
-    const fmt = detectFormat(headers, file.name);
-    const { mapped } = parseRows(parsed.data, fmt, file.name);
+  for (const pf of pendingFiles) {
+    const { mapped } = parseRows(pf.parsedData, pf.detectedFormat, pf.name);
     allRows.push(...mapped);
     fileMetas.push({
-      fileName: file.name,
+      fileName: pf.name,
       rowCount: mapped.length,
-      detectedFormat: fmt,
+      detectedFormat: pf.detectedFormat,
     });
   }
-  return buildMockAnalysisFromRows(allRows, fileMetas);
+  const result = buildMockAnalysisFromRows(allRows, fileMetas);
+  return { result, mode: "local" };
+}
+
+export async function importStatementFiles(fileList, mode = "local") {
+  const pendingFiles = await prepareStatementFiles(fileList);
+  const { result } = await runStatementAnalysis(pendingFiles, mode);
+  return result;
 }
 
 export { validateCsvFiles, parseOneCsvFile, detectFormat, parseRows, buildMockAnalysisFromRows };

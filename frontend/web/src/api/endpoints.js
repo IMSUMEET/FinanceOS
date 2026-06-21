@@ -6,6 +6,7 @@
 
 export const ENDPOINTS = {
   analyze: "/api/analyze",
+  aiAnalyze: "/api/ai-analyze",
   transactions: {
     list: "/transactions",
     create: "/transactions",
@@ -26,5 +27,8 @@ export const ENDPOINTS = {
   profile: {
     get: "/profile",
     update: "/profile",
+  },
+  coach: {
+    suggestions: "/api/coach/suggestions",
   },
 };

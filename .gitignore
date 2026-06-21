@@ -20,10 +20,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Environment & secrets (keep .env.example committed if you use one)
+# Environment & secrets (keep .env.example and .env.production committed)
 .env
 .env.*
 !.env.example
+!.env.production
 
 # Local overrides
 *.local
@@ -31,6 +32,9 @@ lerna-debug.log*
 # Test / coverage
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
+.playwright/
 
 # OS
 .DS_Store

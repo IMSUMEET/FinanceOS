@@ -1,4 +1,4 @@
-import { createElement, useState } from "react";
+import { createElement, useEffect, useState } from "react";
 import { motion as Motion } from "framer-motion";
 import {
   AtSign,
@@ -22,6 +22,7 @@ import { useProfile } from "../../hooks/useProfile";
 import { useTheme } from "../../hooks/useTheme";
 import { classifyPersonality } from "../../utils/personality";
 import { detectRecurring, totalSpend } from "../../utils/insights";
+import { getCoachSuggestions } from "../../services/coach";
 import { formatCurrency, monthKey } from "../../utils/format";
 import seed from "../../data/mockTransactions";
 
@@ -88,12 +89,22 @@ function exportCsv(rows) {
   URL.revokeObjectURL(url);
 }
 
+function impactTone(impact) {
+  if (impact === "high") return "border-emerald-200 bg-emerald-50/70 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200";
+  if (impact === "low") return "border-ink-200 bg-ink-50/80 text-ink-700 dark:border-ink-700 dark:bg-ink-900/50 dark:text-ink-300";
+  return "border-brand-200 bg-brand-50/60 text-brand-800 dark:border-brand-900/50 dark:bg-brand-950/25 dark:text-brand-200";
+}
+
 function ProfilePanel({ onClose }) {
   const { transactions, replaceAll, resetAllPageFilters } = useTransactions();
   const { profile, cycleAvatar, updateProfile, hasProfile, displayName } = useProfile();
   const { theme, toggleTheme } = useTheme();
   const [nameInput, setNameInput] = useState(profile.name ?? "");
   const [handleInput, setHandleInput] = useState(profile.handle ?? "");
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachError, setCoachError] = useState("");
+  const [coachSuggestions, setCoachSuggestions] = useState([]);
+  const [coachSource, setCoachSource] = useState(null);
 
   const total = totalSpend(transactions);
   const recurring = detectRecurring(transactions);
@@ -101,6 +112,39 @@ function ProfilePanel({ onClose }) {
   const personality = classifyPersonality(transactions);
   const monthCount = new Set(transactions.map((t) => monthKey(t.date)).filter(Boolean)).size;
   const avgMonthly = monthCount ? total / monthCount : total;
+
+  useEffect(() => {
+    if (!hasProfile || !transactions.length) {
+      setCoachSuggestions([]);
+      setCoachSource(null);
+      setCoachError("");
+      return;
+    }
+
+    let cancelled = false;
+    setCoachLoading(true);
+    setCoachError("");
+
+    getCoachSuggestions(transactions, { personalityLabel: personality.label, preferFresh: true })
+      .then(({ suggestions, source }) => {
+        if (cancelled) return;
+        setCoachSuggestions(suggestions.slice(0, 3));
+        setCoachSource(source);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setCoachError(err?.message || "Could not load AI suggestions.");
+        setCoachSuggestions([]);
+        setCoachSource(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCoachLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasProfile, transactions, personality.label]);
 
   function handleReset() {
     replaceAll(seed);
@@ -237,6 +281,65 @@ function ProfilePanel({ onClose }) {
           <InfoRow icon={Wallet} label="Avg monthly" value={formatCurrency(avgMonthly)} />
         </div>
       </section>
+
+      {hasProfile ? (
+        <section className="rounded-xl2 border border-ink-100 bg-white p-4 shadow-soft dark:border-ink-800 dark:bg-ink-900/70 dark:shadow-softDark">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+              AI coach
+            </p>
+            {coachSource === "openrouter" ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-700 dark:bg-brand-950/40 dark:text-brand-200">
+                <Sparkles size={10} />
+                Live
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 text-xs text-ink-500 dark:text-ink-400">
+            Top 3 personalized actions based on your spending summary.
+          </p>
+
+          {coachLoading ? (
+            <div className="mt-4 flex items-center gap-2 text-sm text-ink-500 dark:text-ink-400">
+              <Sparkles size={16} className="animate-pulse text-brand" />
+              Generating suggestions…
+            </div>
+          ) : null}
+
+          {coachError ? (
+            <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">
+              {coachError}
+            </p>
+          ) : null}
+
+          {!coachLoading && !coachError && coachSuggestions.length ? (
+            <ol className="mt-3 space-y-2">
+              {coachSuggestions.map((item, idx) => (
+                <li
+                  key={`${item.title}-${idx}`}
+                  className={`rounded-xl border px-3 py-2.5 ${impactTone(item.impact)}`}
+                >
+                  <p className="text-sm font-bold">
+                    {idx + 1}. {item.title}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed opacity-90">{item.message}</p>
+                  {item.estimatedMonthlySavings > 0 ? (
+                    <p className="tabular mt-1.5 text-[11px] font-semibold opacity-80">
+                      Est. savings {formatCurrency(item.estimatedMonthlySavings)}/mo
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          ) : null}
+
+          {!coachLoading && !coachError && !coachSuggestions.length ? (
+            <p className="mt-3 text-xs text-ink-500 dark:text-ink-400">
+              Import transactions to receive AI coach suggestions.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="rounded-xl2 border border-ink-100 bg-white p-4 shadow-soft dark:border-ink-800 dark:bg-ink-900/70 dark:shadow-softDark">
         <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">

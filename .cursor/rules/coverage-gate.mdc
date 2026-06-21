@@ -1,0 +1,16 @@
+---
+description: Enforce 90% test coverage before build and push on main-bound work
+alwaysApply: true
+---
+
+# Coverage gate (90% minimum)
+
+Before finishing work that will merge to **main**:
+
+1. Run `npm run test:coverage` — must pass with **≥ 90%** on lines, statements, functions, and branches for scoped modules (backend: `csvAnalyze`, `categorize`, `openrouter`; frontend: utils listed in `vitest.config.js`).
+2. Run `npm run build` — coverage runs **before** compile steps; do not reorder `scripts/build.mjs` to build first.
+3. Do not lower `COVERAGE_THRESHOLD` in `scripts/coverage-threshold.mjs` or vitest thresholds to bypass CI.
+
+CI on **main** (`.github/workflows/ci.yml`) blocks merge when coverage or build fails. Local **pre-push** hook runs `test:coverage`.
+
+When adding code in scoped paths, add or extend tests in the same PR — do not commit untested logic to main-bound branches.

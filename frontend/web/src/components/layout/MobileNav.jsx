@@ -1,13 +1,14 @@
 import { createElement } from "react";
 import { NavLink } from "react-router-dom";
 import { motion as Motion } from "framer-motion";
-import { Home, LayoutDashboard, ListOrdered, PieChart, Sparkles, Upload } from "lucide-react";
+import { Home, LayoutDashboard, ListOrdered, PieChart, Sparkles, Upload, BarChart3 } from "lucide-react";
 
 const SPEND_NAV = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/transactions", label: "Activity", icon: ListOrdered },
   { to: "/categories", label: "Cats", icon: PieChart },
   { to: "/insights", label: "Insights", icon: Sparkles },
+  { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/upload", label: "Upload", icon: Upload },
 ];
 

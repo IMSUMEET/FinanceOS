@@ -87,9 +87,13 @@ Expected:
 Set the Vite base URL to your API (see `frontend/web/.env.example`):
 
 ```bash
-VITE_API_BASE_URL=https://YOUR_API_ID.execute-api.YOUR_REGION.amazonaws.com
+VITE_API_BASE_URL=https://YOUR_FILE_PROCESSING_API.execute-api.YOUR_REGION.amazonaws.com
+VITE_AI_ANALYZER_URL=https://YOUR_AI_ANALYZER_API.execute-api.YOUR_REGION.amazonaws.com
 VITE_USE_MOCK=false
 ```
+
+- **Lambda 1** (`VITE_API_BASE_URL`): local CSV analyze + coach suggestions.
+- **Lambda 2** (`VITE_AI_ANALYZER_URL`): AI analysis button only (`POST /` on the dedicated stack).
 
 CORS: the CDK stack allows `http://localhost:5173`, `http://localhost:3000`, and `*` (covers Vercel preview URLs; tighten for production if needed).
 

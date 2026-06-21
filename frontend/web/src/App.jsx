@@ -7,6 +7,7 @@ import InsightsPage from "./pages/InsightsPage";
 import UploadPage from "./pages/UploadPage";
 import HelpSupportPage from "./pages/HelpSupportPage";
 import HouseSaleCalculator from "./pages/HouseSaleCalculator";
+import ReportsPage from "./pages/ReportsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/help" element={<HelpSupportPage />} />
           <Route path="/house-sale" element={<HouseSaleCalculator />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AppShell>

@@ -1,30 +1,16 @@
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 import { formatCurrency } from "../../utils/format";
 import { useTheme } from "../../hooks/useTheme";
+import SafeResponsiveContainer from "./SafeResponsiveContainer";
 
 function TooltipBox({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
     <div className="rounded-2xl border border-white/70 bg-white/95 px-4 py-3 shadow-soft backdrop-blur dark:border-ink-700 dark:bg-ink-900/95">
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
-        Sale price
-      </p>
-      <p className="tabular mt-1 text-base font-black text-ink-900 dark:text-ink-50">
-        {formatCurrency(d.salePrice)}
-      </p>
-      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
-        True profit
-      </p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">Sale price</p>
+      <p className="tabular mt-1 text-base font-black text-ink-900 dark:text-ink-50">{formatCurrency(d.salePrice)}</p>
+      <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">True profit</p>
       <p className="tabular mt-1 text-base font-black text-brand-700 dark:text-brand-300">
         {formatCurrency(d.profit, { signed: true })}
       </p>
@@ -41,9 +27,7 @@ function MarkerLegend({ label, value, tone }) {
         : "border-ink-200/80 dark:border-ink-600/60";
   return (
     <div className={`rounded-xl2 border bg-white/70 px-3 py-2 dark:bg-ink-900/50 ${border}`}>
-      <p className="text-[10px] font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">
-        {label}
-      </p>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">{label}</p>
       <p className="tabular text-sm font-black text-ink-900 dark:text-ink-50">{value}</p>
     </div>
   );
@@ -65,20 +49,15 @@ function ProfitCurveChart({ data, markers = {}, height = 260 }) {
   const strokeTarget = "#8b5cf6";
 
   if (!data?.length) {
-    return (
-      <p className="text-sm text-ink-500 dark:text-ink-400">
-        Add valid inputs to see the profit curve.
-      </p>
-    );
+    return <p className="text-sm text-ink-500 dark:text-ink-400">Add valid inputs to see the profit curve.</p>;
   }
 
   const { expected, breakEven, target } = markers;
 
   return (
     <div className="space-y-4">
-      <div className="select-none" style={{ width: "100%", height }}>
-        <ResponsiveContainer>
-          <LineChart data={data} margin={{ top: 12, right: 12, left: 4, bottom: 8 }}>
+      <SafeResponsiveContainer height={height} className="select-none">
+        <LineChart data={data} margin={{ top: 12, right: 12, left: 4, bottom: 8 }}>
             <CartesianGrid strokeDasharray="4 6" stroke={gridStroke} vertical={false} />
             <XAxis
               dataKey="salePrice"
@@ -94,28 +73,15 @@ function ProfitCurveChart({ data, markers = {}, height = 260 }) {
               tickLine={false}
               width={52}
             />
-            <Tooltip
-              content={<TooltipBox />}
-              cursor={{ stroke: "#3b82f6", strokeWidth: 1, strokeDasharray: "3 3" }}
-            />
+            <Tooltip content={<TooltipBox />} cursor={{ stroke: "#3b82f6", strokeWidth: 1, strokeDasharray: "3 3" }} />
             {breakEven != null && breakEven > 0 ? (
-              <ReferenceLine
-                x={breakEven}
-                stroke={strokeBreak}
-                strokeDasharray="4 4"
-                strokeWidth={1.5}
-              />
+              <ReferenceLine x={breakEven} stroke={strokeBreak} strokeDasharray="4 4" strokeWidth={1.5} />
             ) : null}
             {expected != null && expected > 0 ? (
               <ReferenceLine x={expected} stroke={strokeExpected} strokeWidth={2} />
             ) : null}
             {target != null && target > 0 ? (
-              <ReferenceLine
-                x={target}
-                stroke={strokeTarget}
-                strokeDasharray="5 5"
-                strokeWidth={1.5}
-              />
+              <ReferenceLine x={target} stroke={strokeTarget} strokeDasharray="5 5" strokeWidth={1.5} />
             ) : null}
             <Line
               type="monotone"
@@ -123,17 +89,11 @@ function ProfitCurveChart({ data, markers = {}, height = 260 }) {
               stroke="#3b82f6"
               strokeWidth={2.5}
               dot={false}
-              activeDot={{
-                r: 5,
-                stroke: "#3b82f6",
-                strokeWidth: 2,
-                fill: isDark ? "#0b1326" : "#fff",
-              }}
+              activeDot={{ r: 5, stroke: "#3b82f6", strokeWidth: 2, fill: isDark ? "#0b1326" : "#fff" }}
               isAnimationActive
             />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+        </LineChart>
+      </SafeResponsiveContainer>
       <div className="grid gap-2 sm:grid-cols-3">
         {expected != null && expected > 0 ? (
           <MarkerLegend label="Expected sale" value={formatCurrency(expected)} tone="brand" />

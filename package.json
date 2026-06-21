@@ -1,18 +1,31 @@
 {
   "name": "financeos",
+  "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "description": "FinanceOS monorepo",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:check": "node scripts/build-check.mjs",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend/web run build",
+    "ci": "npm run format:check && npm run lint && npm run build --prefix frontend/web && npm run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "npm run lint --prefix frontend/web",
-    "typecheck": "npm run typecheck --prefix backend",
-    "ci": "npm run format:check && npm run lint && npm run build --prefix frontend/web && npm run typecheck",
-    "prepare": "husky"
+    "prepare": "husky && node scripts/install-git-hooks.mjs",
+    "setup:hooks": "node scripts/install-git-hooks.mjs",
+    "test": "npm --prefix backend test && npm --prefix frontend/web test",
+    "test:coverage": "node scripts/coverage-report.mjs",
+    "test:e2e": "playwright test --project=api-mock",
+    "test:e2e:live": "playwright test --project=openrouter-live",
+    "typecheck": "npm run typecheck --prefix backend"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "prettier": "^3.5.3"
