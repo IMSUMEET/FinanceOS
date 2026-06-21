@@ -179,7 +179,7 @@ function TrendReport({ transactions }) {
       </div>
 
       <div className="h-[360px] w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="name" stroke="#888" fontSize={11} tickLine={false} />

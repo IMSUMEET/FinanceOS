@@ -249,7 +249,7 @@ ${JSON.stringify(
 )}`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
 
   try {
     const res = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
@@ -434,13 +434,11 @@ async function handleAiAnalyzeRequest(c: any) {
   const hasApiKey = !!process.env.OPENROUTER_API_KEY;
 
   if (hasApiKey) {
-    // Process in batches of 40
+    // One OpenRouter batch per request — API Gateway times out at 30s.
     const batchSize = 40;
-    for (let i = 0; i < transactionsWithHints.length; i += batchSize) {
-      const batch = transactionsWithHints.slice(i, i + batchSize);
-      const batchResults = await categorizeTransactionsWithOpenRouter(batch);
-      aiResults.push(...batchResults);
-    }
+    const batch = transactionsWithHints.slice(0, batchSize);
+    const batchResults = await categorizeTransactionsWithOpenRouter(batch);
+    aiResults.push(...batchResults);
     if (aiResults.length === 0) {
       aiStatusCategorization = "fallback";
     }

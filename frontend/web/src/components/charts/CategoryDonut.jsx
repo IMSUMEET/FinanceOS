@@ -23,8 +23,8 @@ function CategoryDonut({
   }
 
   return (
-    <div className="relative mx-auto select-none" style={{ width: size, height: size }}>
-      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+    <div className="relative mx-auto min-w-0 select-none" style={{ width: size, height: size }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <PieChart>
           <Pie
             data={safeData}

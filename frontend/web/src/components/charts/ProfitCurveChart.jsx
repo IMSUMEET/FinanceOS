@@ -77,7 +77,7 @@ function ProfitCurveChart({ data, markers = {}, height = 260 }) {
   return (
     <div className="space-y-4">
       <div className="select-none" style={{ width: "100%", height }}>
-        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <LineChart data={data} margin={{ top: 12, right: 12, left: 4, bottom: 8 }}>
             <CartesianGrid strokeDasharray="4 6" stroke={gridStroke} vertical={false} />
             <XAxis

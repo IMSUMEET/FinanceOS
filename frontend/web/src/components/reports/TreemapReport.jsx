@@ -81,7 +81,7 @@ function TreemapReport({ transactions }) {
       </div>
 
       <div className="h-[380px] w-full">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <Treemap
             data={data}
             dataKey="value"
