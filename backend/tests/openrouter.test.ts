@@ -116,6 +116,61 @@ describe("validateInsights branch coverage", () => {
     expect(validated.recommendations).toHaveLength(3);
     expect(validated.recommendations[0]?.title).toBe("Only one");
   });
+
+  it("preserves recommendation breakdown arrays from LLM output", () => {
+    const report = buildReportData([
+      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
+      { id: "2", date: "2026-06-02", amount: -500, type: "expense", finalCategory: "Food", merchant: "Cafe" },
+      { id: "3", date: "2026-06-03", amount: -300, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
+    ]);
+    const validated = validateInsights(
+      {
+        summary: "ok",
+        score: 60,
+        riskLevel: "low",
+        recommendations: [
+          {
+            title: "Trim your top spending categories",
+            message: "Combined trim",
+            impact: "high",
+            estimatedMonthlySavings: 80,
+            breakdown: [
+              { label: "Food", monthlyAvg: 500, sharePct: 62 },
+              { label: "Transportation", monthlyAvg: 300, sharePct: 38 },
+            ],
+          },
+        ],
+      },
+      report,
+    );
+    expect(validated.recommendations[0]?.breakdown).toHaveLength(2);
+    expect(validated.recommendations[0]?.breakdown?.[0]?.label).toBe("Food");
+  });
+
+  it("normalizes invalid breakdown entries from LLM output", () => {
+    const report = buildReportData([
+      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
+    ]);
+    const validated = validateInsights(
+      {
+        summary: "ok",
+        score: 60,
+        riskLevel: "low",
+        recommendations: [
+          {
+            title: "Trim categories",
+            message: "Combined",
+            impact: "medium",
+            estimatedMonthlySavings: 10,
+            breakdown: [{ label: 42, monthlyAvg: "x", sharePct: "y" }, null],
+          },
+        ],
+      },
+      report,
+    );
+    expect(validated.recommendations[0]?.breakdown?.[0]?.label).toBe("Category");
+    expect(validated.recommendations[0]?.breakdown?.[0]?.monthlyAvg).toBe(0);
+  });
 });
 
 describe("generateInsightsWithOpenRouter branch coverage", () => {
@@ -177,9 +232,52 @@ describe("generateStaticInsights", () => {
     expect(insights.summary).toContain("Transportation");
     expect(insights.observations.length).toBeGreaterThan(0);
     expect(insights.recommendations).toHaveLength(3);
-    expect(insights.recommendations[0]?.title).toContain("spend most");
+    expect(insights.recommendations[0]?.title).toMatch(/Trim your top spending categories|Where you spend most/);
+    expect(insights.recommendations[0]?.breakdown?.length).toBeGreaterThan(0);
     expect(insights.recommendations[0]?.estimatedMonthlySavings).toBeLessThan(200);
     expect(insights.score).toBeGreaterThan(0);
+  });
+
+  it("merges top categories and adds trend recommendation when spending rises", () => {
+    const report = buildReportData([
+      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
+      { id: "2", date: "2026-01-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      { id: "3", date: "2026-01-10", amount: -600, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
+      { id: "4", date: "2026-02-05", amount: -1200, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      { id: "5", date: "2026-02-10", amount: -900, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
+      { id: "6", date: "2026-02-12", amount: -300, type: "expense", finalCategory: "Shopping", merchant: "Amazon" },
+    ]);
+    const insights = generateStaticInsights(report);
+    expect(insights.recommendations[0]?.title).toBe("Trim your top spending categories");
+    expect(insights.recommendations[0]?.breakdown?.length).toBe(3);
+    expect(insights.recommendations.some((r) => r.title === "Reverse the spending uptick")).toBe(true);
+    expect(insights.observations[0]?.title).toBe("Spending concentration");
+  });
+
+  it("uses cash-flow and savings recommendations for distinct actions", () => {
+    const deficit = buildReportData([
+      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
+      { id: "2", date: "2026-06-02", amount: -800, type: "expense", finalCategory: "Food", merchant: "Cafe" },
+      { id: "3", date: "2026-06-03", amount: -600, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
+    ]);
+    const deficitInsights = generateStaticInsights(deficit);
+    expect(deficitInsights.recommendations.some((r) => r.title === "Close the cash-flow gap")).toBe(true);
+
+    const lowSavings = buildReportData([
+      { id: "1", date: "2026-06-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Job" },
+      { id: "2", date: "2026-06-02", amount: -4800, type: "expense", finalCategory: "Food", merchant: "Cafe" },
+    ]);
+    const lowSavingsInsights = generateStaticInsights(lowSavings);
+    expect(lowSavingsInsights.recommendations.some((r) => r.title === "Grow your savings rate")).toBe(true);
+
+    const healthy = buildReportData([
+      { id: "1", date: "2026-06-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Job" },
+      { id: "2", date: "2026-06-02", amount: -2000, type: "expense", finalCategory: "Food", merchant: "Cafe" },
+      { id: "3", date: "2026-06-03", amount: -500, type: "expense", finalCategory: "Shopping", merchant: "Amazon" },
+    ]);
+    expect(generateStaticInsights(healthy).recommendations.some((r) => r.title === "Set monthly category caps")).toBe(
+      true,
+    );
   });
 
   it("buildStaticInsightsPrompt includes category ranks and month count", () => {
@@ -358,5 +456,20 @@ describe("coach suggestions", () => {
     const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
     expect(result.source).toBe("fallback");
     expect(result.suggestions).toHaveLength(3);
+  });
+
+  it("falls back when coach response content is empty", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: "" } }],
+        }),
+      }),
+    );
+    const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
+    expect(result.source).toBe("fallback");
   });
 });

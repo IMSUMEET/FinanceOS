@@ -41,7 +41,7 @@ const IMPACT_LABEL = {
 
 const ACTION_LABELS = ["Primary action", "Second action", "Third action"];
 
-function AISuggestionCard({ index, theme, suggestion, placeholder = false }) {
+function AISuggestionCard({ index, theme, suggestion, placeholder = false, featured = false }) {
   const Icon = CARD_ICONS[index] ?? Sparkles;
 
   if (placeholder) {
@@ -66,7 +66,7 @@ function AISuggestionCard({ index, theme, suggestion, placeholder = false }) {
 
   return (
     <article
-      className={`group flex h-full min-h-[220px] flex-col overflow-hidden rounded-xl3 border border-white/60 ring-1 ${theme.ring} ${theme.shadow} transition-transform duration-300 hover:-translate-y-1 dark:border-ink-700/80`}
+      className={`group flex h-full ${featured ? "min-h-[280px]" : "min-h-[220px]"} flex-col overflow-hidden rounded-xl3 border border-white/60 ring-1 ${theme.ring} ${theme.shadow} transition-transform duration-300 hover:-translate-y-1 dark:border-ink-700/80`}
     >
       <div className={`relative bg-gradient-to-br ${theme.header} px-5 py-4`}>
         <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
@@ -90,14 +90,35 @@ function AISuggestionCard({ index, theme, suggestion, placeholder = false }) {
 
       <div className={`flex flex-1 flex-col px-5 py-5 ${theme.body}`}>
         <h3 className="text-base font-black leading-snug text-ink-900 dark:text-ink-50">{suggestion.title}</h3>
-        <p className="mt-2 flex-1 text-sm leading-relaxed text-ink-600 dark:text-ink-300">{suggestion.message}</p>
-        {suggestion.estimatedMonthlySavings > 0 ? (
-          <p className={`tabular mt-4 text-sm font-black ${theme.savings}`}>
-            Save ~{formatCurrency(suggestion.estimatedMonthlySavings)}/mo
-          </p>
-        ) : (
-          <p className="mt-4 text-xs font-semibold text-ink-400 dark:text-ink-500">Personalized from your CSV analysis</p>
-        )}
+        <p className="mt-2 text-sm leading-relaxed text-ink-600 dark:text-ink-300">{suggestion.message}</p>
+
+        {Array.isArray(suggestion.breakdown) && suggestion.breakdown.length > 1 ? (
+          <ul className="mt-4 space-y-2">
+            {suggestion.breakdown.map((row) => (
+              <li
+                key={row.label}
+                className="flex items-center justify-between gap-3 rounded-xl2 border border-white/80 bg-white/70 px-3 py-2.5 dark:border-ink-700/60 dark:bg-ink-900/50"
+              >
+                <span className="min-w-0 truncate text-sm font-bold text-ink-900 dark:text-ink-50">{row.label}</span>
+                <span className="tabular shrink-0 text-xs font-semibold text-ink-500 dark:text-ink-400">
+                  {formatCurrency(row.monthlyAvg)}/mo · {row.sharePct}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <div className="mt-auto pt-4">
+          {suggestion.estimatedMonthlySavings > 0 ? (
+            <p className={`tabular text-sm font-black ${theme.savings}`}>
+              Save ~{formatCurrency(suggestion.estimatedMonthlySavings)}/mo
+            </p>
+          ) : (
+            <p className="text-xs font-semibold text-ink-400 dark:text-ink-500">
+              Personalized from your CSV analysis
+            </p>
+          )}
+        </div>
       </div>
     </article>
   );

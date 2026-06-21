@@ -38,10 +38,67 @@ export function observationSeverityTone(severity) {
   return "neutral";
 }
 
+/** Legacy titles from pre-merge static engine — fold into one card. */
+const CATEGORY_REC_TITLE =
+  /^(?:Where you spend most|Second-biggest category|Third-biggest category):\s*(.+)$/i;
+
+function parseCategoryFromMessage(message) {
+  const monthlyMatch = String(message ?? "").match(/\$([\d,]+)\/mo/);
+  const pctMatch = String(message ?? "").match(/\((\d+)%/);
+  return {
+    monthlyAvg: monthlyMatch ? Number(monthlyMatch[1].replace(/,/g, "")) : 0,
+    sharePct: pctMatch ? Number(pctMatch[1]) : 0,
+  };
+}
+
+/** Merge separate top-category recommendation cards into one deduplicated card. */
+export function dedupeCategoryRecommendations(recommendations) {
+  if (!Array.isArray(recommendations) || recommendations.length === 0) return [];
+
+  const categoryRecs = [];
+  const other = [];
+
+  for (const rec of recommendations) {
+    if (CATEGORY_REC_TITLE.test(rec?.title ?? "")) {
+      categoryRecs.push(rec);
+    } else {
+      other.push(rec);
+    }
+  }
+
+  if (categoryRecs.length < 2) return recommendations;
+
+  const breakdown = categoryRecs.map((rec) => {
+    const label = String(rec.title).replace(CATEGORY_REC_TITLE, "$1").trim();
+    const parsed = parseCategoryFromMessage(rec.message);
+    return {
+      label,
+      monthlyAvg: rec.breakdown?.[0]?.monthlyAvg ?? parsed.monthlyAvg,
+      sharePct: rec.breakdown?.[0]?.sharePct ?? parsed.sharePct,
+    };
+  });
+
+  const combinedMonthly = breakdown.reduce((sum, row) => sum + row.monthlyAvg, 0);
+  const combinedShare = breakdown.reduce((sum, row) => sum + row.sharePct, 0);
+  const savings = categoryRecs.reduce((sum, rec) => sum + (rec.estimatedMonthlySavings || 0), 0);
+
+  const merged = {
+    title: "Trim your top spending categories",
+    message:
+      `These ${breakdown.length} categories total ~$${combinedMonthly.toLocaleString()}/mo (~${combinedShare}% of expenses). ` +
+      `Cutting ~10% across them could save ~$${savings.toLocaleString()}/mo.`,
+    impact: categoryRecs.some((rec) => rec.impact === "high") ? "high" : "medium",
+    estimatedMonthlySavings: savings,
+    breakdown,
+  };
+
+  return [merged, ...other];
+}
+
 /** Top N Lambda recommendations for the AI suggestion cards. */
 export function topAiRecommendations(recommendations, limit = 3) {
   if (!Array.isArray(recommendations)) return [];
-  return recommendations.slice(0, limit);
+  return dedupeCategoryRecommendations(recommendations).slice(0, limit);
 }
 
 /** Top N Lambda anomalies (prompt allows 0–2). */

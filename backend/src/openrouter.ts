@@ -89,6 +89,7 @@ export interface ObservationItem extends InsightItem {
 export interface RecommendationItem extends InsightItem {
   impact: "low" | "medium" | "high";
   estimatedMonthlySavings: number;
+  breakdown?: { label: string; monthlyAvg: number; sharePct: number }[];
 }
 
 export interface AnomalyItem extends InsightItem {
@@ -419,6 +420,7 @@ The same merchant, category, trend, or transaction may appear in only ONE primar
 
 7. Recommendation uniqueness:
 Each recommendation must address a different action.
+Never split top spending categories into separate recommendation cards — merge the top 2–3 categories into ONE card with a breakdown list, then use other actions (merchant, trend, cash-flow) for remaining recommendations.
 
 BAD:
 - Reduce restaurant spending
@@ -537,7 +539,7 @@ function buildCategorySpendRecommendation(
   monthCount: number,
   rank: 1 | 2 | 3,
 ): RecommendationItem {
-  const monthly = monthlyFromPeriod( periodTotal, monthCount);
+  const monthly = monthlyFromPeriod(periodTotal, monthCount);
   const savings = savingsFromMonthlyCut(monthly);
   const rankLabel =
     rank === 1 ? "Where you spend most" : rank === 2 ? "Second-biggest category" : "Third-biggest category";
@@ -546,6 +548,59 @@ function buildCategorySpendRecommendation(
     title: `${rankLabel}: ${category}`,
     message: `${category} averaged $${monthly.toLocaleString()}/mo (${sharePct}% of your expenses). Trimming this category by about 10% would free up ~$${savings}/mo.`,
     impact: rank === 1 && sharePct >= 25 ? "high" : "medium",
+    estimatedMonthlySavings: savings,
+  };
+}
+
+/** One recommendation card for the top 2–3 categories (deduplicated root cause). */
+function buildMergedCategoryRecommendation(enriched: EnrichedFinancialSummary): RecommendationItem | null {
+  const rows = enriched.topCategories.slice(0, 3);
+  if (rows.length === 0) return null;
+
+  const combinedMonthly = rows.reduce((sum, row) => sum + row.monthlyAvg, 0);
+  const combinedShare = rows.reduce((sum, row) => sum + row.sharePct, 0);
+  const savings = savingsFromMonthlyCut(combinedMonthly);
+  const breakdown = rows.map((row) => ({
+    label: row.category,
+    monthlyAvg: row.monthlyAvg,
+    sharePct: row.sharePct,
+  }));
+
+  if (rows.length === 1) {
+    const row = rows[0]!;
+    return {
+      title: `Where you spend most: ${row.category}`,
+      message: `${row.category} averaged $${row.monthlyAvg.toLocaleString()}/mo (${row.sharePct}% of expenses). Trimming by ~10% would free up ~$${savingsFromMonthlyCut(row.monthlyAvg)}/mo.`,
+      impact: row.sharePct >= 25 ? "high" : "medium",
+      estimatedMonthlySavings: savingsFromMonthlyCut(row.monthlyAvg),
+      breakdown,
+    };
+  }
+
+  return {
+    title: "Trim your top spending categories",
+    message:
+      `These ${rows.length} categories total ~$${combinedMonthly.toLocaleString()}/mo (~${combinedShare}% of expenses). ` +
+      `Cutting ~10% across them could save ~$${savings.toLocaleString()}/mo.`,
+    impact: combinedShare >= 50 || (rows[0]?.sharePct ?? 0) >= 25 ? "high" : "medium",
+    estimatedMonthlySavings: savings,
+    breakdown,
+  };
+}
+
+function buildTrendRecommendation(enriched: EnrichedFinancialSummary): RecommendationItem | null {
+  const mom = enriched.monthOverMonthChange;
+  if (!mom || enriched.spendingTrendDirection !== "up") return null;
+
+  const monthlyDelta = monthlyFromPeriod(Math.abs(mom.expenseDelta), enriched.monthCount);
+  const savings = Math.max(10, Math.round(monthlyDelta * 0.25));
+
+  return {
+    title: "Reverse the spending uptick",
+    message:
+      `Expenses rose from $${mom.previousExpenses.toLocaleString()} (${mom.previousMonth}) to ` +
+      `$${mom.currentExpenses.toLocaleString()} (${mom.currentMonth}). Hold discretionary categories flat next month to claw back ~$${savings.toLocaleString()}/mo.`,
+    impact: "high",
     estimatedMonthlySavings: savings,
   };
 }
@@ -608,20 +663,13 @@ function buildSpendingRecommendations(reportData: ReportData): RecommendationIte
   const monthCount = enriched.monthCount;
   const candidates: RecommendationItem[] = [];
 
-  for (let i = 0; i < Math.min(3, enriched.topCategories.length); i++) {
-    const row = enriched.topCategories[i]!;
-    candidates.push(
-      buildCategorySpendRecommendation(
-        row.category,
-        row.periodTotal,
-        row.sharePct,
-        monthCount,
-        (i + 1) as 1 | 2 | 3,
-      ),
-    );
-  }
+  const mergedCategory = buildMergedCategoryRecommendation(enriched);
+  if (mergedCategory) candidates.push(mergedCategory);
 
-  if (enriched.topMerchant && candidates.length < 3) {
+  const trendRec = buildTrendRecommendation(enriched);
+  if (trendRec) candidates.push(trendRec);
+
+  if (enriched.topMerchant) {
     candidates.push(
       buildMerchantSpendRecommendation(
         enriched.topMerchant.merchant,
@@ -632,15 +680,13 @@ function buildSpendingRecommendations(reportData: ReportData): RecommendationIte
     );
   }
 
-  if (candidates.length < 3) {
-    candidates.push(
-      buildCashFlowRecommendation(
-        reportData,
-        monthCount,
-        enriched.topCategory?.category ?? "discretionary",
-      ),
-    );
-  }
+  candidates.push(
+    buildCashFlowRecommendation(
+      reportData,
+      monthCount,
+      enriched.topCategory?.category ?? "discretionary",
+    ),
+  );
 
   const seen = new Set<string>();
   const unique: RecommendationItem[] = [];
@@ -741,11 +787,21 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
 
   const observations: ObservationItem[] = [];
 
-  if (topCategory) {
+  const topCatRows = enriched.topCategories.slice(0, 3);
+  if (topCatRows.length > 0) {
+    const combinedMonthly = topCatRows.reduce((sum, row) => sum + row.monthlyAvg, 0);
+    const combinedShare = topCatRows.reduce((sum, row) => sum + row.sharePct, 0);
+    const categoryList = topCatRows
+      .map((row) => `${row.category} (${row.sharePct}%, ~$${row.monthlyAvg.toLocaleString()}/mo)`)
+      .join("; ");
+
     observations.push({
-      title: `Largest category: ${topCatName}`,
-      message: `${topCatName} accounts for ${topCatShare}% of expenses (~$${topCategory.monthlyAvg.toLocaleString()}/mo).`,
-      severity: topCatShare >= 40 ? "warning" : "info",
+      title: topCatRows.length === 1 ? `Largest category: ${topCatName}` : "Spending concentration",
+      message:
+        topCatRows.length === 1
+          ? `${topCatName} accounts for ${topCatShare}% of expenses (~$${topCategory!.monthlyAvg.toLocaleString()}/mo).`
+          : `Your top ${topCatRows.length} categories — ${categoryList} — total ~$${combinedMonthly.toLocaleString()}/mo (~${combinedShare}% of expenses).`,
+      severity: combinedShare >= 60 || topCatShare >= 40 ? "warning" : "info",
       category: topCatName,
     });
   }
@@ -875,6 +931,13 @@ export function validateInsights(insights: any, reportData: ReportData): AIInsig
         impact: ["low", "medium", "high"].includes(r?.impact) ? r.impact : "medium",
         estimatedMonthlySavings:
           typeof r?.estimatedMonthlySavings === "number" ? r.estimatedMonthlySavings : 0,
+        breakdown: Array.isArray(r?.breakdown)
+          ? r.breakdown.map((b: any) => ({
+              label: typeof b?.label === "string" ? b.label : "Category",
+              monthlyAvg: typeof b?.monthlyAvg === "number" ? b.monthlyAvg : 0,
+              sharePct: typeof b?.sharePct === "number" ? b.sharePct : 0,
+            }))
+          : undefined,
       }))
     : fallback.recommendations;
 

@@ -90,18 +90,28 @@ function AnalysisInsightsPanel({ latestAnalysis }) {
             <div>
               <h3 className="text-lg font-black text-ink-900 dark:text-ink-50">Action plan</h3>
               <p className="text-xs text-ink-500 dark:text-ink-400">
-                Three distinct recommendations — each targets a different action.
+                One card per root cause — categories merged, then merchant and cash-flow actions.
               </p>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-3">
-            {AI_SUGGESTION_THEMES.map((theme, index) => (
+
+          {suggestions[0]?.breakdown?.length > 1 ? (
+            <AISuggestionCard
+              index={0}
+              theme={AI_SUGGESTION_THEMES[0]}
+              suggestion={suggestions[0]}
+              featured
+            />
+          ) : null}
+
+          <div className={`grid gap-4 ${suggestions[0]?.breakdown?.length > 1 ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-3"}`}>
+            {(suggestions[0]?.breakdown?.length > 1 ? [1, 2] : [0, 1, 2]).map((cardIndex) => (
               <AISuggestionCard
-                key={theme.header}
-                index={index}
-                theme={theme}
-                suggestion={suggestions[index]}
-                placeholder={!suggestions[index]}
+                key={`action-${cardIndex}`}
+                index={cardIndex}
+                theme={AI_SUGGESTION_THEMES[cardIndex] ?? AI_SUGGESTION_THEMES[0]}
+                suggestion={suggestions[cardIndex]}
+                placeholder={!suggestions[cardIndex]}
               />
             ))}
           </div>

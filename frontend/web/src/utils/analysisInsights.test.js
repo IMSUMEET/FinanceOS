@@ -6,6 +6,7 @@ import {
   topAiRecommendations,
   topAiAnomalies,
   insightSourceLabel,
+  dedupeCategoryRecommendations,
 } from "./analysisInsights.js";
 
 describe("parseAnalysisInsights", () => {
@@ -70,6 +71,35 @@ describe("topAiRecommendations", () => {
     ];
     expect(topAiRecommendations(recs)).toHaveLength(3);
     expect(topAiRecommendations(recs)[2].title).toBe("C");
+  });
+
+  it("merges legacy top-category cards into one recommendation", () => {
+    const legacy = [
+      {
+        title: "Where you spend most: Transportation",
+        message: "Transportation averaged $1,593/mo (38% of your expenses). Trimming this category by about 10% would free up ~$159/mo.",
+        impact: "high",
+        estimatedMonthlySavings: 159,
+      },
+      {
+        title: "Second-biggest category: Other",
+        message: "Other averaged $749/mo (47% of your expenses). Trimming this category by about 10% would free up ~$75/mo.",
+        impact: "medium",
+        estimatedMonthlySavings: 75,
+      },
+      {
+        title: "Third-biggest category: Bills & Utilities",
+        message: "Bills & Utilities averaged $361/mo (23% of your expenses). Trimming this category by about 10% would free up ~$36/mo.",
+        impact: "medium",
+        estimatedMonthlySavings: 36,
+      },
+    ];
+    const merged = dedupeCategoryRecommendations(legacy);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].title).toBe("Trim your top spending categories");
+    expect(merged[0].breakdown).toHaveLength(3);
+    expect(merged[0].estimatedMonthlySavings).toBe(270);
+    expect(topAiRecommendations(legacy)[0].breakdown[0].label).toBe("Transportation");
   });
 });
 
