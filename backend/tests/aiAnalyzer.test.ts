@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { parseCsvToTransactions, getLocalCategoryHint, mergeAiCategories, aiApp } from "../src/aiAnalyzer.js";
+import { parseCsvToTransactions, getLocalCategoryHint, mergeAiCategories, aiApp, transactionCreatedAt } from "../src/aiAnalyzer.js";
 import { buildReportData, fallbackInsights, safeJsonParse, validateInsights, generateInsightsWithOpenRouter } from "../src/openrouter.js";
 
 describe("CSV Parser (Lambda 2)", () => {
@@ -39,6 +39,29 @@ describe("CSV Parser (Lambda 2)", () => {
   it("returns empty array for empty row csv content", () => {
     expect(parseCsvToTransactions("")).toEqual([]);
     expect(parseCsvToTransactions("\n\n\n")).toEqual([]);
+  });
+
+  it("normalizes US-style MM/DD/YYYY dates from bank exports", () => {
+    const csv = "Date,Description,Amount\n06/15/2026,STARBUCKS,-4.50\n06/16/2026,Payroll,2500";
+    const txns = parseCsvToTransactions(csv);
+    expect(txns).toHaveLength(2);
+    expect(txns[0].date).toBe("2026-06-15");
+    expect(txns[1].date).toBe("2026-06-16");
+  });
+});
+
+describe("mergeAiCategories date safety", () => {
+  it("does not throw on US-style dates when building created_at", () => {
+    const merged = mergeAiCategories(
+      [{ id: "txn_001", date: "06/15/2026", description: "Coffee", merchant: "Coffee", amount: -4.5, type: "expense", localCategory: "Food", localConfidence: 0.9 }],
+      [],
+    );
+    expect(merged[0].created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(merged[0].date).toBe("06/15/2026");
+  });
+
+  it("transactionCreatedAt returns valid ISO for slash dates", () => {
+    expect(transactionCreatedAt("06/15/2026")).toMatch(/^2026-06-15T/);
   });
 });
 

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { handle } from "hono/aws-lambda";
 import Papa from "papaparse";
 import { categorize, normalizeMerchant } from "./categorize.js";
+import { parseToIsoDateString } from "./csvAnalyze.js";
 import {
   buildReportData,
   generateInsightsWithOpenRouter,
@@ -73,7 +74,7 @@ export function parseCsvToTransactions(csvText: string): any[] {
       return;
     }
 
-    const dateStr = String(r[dateCol] || "").trim();
+    const dateStr = normalizeTransactionDate(String(r[dateCol] || ""));
     if (!dateStr) return;
 
     let amount = 0;
@@ -107,6 +108,21 @@ export function parseCsvToTransactions(csvText: string): any[] {
   });
 
   return cleaned;
+}
+
+/** Safe ISO timestamp for API responses — bank CSV dates are often MM/DD/YYYY. */
+export function transactionCreatedAt(dateStr: string): string {
+  const isoDate = parseToIsoDateString(String(dateStr || "").trim());
+  const d = new Date(`${isoDate}T12:00:00Z`);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : new Date().toISOString();
+}
+
+export function normalizeTransactionDate(dateStr: string): string | null {
+  const raw = String(dateStr || "").trim();
+  if (!raw) return null;
+  const isoDate = parseToIsoDateString(raw);
+  const d = new Date(`${isoDate}T12:00:00Z`);
+  return Number.isFinite(d.getTime()) ? isoDate : null;
 }
 
 export function getLocalCategoryHint(transaction: any) {
@@ -347,12 +363,13 @@ export function mergeAiCategories(transactions: any[], aiResults: any[]): any[] 
       category: finalCategory,
       source: "csv-analyze",
       card_identity: "Unknown",
-      created_at: new Date(`${t.date}T12:00:00Z`).toISOString()
+      created_at: transactionCreatedAt(t.date)
     };
   });
 }
 
 async function handleAiAnalyzeRequest(c: any) {
+  try {
   let csvText = "";
 
   // 1. Accept uploaded CSV
@@ -459,6 +476,20 @@ async function handleAiAnalyzeRequest(c: any) {
       insights: aiStatusInsights,
     },
   });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "unknown";
+    console.log(
+      JSON.stringify({
+        event: "ai-analyze",
+        outcome: "failure",
+        error: message,
+      }),
+    );
+    return c.json(
+      { status: "error", message: "AI analysis failed. Check CSV dates and try again.", code: "AI_ANALYZE_FAILED" },
+      500,
+    );
+  }
 }
 
 aiApp.post("/", handleAiAnalyzeRequest);
