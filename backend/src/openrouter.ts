@@ -24,6 +24,58 @@ export interface ReportData {
   monthlyTrend: { month: string; income: number; expenses: number; netCashFlow: number }[];
 }
 
+export interface EnrichedFinancialSummary {
+  period: { start: string; end: string };
+  monthCount: number;
+  totalIncome: number;
+  totalExpenses: number;
+  netCashFlow: number;
+  savingsRate: number;
+  averageMonthlySpend: number;
+  categoryPercentages: Record<string, number>;
+  merchantPercentages: Record<string, number>;
+  monthOverMonthChange: {
+    previousMonth: string;
+    currentMonth: string;
+    previousExpenses: number;
+    currentExpenses: number;
+    expenseDelta: number;
+    expenseDeltaPct: number | null;
+  } | null;
+  spendingTrendDirection: "up" | "down" | "flat" | "unknown";
+  topCategory: {
+    category: string;
+    periodTotal: number;
+    monthlyAvg: number;
+    sharePct: number;
+  } | null;
+  topMerchant: {
+    merchant: string;
+    periodTotal: number;
+    monthlyAvg: number;
+    sharePct: number;
+    count: number;
+  } | null;
+  highestTransaction: {
+    id: string;
+    merchant: string;
+    date: string;
+    amount: number;
+  } | null;
+  topCategories: {
+    category: string;
+    periodTotal: number;
+    monthlyAvg: number;
+    sharePct: number;
+  }[];
+  topMerchants: { merchant: string; total: number; count: number; sharePct: number; monthlyAvg: number }[];
+}
+
+export interface InsightsGenerationResult {
+  insights: AIInsights;
+  source: "openrouter" | "fallback";
+}
+
 export interface InsightItem {
   title: string;
   message: string;
@@ -211,16 +263,67 @@ function spendingCategories(categoryTotals: Record<string, number>) {
     .sort((a, b) => b[1] - a[1]);
 }
 
-/** Compact summary passed to the static insights rules (logged as the effective prompt input). */
-export function buildStaticInsightsContext(reportData: ReportData) {
+function monthlyFromPeriod(total: number, monthCount: number): number {
+  return Math.round(total / Math.max(1, monthCount));
+}
+
+/** Pre-computed aggregates for LLM + static insights (percentages, trends, tops). */
+export function buildEnrichedFinancialSummary(reportData: ReportData): EnrichedFinancialSummary {
   const monthCount = reportMonthCount(reportData);
-  const topCategories = spendingCategories(reportData.categoryTotals).slice(0, 5).map(([category, total]) => ({
+  const expenseBase = reportData.totalExpenses > 0 ? reportData.totalExpenses : 1;
+
+  const categoryPercentages: Record<string, number> = {};
+  const topCategoryRows = spendingCategories(reportData.categoryTotals).slice(0, 8);
+  for (const [category, total] of topCategoryRows) {
+    categoryPercentages[category] = Math.round((total / expenseBase) * 100);
+  }
+
+  const merchantPercentages: Record<string, number> = {};
+  const topMerchantRows = reportData.topMerchants.slice(0, 10);
+  for (const row of topMerchantRows) {
+    merchantPercentages[row.merchant] = Math.round((row.total / expenseBase) * 100);
+  }
+
+  const topCategories = topCategoryRows.map(([category, total]) => ({
     category,
     periodTotal: Math.round(total),
-    monthlyAvg: Math.round(total / monthCount),
-    sharePct:
-      reportData.totalExpenses > 0 ? Math.round((total / reportData.totalExpenses) * 100) : 0,
+    monthlyAvg: monthlyFromPeriod(total, monthCount),
+    sharePct: categoryPercentages[category] ?? 0,
   }));
+
+  const topMerchants = topMerchantRows.map((row) => ({
+    merchant: row.merchant,
+    total: row.total,
+    count: row.count,
+    sharePct: merchantPercentages[row.merchant] ?? 0,
+    monthlyAvg: monthlyFromPeriod(row.total, monthCount),
+  }));
+
+  const monthOverMonthChange = computeMonthOverMonthChange(reportData.monthlyTrend);
+  const spendingTrendDirection = computeSpendingTrendDirection(monthOverMonthChange);
+
+  const topCategory = topCategories[0] ?? null;
+  const topMerchantRow = topMerchants[0];
+  const topMerchant = topMerchantRow
+    ? {
+        merchant: topMerchantRow.merchant,
+        periodTotal: topMerchantRow.total,
+        monthlyAvg: topMerchantRow.monthlyAvg,
+        sharePct: topMerchantRow.sharePct,
+        count: topMerchantRow.count,
+      }
+    : null;
+
+  const expenseTxns = reportData.largestTransactions.filter((t) => t.amount > 0);
+  const highest = expenseTxns[0] ?? reportData.largestTransactions[0];
+  const highestTransaction = highest
+    ? {
+        id: highest.id,
+        merchant: highest.merchant,
+        date: highest.date,
+        amount: Math.abs(highest.amount),
+      }
+    : null;
 
   return {
     period: reportData.period,
@@ -229,26 +332,198 @@ export function buildStaticInsightsContext(reportData: ReportData) {
     totalExpenses: reportData.totalExpenses,
     netCashFlow: reportData.netCashFlow,
     savingsRate: reportData.savingsRate,
+    averageMonthlySpend: monthlyFromPeriod(reportData.totalExpenses, monthCount),
+    categoryPercentages,
+    merchantPercentages,
+    monthOverMonthChange,
+    spendingTrendDirection,
+    topCategory,
+    topMerchant,
+    highestTransaction,
     topCategories,
-    topMerchants: reportData.topMerchants.slice(0, 5),
+    topMerchants,
   };
 }
 
-/** Human-readable rules + JSON input (logged to CloudWatch as staticInsightsPrompt). */
-export function buildStaticInsightsPrompt(reportData: ReportData): string {
-  const ctx = buildStaticInsightsContext(reportData);
-  return (
-    "FinanceOS static insights engine (no LLM). Produce exactly 3 recommendations:\n" +
-    "1) Biggest spending category — monthly avg, % of expenses, ~10% savings target\n" +
-    "2) Second-biggest category (or top merchant if only one category dominates)\n" +
-    "3) Cash-flow or merchant-specific save opportunity\n" +
-    "Use only amounts from financialSummary. Savings must be monthly USD.\n\n" +
-    `financialSummary:\n${JSON.stringify(ctx, null, 2)}`
-  );
+function computeMonthOverMonthChange(
+  monthlyTrend: ReportData["monthlyTrend"],
+): EnrichedFinancialSummary["monthOverMonthChange"] {
+  const months = monthlyTrend.filter((m) => m.expenses > 0);
+  if (months.length < 2) return null;
+  const prev = months[months.length - 2]!;
+  const curr = months[months.length - 1]!;
+  const expenseDelta = curr.expenses - prev.expenses;
+  const expenseDeltaPct =
+    prev.expenses > 0 ? Number(((expenseDelta / prev.expenses) * 100).toFixed(1)) : null;
+  return {
+    previousMonth: prev.month,
+    currentMonth: curr.month,
+    previousExpenses: prev.expenses,
+    currentExpenses: curr.expenses,
+    expenseDelta,
+    expenseDeltaPct,
+  };
 }
 
-function monthlyFromPeriod(total: number, monthCount: number): number {
-  return Math.round(total / Math.max(1, monthCount));
+function computeSpendingTrendDirection(
+  mom: EnrichedFinancialSummary["monthOverMonthChange"],
+): EnrichedFinancialSummary["spendingTrendDirection"] {
+  if (!mom || mom.expenseDeltaPct == null) return "unknown";
+  if (mom.expenseDeltaPct > 5) return "up";
+  if (mom.expenseDeltaPct < -5) return "down";
+  return "flat";
+}
+
+/** Deduplication and grouping rules injected into the spend-analyzer LLM prompt. */
+export const INSIGHT_DEDUPLICATION_AND_GROUPING_RULES = `DEDUPLICATION AND INSIGHT GROUPING RULES
+
+Before generating observations, recommendations, and anomalies:
+
+1. Identify root causes first.
+
+Examples of root causes:
+- High restaurant spending
+- High subscription spending
+- Large one-time purchase
+- Spending increase month-over-month
+- Heavy concentration in one merchant
+- Low savings rate
+
+2. Create ONLY ONE insight card per root cause.
+
+BAD:
+- Dining spending is high
+- Restaurants are your largest category
+- Food spending increased this month
+
+GOOD:
+- Dining spending is the largest discretionary expense category and increased compared to previous months.
+
+3. Merge related evidence into a single card.
+
+Example — instead of three separate cards about Uber Eats, DoorDash, and restaurants, create one:
+"Food delivery and restaurant spending represent a significant share of total expenses, driven by Uber Eats and DoorDash."
+
+4. Observations, recommendations, and anomalies must each focus on DIFFERENT findings.
+If an observation already discusses a spending category, do not create another observation for the same category.
+
+5. Maximum repetition rule:
+The same merchant, category, trend, or transaction may appear in only ONE primary insight card unless it is required as supporting evidence.
+
+6. Prioritize insights in this order (stop once major unique insights are covered):
+- Largest spending concentration
+- Largest trend change
+- Largest merchant concentration
+- Largest transaction anomaly
+- Recurring spending patterns
+
+7. Recommendation uniqueness:
+Each recommendation must address a different action.
+
+BAD:
+- Reduce restaurant spending
+- Eat out less
+- Limit food delivery
+
+GOOD:
+- Reduce restaurant spending
+- Review recurring subscriptions
+- Set a monthly discretionary spending cap
+
+8. Anomaly uniqueness:
+An anomaly should represent a unique unusual event.
+
+BAD:
+- Amazon purchase was large
+- Amazon spending was unusually high
+- Amazon was your top merchant
+
+GOOD:
+- Single Amazon purchase of $X exceeded normal transaction size.
+
+9. Final validation before output:
+For every card ask: "Does this represent a unique financial insight that is not already covered by another card?"
+- If NO: merge it into the existing card.
+- If YES: keep it.
+
+Never create more than one observation, recommendation, or anomaly for the same category, merchant, transaction, or trend. Merge related findings into the most comprehensive card.`;
+
+/** LLM prompt with ranked insight instructions + enriched payload. */
+export function buildInsightsLlmPrompt(enriched: EnrichedFinancialSummary): string {
+  return `You are FinanceOS spend analyzer. Analyze enrichedFinancialSummary and return ONLY valid JSON.
+No markdown. No explanation.
+
+Use enrichedFinancialSummary as the sole source of truth.
+Do not invent merchants, categories, dollar amounts, or percentages.
+
+${INSIGHT_DEDUPLICATION_AND_GROUPING_RULES}
+
+Output structure and counts:
+- summary: one concise paragraph synthesizing the top unique root causes (no repeated points).
+- observations: 3 to 5 items, each covering a different root cause. Apply deduplication rules strictly.
+- recommendations: exactly 3 items, each a different action on a different root cause. Ordered highest to lowest impact.
+- anomalies: 0 to 2 items. Only unique unusual events (typically highestTransaction vs averageMonthlySpend). Do not repeat category/merchant/trend cards.
+- score: 0 to 100. riskLevel: low | medium | high.
+
+When ordering observations, follow insight priority:
+1. Largest spending concentration (topCategory + categoryPercentages)
+2. Largest trend change (spendingTrendDirection + monthOverMonthChange)
+3. Largest merchant concentration (topMerchant + merchantPercentages)
+4. Largest transaction anomaly (highestTransaction)
+5. Recurring spending patterns (repeat merchants/counts)
+
+Return schema:
+{
+  "summary": "string",
+  "score": 0,
+  "riskLevel": "low | medium | high",
+  "observations": [
+    {
+      "title": "string",
+      "message": "string",
+      "severity": "info | warning | critical",
+      "category": "string"
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "string",
+      "message": "string",
+      "impact": "low | medium | high",
+      "estimatedMonthlySavings": 0
+    }
+  ],
+  "anomalies": [
+    {
+      "title": "string",
+      "message": "string",
+      "severity": "info | warning | critical",
+      "amount": 0
+    }
+  ]
+}
+
+Additional rules:
+- Reference specific categoryPercentages and merchantPercentages in messages.
+- estimatedMonthlySavings must be realistic (typically 5–15% of the relevant monthly category or merchant spend).
+- Run final validation (rule 9) on every card before returning JSON.
+
+enrichedFinancialSummary:
+${JSON.stringify(enriched, null, 2)}`;
+}
+
+/** @deprecated alias — use buildEnrichedFinancialSummary */
+export function buildStaticInsightsContext(reportData: ReportData): EnrichedFinancialSummary {
+  return buildEnrichedFinancialSummary(reportData);
+}
+
+/** Human-readable rules + JSON input (logged when static fallback runs). */
+export function buildStaticInsightsPrompt(reportData: ReportData): string {
+  const enriched = buildEnrichedFinancialSummary(reportData);
+  return (
+    "FinanceOS static insights fallback (no LLM). Produce exactly 3 recommendations from enrichedFinancialSummary.\n\n" +
+    buildInsightsLlmPrompt(enriched)
+  );
 }
 
 function savingsFromMonthlyCut(monthlyAmount: number, cutPct = 0.1): number {
@@ -329,26 +604,29 @@ function buildCashFlowRecommendation(
 }
 
 function buildSpendingRecommendations(reportData: ReportData): RecommendationItem[] {
-  const monthCount = reportMonthCount(reportData);
-  const topCats = spendingCategories(reportData.categoryTotals);
+  const enriched = buildEnrichedFinancialSummary(reportData);
+  const monthCount = enriched.monthCount;
   const candidates: RecommendationItem[] = [];
 
-  for (let i = 0; i < Math.min(3, topCats.length); i++) {
-    const [category, total] = topCats[i]!;
-    const sharePct =
-      reportData.totalExpenses > 0 ? Math.round((total / reportData.totalExpenses) * 100) : 0;
+  for (let i = 0; i < Math.min(3, enriched.topCategories.length); i++) {
+    const row = enriched.topCategories[i]!;
     candidates.push(
-      buildCategorySpendRecommendation(category, total, sharePct, monthCount, (i + 1) as 1 | 2 | 3),
+      buildCategorySpendRecommendation(
+        row.category,
+        row.periodTotal,
+        row.sharePct,
+        monthCount,
+        (i + 1) as 1 | 2 | 3,
+      ),
     );
   }
 
-  const topMerchant = reportData.topMerchants[0];
-  if (topMerchant && candidates.length < 3) {
+  if (enriched.topMerchant && candidates.length < 3) {
     candidates.push(
       buildMerchantSpendRecommendation(
-        topMerchant.merchant,
-        topMerchant.total,
-        topMerchant.count,
+        enriched.topMerchant.merchant,
+        enriched.topMerchant.periodTotal,
+        enriched.topMerchant.count,
         monthCount,
       ),
     );
@@ -356,7 +634,11 @@ function buildSpendingRecommendations(reportData: ReportData): RecommendationIte
 
   if (candidates.length < 3) {
     candidates.push(
-      buildCashFlowRecommendation(reportData, monthCount, topCats[0]?.[0] ?? "discretionary"),
+      buildCashFlowRecommendation(
+        reportData,
+        monthCount,
+        enriched.topCategory?.category ?? "discretionary",
+      ),
     );
   }
 
@@ -381,18 +663,7 @@ function buildSpendingRecommendations(reportData: ReportData): RecommendationIte
 }
 
 export function generateStaticInsights(reportData: ReportData): AIInsights {
-  const {
-    totalIncome,
-    totalExpenses,
-    netCashFlow,
-    savingsRate,
-    totalTransactions,
-    categoryTotals,
-    topMerchants,
-    largestTransactions,
-    period,
-    monthlyTrend,
-  } = reportData;
+  const { totalTransactions, period } = reportData;
 
   if (!totalTransactions) {
     return {
@@ -431,12 +702,23 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
     };
   }
 
-  const topCategories = spendingCategories(categoryTotals);
-  const topCat = topCategories[0];
-  const topCatName = topCat?.[0] ?? "Spending";
-  const topCatTotal = topCat?.[1] ?? 0;
-  const topCatShare = totalExpenses > 0 ? Math.round((topCatTotal / totalExpenses) * 100) : 0;
-  const monthCount = reportMonthCount(reportData);
+  const enriched = buildEnrichedFinancialSummary(reportData);
+  const {
+    totalIncome,
+    totalExpenses,
+    netCashFlow,
+    savingsRate,
+    monthCount,
+    topCategory,
+    topMerchant,
+    monthOverMonthChange,
+    spendingTrendDirection,
+    highestTransaction,
+    averageMonthlySpend,
+  } = enriched;
+
+  const topCatName = topCategory?.category ?? "Spending";
+  const topCatShare = topCategory?.sharePct ?? 0;
 
   const score =
     totalIncome <= 0
@@ -453,29 +735,42 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
     `From ${periodLabel}, you recorded $${totalIncome.toLocaleString()} income and ` +
     `$${totalExpenses.toLocaleString()} expenses (${netCashFlow >= 0 ? "+" : ""}$${netCashFlow.toLocaleString()}). ` +
     `Savings rate: ${savingsRate.toFixed(1)}%. ` +
-    (topCat
-      ? `Your biggest category is ${topCatName} at ~$${monthlyFromPeriod(topCatTotal, monthCount).toLocaleString()}/mo (${topCatShare}% of spend).`
+    (topCategory
+      ? `Your biggest category is ${topCatName} at ~$${topCategory.monthlyAvg.toLocaleString()}/mo (${topCatShare}% of spend).`
       : `Top spending category: ${topCatName}.`);
 
   const observations: ObservationItem[] = [];
 
-  if (totalExpenses > 0 && topCat) {
+  if (topCategory) {
     observations.push({
-      title: `${topCatName} spending`,
-      message: `${topCatName} accounts for ${topCatShare}% of expenses (~$${monthlyFromPeriod(topCatTotal, monthCount).toLocaleString()}/mo).`,
+      title: `Largest category: ${topCatName}`,
+      message: `${topCatName} accounts for ${topCatShare}% of expenses (~$${topCategory.monthlyAvg.toLocaleString()}/mo).`,
       severity: topCatShare >= 40 ? "warning" : "info",
       category: topCatName,
     });
   }
 
-  if (topCategories[1]) {
-    const [name, total] = topCategories[1];
-    const share = totalExpenses > 0 ? Math.round((total / totalExpenses) * 100) : 0;
+  if (topMerchant) {
     observations.push({
-      title: `${name} spending`,
-      message: `${name} is your #2 category at ~$${monthlyFromPeriod(total, monthCount).toLocaleString()}/mo (${share}%).`,
+      title: `Largest merchant: ${topMerchant.merchant}`,
+      message:
+        `${topMerchant.merchant} is ${topMerchant.sharePct}% of spend (~$${topMerchant.monthlyAvg.toLocaleString()}/mo, ${topMerchant.count} transaction(s)).`,
       severity: "info",
-      category: name,
+      category: topCatName,
+    });
+  }
+
+  if (monthOverMonthChange) {
+    const pctLabel =
+      monthOverMonthChange.expenseDeltaPct != null
+        ? `${monthOverMonthChange.expenseDeltaPct > 0 ? "+" : ""}${monthOverMonthChange.expenseDeltaPct}%`
+        : "n/a";
+    observations.push({
+      title: "Spending trend",
+      message:
+        `Expenses ${spendingTrendDirection === "up" ? "rose" : spendingTrendDirection === "down" ? "fell" : "held steady"} from $${monthOverMonthChange.previousExpenses.toLocaleString()} (${monthOverMonthChange.previousMonth}) to $${monthOverMonthChange.currentExpenses.toLocaleString()} (${monthOverMonthChange.currentMonth}), ${pctLabel} month-over-month.`,
+      severity: spendingTrendDirection === "up" ? "warning" : "info",
+      category: "Trend",
     });
   }
 
@@ -488,39 +783,28 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
     });
   }
 
-  if (topMerchants[0]) {
-    observations.push({
-      title: "Top merchant",
-      message:
-        `${topMerchants[0].merchant} had ${topMerchants[0].count} transaction(s), ~$${monthlyFromPeriod(topMerchants[0].total, monthCount).toLocaleString()}/mo.`,
-      severity: "info",
-      category: topCatName,
-    });
-  }
-
   observations.push({
     title: "Activity",
-    message: `${totalTransactions} transaction(s) across ${monthCount} month(s) in this analysis.`,
+    message: `${totalTransactions} transaction(s) across ${monthCount} month(s); ~$${averageMonthlySpend.toLocaleString()}/mo average spend.`,
     severity: "info",
     category: "General",
   });
 
   const recommendations = buildSpendingRecommendations(reportData);
 
-  const expenseCount = Math.max(1, largestTransactions.filter((t) => t.amount < 0).length);
-  const avgExpense = totalExpenses / expenseCount;
   const anomalies: AnomalyItem[] = [];
-  for (const txn of largestTransactions) {
-    if (txn.amount >= 0 || avgExpense <= 0) continue;
-    if (Math.abs(txn.amount) <= avgExpense * 2.5) continue;
+  if (
+    highestTransaction &&
+    averageMonthlySpend > 0 &&
+    highestTransaction.amount >= averageMonthlySpend * 1.5
+  ) {
     anomalies.push({
       title: "Large expense",
       message:
-        `${txn.merchant} on ${txn.date} was $${Math.abs(txn.amount).toLocaleString()}, above typical spend.`,
+        `${highestTransaction.merchant} on ${highestTransaction.date} was $${highestTransaction.amount.toLocaleString()}, well above your ~$${averageMonthlySpend.toLocaleString()}/mo average.`,
       severity: "warning",
-      amount: Math.abs(txn.amount),
+      amount: highestTransaction.amount,
     });
-    if (anomalies.length >= 3) break;
   }
 
   return {
@@ -584,34 +868,47 @@ export function validateInsights(insights: any, reportData: ReportData): AIInsig
     category: typeof o?.category === "string" ? o.category : "General",
   })) : fallback.observations;
 
-  const recommendations = Array.isArray(insights.recommendations) ? insights.recommendations.map((r: any) => ({
-    title: typeof r?.title === "string" ? r.title : "Recommendation",
-    message: typeof r?.message === "string" ? r.message : "",
-    impact: ["low", "medium", "high"].includes(r?.impact) ? r.impact : "medium",
-    estimatedMonthlySavings: typeof r?.estimatedMonthlySavings === "number" ? r.estimatedMonthlySavings : 0,
-  })) : fallback.recommendations;
+  const recommendations = Array.isArray(insights.recommendations)
+    ? insights.recommendations.map((r: any) => ({
+        title: typeof r?.title === "string" ? r.title : "Recommendation",
+        message: typeof r?.message === "string" ? r.message : "",
+        impact: ["low", "medium", "high"].includes(r?.impact) ? r.impact : "medium",
+        estimatedMonthlySavings:
+          typeof r?.estimatedMonthlySavings === "number" ? r.estimatedMonthlySavings : 0,
+      }))
+    : fallback.recommendations;
 
-  const anomalies = Array.isArray(insights.anomalies) ? insights.anomalies.map((a: any) => ({
-    title: typeof a?.title === "string" ? a.title : "Anomaly",
-    message: typeof a?.message === "string" ? a.message : "",
-    severity: ["info", "warning", "critical"].includes(a?.severity) ? a.severity : "info",
-    amount: typeof a?.amount === "number" ? a.amount : 0,
-  })) : [];
+  const paddedRecommendations = recommendations.slice(0, 3);
+  while (paddedRecommendations.length < 3) {
+    paddedRecommendations.push(fallback.recommendations[paddedRecommendations.length]!);
+  }
+
+  const anomalies = Array.isArray(insights.anomalies)
+    ? insights.anomalies.map((a: any) => ({
+        title: typeof a?.title === "string" ? a.title : "Anomaly",
+        message: typeof a?.message === "string" ? a.message : "",
+        severity: ["info", "warning", "critical"].includes(a?.severity) ? a.severity : "info",
+        amount: typeof a?.amount === "number" ? a.amount : 0,
+      }))
+    : [];
 
   return {
     summary,
     score,
     riskLevel,
     observations,
-    recommendations,
+    recommendations: paddedRecommendations,
     anomalies,
   };
 }
 
-export async function generateInsightsWithOpenRouter(reportData: ReportData): Promise<AIInsights> {
+export async function generateInsightsWithOpenRouter(
+  reportData: ReportData,
+): Promise<InsightsGenerationResult> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   const model = process.env.OPENROUTER_MODEL || "openrouter/free";
   const appUrl = process.env.APP_URL || "https://financeos.app";
+  const enriched = buildEnrichedFinancialSummary(reportData);
 
   if (!apiKey) {
     logOpenRouter("openrouter_skipped", {
@@ -620,7 +917,7 @@ export async function generateInsightsWithOpenRouter(reportData: ReportData): Pr
       model,
       outcome: "fallback",
     });
-    return fallbackInsights(reportData);
+    return { insights: fallbackInsights(reportData), source: "fallback" };
   }
 
   logOpenRouter("openrouter_start", {
@@ -631,7 +928,7 @@ export async function generateInsightsWithOpenRouter(reportData: ReportData): Pr
   });
 
   const startedAt = Date.now();
-  const failInsights = (fields: Record<string, unknown>) => {
+  const failInsights = (fields: Record<string, unknown>): InsightsGenerationResult => {
     logOpenRouter("openrouter_failure", {
       operation: "insights",
       model,
@@ -639,63 +936,13 @@ export async function generateInsightsWithOpenRouter(reportData: ReportData): Pr
       outcome: "fallback",
       ...fields,
     });
-    return fallbackInsights(reportData);
+    return { insights: fallbackInsights(reportData), source: "fallback" };
   };
 
-  const prompt = `You are FinanceOS AI, a practical personal finance analyst.
-
-Analyze the reportData and return ONLY valid JSON.
-No markdown. No explanation.
-
-Use reportData as the source of truth.
-Do not invent merchants, categories, or numbers.
-
-Return schema:
-{
-  "summary": "string",
-  "score": 0,
-  "riskLevel": "low | medium | high",
-  "observations": [
-    {
-      "title": "string",
-      "message": "string",
-      "severity": "info | warning | critical",
-      "category": "string"
-    }
-  ],
-  "recommendations": [
-    {
-      "title": "string",
-      "message": "string",
-      "impact": "low | medium | high",
-      "estimatedMonthlySavings": 0
-    }
-  ],
-  "anomalies": [
-    {
-      "title": "string",
-      "message": "string",
-      "severity": "info | warning | critical",
-      "amount": 0
-    }
-  ]
-}
-
-Rules:
-- Return 3 to 5 observations.
-- Return 2 to 4 recommendations.
-- Return 0 to 3 anomalies.
-- score must be 0 to 100.
-- riskLevel must be low, medium, or high.
-- estimatedMonthlySavings must be a number.
-- amount must be a number.
-- Keep messages short and practical.
-
-reportData:
-${JSON.stringify(reportData, null, 2)}`;
+  const prompt = buildInsightsLlmPrompt(enriched);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 18000);
 
   try {
     const res = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
@@ -757,7 +1004,7 @@ ${JSON.stringify(reportData, null, 2)}`;
       observationCount: insights.observations.length,
       outcome: "success",
     });
-    return insights;
+    return { insights, source: "openrouter" };
   } catch (e: unknown) {
     clearTimeout(timeoutId);
     return failInsights({

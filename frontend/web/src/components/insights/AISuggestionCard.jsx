@@ -39,6 +39,8 @@ const IMPACT_LABEL = {
   low: "Quick win",
 };
 
+const ACTION_LABELS = ["Primary action", "Second action", "Third action"];
+
 function AISuggestionCard({ index, theme, suggestion, placeholder = false }) {
   const Icon = CARD_ICONS[index] ?? Sparkles;
 
@@ -74,7 +76,9 @@ function AISuggestionCard({ index, theme, suggestion, placeholder = false }) {
               <Icon size={20} />
             </span>
             <div>
-              <p className={`text-[10px] font-bold uppercase tracking-widest ${theme.number}`}>AI suggestion</p>
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${theme.number}`}>
+                {ACTION_LABELS[index] ?? "Recommended action"}
+              </p>
               <p className="text-lg font-black text-white">#{index + 1}</p>
             </div>
           </div>

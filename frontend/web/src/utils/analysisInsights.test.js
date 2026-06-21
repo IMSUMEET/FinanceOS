@@ -4,6 +4,8 @@ import {
   recommendationImpactTone,
   observationSeverityTone,
   topAiRecommendations,
+  topAiAnomalies,
+  insightSourceLabel,
 } from "./analysisInsights.js";
 
 describe("parseAnalysisInsights", () => {
@@ -38,6 +40,23 @@ describe("parseAnalysisInsights", () => {
     expect(parsed.score).toBe(72);
     expect(parsed.recommendations).toHaveLength(1);
     expect(parsed.source).toBe("static");
+    expect(parsed.anomalies).toHaveLength(1);
+  });
+});
+
+describe("topAiAnomalies", () => {
+  it("returns at most two anomalies", () => {
+    const items = [{ title: "A" }, { title: "B" }, { title: "C" }];
+    expect(topAiAnomalies(items)).toHaveLength(2);
+    expect(topAiAnomalies(items)[1].title).toBe("B");
+  });
+});
+
+describe("insightSourceLabel", () => {
+  it("maps aiStatus insight source values", () => {
+    expect(insightSourceLabel("openrouter")).toContain("OpenRouter");
+    expect(insightSourceLabel("static")).toContain("Lambda");
+    expect(insightSourceLabel("fallback")).toContain("fallback");
   });
 });
 

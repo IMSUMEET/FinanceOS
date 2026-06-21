@@ -15,6 +15,13 @@ export function parseAnalysisInsights(latestAnalysis) {
   };
 }
 
+export function insightSourceLabel(source) {
+  if (source === "static") return "Lambda 2 · AI analyzer";
+  if (source === "openrouter") return "OpenRouter · ranked insights";
+  if (source === "fallback") return "Lambda 2 · static fallback";
+  return "Server analysis";
+}
+
 export function recommendationImpactTone(impact) {
   if (impact === "high") {
     return "border-emerald-200 bg-emerald-50/70 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200";
@@ -35,4 +42,10 @@ export function observationSeverityTone(severity) {
 export function topAiRecommendations(recommendations, limit = 3) {
   if (!Array.isArray(recommendations)) return [];
   return recommendations.slice(0, limit);
+}
+
+/** Top N Lambda anomalies (prompt allows 0–2). */
+export function topAiAnomalies(anomalies, limit = 2) {
+  if (!Array.isArray(anomalies)) return [];
+  return anomalies.slice(0, limit);
 }

@@ -5,6 +5,8 @@ import {
   generateInsightsWithOpenRouter,
   generateStaticInsights,
   buildStaticInsightsPrompt,
+  buildEnrichedFinancialSummary,
+  buildInsightsLlmPrompt,
   fallbackInsights,
   mapToAllowedCategory,
   safeJsonParse,
@@ -96,6 +98,24 @@ describe("validateInsights branch coverage", () => {
     expect(validated.recommendations[0]?.impact).toBe("high");
     expect(validated.anomalies[0]?.amount).toBe(500);
   });
+
+  it("pads recommendations to exactly three items", () => {
+    const report = buildReportData([
+      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
+      { id: "2", date: "2026-06-02", amount: -50, type: "expense", finalCategory: "Food", merchant: "Cafe" },
+    ]);
+    const validated = validateInsights(
+      {
+        summary: "ok",
+        score: 60,
+        riskLevel: "low",
+        recommendations: [{ title: "Only one", message: "Trim food", impact: "medium", estimatedMonthlySavings: 5 }],
+      },
+      report,
+    );
+    expect(validated.recommendations).toHaveLength(3);
+    expect(validated.recommendations[0]?.title).toBe("Only one");
+  });
 });
 
 describe("generateInsightsWithOpenRouter branch coverage", () => {
@@ -109,7 +129,8 @@ describe("generateInsightsWithOpenRouter branch coverage", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     const report = buildReportData([]);
     const insights = await generateInsightsWithOpenRouter(report);
-    expect(insights.summary).toContain("No transactions");
+    expect(insights.insights.summary).toContain("No transactions");
+    expect(insights.source).toBe("fallback");
   });
 
   it("uses custom model and app url env vars", async () => {
@@ -136,8 +157,10 @@ describe("generateInsightsWithOpenRouter branch coverage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const insights = await generateInsightsWithOpenRouter(buildReportData([]));
-    expect(insights.summary).toBe("All good");
+    expect(insights.insights.summary).toBe("All good");
+    expect(insights.source).toBe("openrouter");
     expect(fetchMock.mock.calls[0]?.[1]?.body).toContain("custom/model");
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toContain("enrichedFinancialSummary");
   });
 });
 
@@ -166,8 +189,65 @@ describe("generateStaticInsights", () => {
       { id: "3", date: "2026-02-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
     ]);
     const prompt = buildStaticInsightsPrompt(report);
-    expect(prompt).toContain("financialSummary");
+    expect(prompt).toContain("enrichedFinancialSummary");
+    expect(prompt).toContain("categoryPercentages");
+    expect(prompt).toContain("DEDUPLICATION AND INSIGHT GROUPING RULES");
+    expect(prompt).toContain("Create ONLY ONE insight card per root cause");
     expect(prompt).toContain("Food");
+  });
+
+  it("buildEnrichedFinancialSummary pre-computes percentages and trend fields", () => {
+    const report = buildReportData([
+      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
+      { id: "2", date: "2026-01-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      { id: "3", date: "2026-02-05", amount: -1200, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      { id: "4", date: "2026-02-10", amount: -300, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
+    ]);
+    const enriched = buildEnrichedFinancialSummary(report);
+    expect(enriched.categoryPercentages.Food).toBeGreaterThan(0);
+    expect(enriched.topCategory?.category).toBe("Food");
+    expect(enriched.topMerchant?.merchant).toBe("Grocer");
+    expect(enriched.averageMonthlySpend).toBeGreaterThan(0);
+    expect(enriched.monthOverMonthChange?.expenseDelta).toBeGreaterThan(0);
+    expect(enriched.spendingTrendDirection).toBe("up");
+    expect(enriched.highestTransaction?.amount).toBe(1200);
+  });
+
+  it("computes flat and down spending trend directions", () => {
+    const flatReport = buildReportData([
+      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
+      { id: "2", date: "2026-01-05", amount: -1000, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      { id: "3", date: "2026-02-05", amount: -1020, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+    ]);
+    expect(buildEnrichedFinancialSummary(flatReport).spendingTrendDirection).toBe("flat");
+
+    const downReport = buildReportData([
+      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
+      { id: "2", date: "2026-01-05", amount: -1500, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      { id: "3", date: "2026-02-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+    ]);
+    expect(buildEnrichedFinancialSummary(downReport).spendingTrendDirection).toBe("down");
+  });
+
+  it("flags large expense anomalies in static insights", () => {
+    const report = buildReportData([
+      { id: "1", date: "2026-05-01", amount: 3000, type: "income", finalCategory: "Income", merchant: "Employer" },
+      { id: "2", date: "2026-05-02", amount: -40, type: "expense", finalCategory: "Food", merchant: "Cafe" },
+      { id: "3", date: "2026-06-01", amount: 3000, type: "income", finalCategory: "Income", merchant: "Employer" },
+      { id: "4", date: "2026-06-02", amount: -50, type: "expense", finalCategory: "Food", merchant: "Cafe" },
+      { id: "5", date: "2026-06-03", amount: -2500, type: "expense", finalCategory: "Shopping", merchant: "Electronics" },
+    ]);
+    const insights = generateStaticInsights(report);
+    expect(insights.anomalies.length).toBeGreaterThan(0);
+    expect(insights.anomalies[0]?.amount).toBe(2500);
+  });
+
+  it("buildInsightsLlmPrompt includes deduplication rules", () => {
+    const report = buildReportData([
+      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
+    ]);
+    const prompt = buildInsightsLlmPrompt(buildEnrichedFinancialSummary(report));
+    expect(prompt).toContain("Recommendation uniqueness");
   });
 
   it("returns empty-state defaults", () => {
@@ -262,5 +342,21 @@ describe("coach suggestions", () => {
   it("skips OpenRouter without api key", async () => {
     const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
     expect(result.source).toBe("fallback");
+  });
+
+  it("falls back when coach response JSON is invalid", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: "not-json" } }],
+        }),
+      }),
+    );
+    const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
+    expect(result.source).toBe("fallback");
+    expect(result.suggestions).toHaveLength(3);
   });
 });

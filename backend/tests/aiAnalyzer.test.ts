@@ -214,8 +214,9 @@ describe("OpenRouter Integration Mocks", () => {
 
     const report = buildReportData([]);
     const result = await generateInsightsWithOpenRouter(report);
-    expect(result.summary).toBe("Excellent financial health");
-    expect(result.score).toBe(95);
+    expect(result.insights.summary).toBe("Excellent financial health");
+    expect(result.insights.score).toBe(95);
+    expect(result.source).toBe("openrouter");
     expect(globalFetchMock).toHaveBeenCalledOnce();
   });
 
@@ -228,7 +229,8 @@ describe("OpenRouter Integration Mocks", () => {
 
     const report = buildReportData([]);
     const result = await generateInsightsWithOpenRouter(report);
-    expect(result.summary).toContain("No transactions");
+    expect(result.insights.summary).toContain("No transactions");
+    expect(result.source).toBe("fallback");
   });
 
   it("handles empty choice content from fetch", async () => {
@@ -239,7 +241,8 @@ describe("OpenRouter Integration Mocks", () => {
     vi.stubGlobal("fetch", globalFetchMock);
     const report = buildReportData([]);
     const result = await generateInsightsWithOpenRouter(report);
-    expect(result.summary).toContain("No transactions");
+    expect(result.insights.summary).toContain("No transactions");
+    expect(result.source).toBe("fallback");
   });
 
   it("handles unparseable json response content from fetch", async () => {
@@ -250,7 +253,8 @@ describe("OpenRouter Integration Mocks", () => {
     vi.stubGlobal("fetch", globalFetchMock);
     const report = buildReportData([]);
     const result = await generateInsightsWithOpenRouter(report);
-    expect(result.summary).toContain("No transactions");
+    expect(result.insights.summary).toContain("No transactions");
+    expect(result.source).toBe("fallback");
   });
 });
 

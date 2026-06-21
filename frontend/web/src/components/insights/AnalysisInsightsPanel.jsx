@@ -1,24 +1,24 @@
-import { Sparkles, Bot } from "lucide-react";
+import { Sparkles, Bot, Lightbulb, AlertTriangle } from "lucide-react";
 import Card from "../ui/Card";
 import Badge from "../ui/Badge";
 import SectionHeader from "../ui/SectionHeader";
 import AISuggestionCard, { AI_SUGGESTION_THEMES } from "./AISuggestionCard";
+import AIInsightCard from "./AIInsightCard";
+import AIAnomalyCard, { AIAnomalyEmptyState } from "./AIAnomalyCard";
 import {
   parseAnalysisInsights,
-  observationSeverityTone,
+  insightSourceLabel,
   topAiRecommendations,
+  topAiAnomalies,
 } from "../../utils/analysisInsights";
 
 function AnalysisInsightsPanel({ latestAnalysis }) {
   const insights = parseAnalysisInsights(latestAnalysis);
   const suggestions = topAiRecommendations(insights?.recommendations ?? [], 3);
+  const anomalies = topAiAnomalies(insights?.anomalies ?? [], 2);
+  const observations = insights?.observations?.slice(0, 5) ?? [];
 
-  const sourceLabel =
-    insights?.source === "static"
-      ? "Lambda 2 · AI analyzer"
-      : insights?.source === "openrouter"
-        ? "OpenRouter"
-        : "Server analysis";
+  const sourceLabel = insightSourceLabel(insights?.source);
 
   return (
     <div className="space-y-5">
@@ -29,14 +29,14 @@ function AnalysisInsightsPanel({ latestAnalysis }) {
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white">
                 <Bot size={18} />
               </span>
-              <p className="text-xs font-bold uppercase tracking-widest text-white/70">AI suggestions</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-white/70">Spend analysis</p>
             </div>
             <h2 className="mt-3 text-2xl font-black text-white md:text-3xl">
-              {insights ? "Your personalized action plan" : "Waiting for your first analysis"}
+              {insights ? "Root-cause insights from your CSV" : "Waiting for your first analysis"}
             </h2>
-            <p className="mt-2 max-w-3xl text-sm text-white/75">
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/75">
               {insights?.summary ??
-                "Upload a CSV with AI analysis on the Import page. Lambda returns three tailored recommendations based on your spending."}
+                "Upload a CSV with AI analysis on the Import page. Each finding covers a unique root cause — no duplicate category or merchant cards."}
             </p>
           </div>
           {insights ? (
@@ -64,39 +64,72 @@ function AnalysisInsightsPanel({ latestAnalysis }) {
         </div>
       </Card>
 
-      <div className="grid gap-5 md:grid-cols-3">
-        {AI_SUGGESTION_THEMES.map((theme, index) => (
-          <AISuggestionCard
-            key={theme.header}
-            index={index}
-            theme={theme}
-            suggestion={suggestions[index]}
-            placeholder={!suggestions[index]}
-          />
-        ))}
-      </div>
-
-      {insights && insights.observations.length > 0 ? (
+      {insights && observations.length > 0 ? (
         <Card padding="md">
-          <SectionHeader eyebrow="From your analysis" title="What we noticed" />
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {insights.observations.slice(0, 3).map((item, idx) => (
-              <li
-                key={`${item.title}-${idx}`}
-                className="rounded-xl2 border border-ink-100 bg-[#f8fbff] px-4 py-3 dark:border-ink-800 dark:bg-ink-800/60"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-ink-900 dark:text-ink-50">{item.title}</p>
-                  {item.severity ? (
-                    <Badge tone={observationSeverityTone(item.severity)}>{item.severity}</Badge>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-sm text-ink-600 dark:text-ink-300">{item.message}</p>
+          <SectionHeader
+            eyebrow="Priority order"
+            title="Key findings"
+            subtitle="One card per root cause — concentration, trend, merchant, then patterns."
+          />
+          <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {observations.map((item, idx) => (
+              <li key={`${item.title}-${idx}`} className="list-none">
+                <AIInsightCard observation={item} index={idx} />
               </li>
             ))}
           </ul>
         </Card>
       ) : null}
+
+      <div className="grid gap-5 xl:grid-cols-12">
+        <div className="space-y-4 xl:col-span-7">
+          <div className="flex items-center gap-2 px-1">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
+              <Lightbulb size={16} />
+            </span>
+            <div>
+              <h3 className="text-lg font-black text-ink-900 dark:text-ink-50">Action plan</h3>
+              <p className="text-xs text-ink-500 dark:text-ink-400">
+                Three distinct recommendations — each targets a different action.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-3">
+            {AI_SUGGESTION_THEMES.map((theme, index) => (
+              <AISuggestionCard
+                key={theme.header}
+                index={index}
+                theme={theme}
+                suggestion={suggestions[index]}
+                placeholder={!suggestions[index]}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4 xl:col-span-5">
+          <div className="flex items-center gap-2 px-1">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+              <AlertTriangle size={16} />
+            </span>
+            <div>
+              <h3 className="text-lg font-black text-ink-900 dark:text-ink-50">Unusual activity</h3>
+              <p className="text-xs text-ink-500 dark:text-ink-400">
+                One-off events that differ from normal transaction size — not repeated in findings above.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-4">
+            {insights && anomalies.length > 0 ? (
+              anomalies.map((item, idx) => (
+                <AIAnomalyCard key={`${item.title}-${idx}`} anomaly={item} index={idx} />
+              ))
+            ) : (
+              <AIAnomalyEmptyState />
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -235,7 +235,7 @@ function InsightsPage() {
           tone={hasProfile ? "success" : "neutral"}
           body={
             hasProfile
-              ? "Open the profile tab (top right) for fresh OpenRouter coach suggestions. The section above shows static suggestions from your last CSV analysis."
+              ? "Open the profile tab (top right) for fresh OpenRouter coach suggestions. The section above shows findings, action plan, and anomalies from your last CSV analysis."
               : "Create a profile from the top-right profile tab to unlock live OpenRouter coach suggestions in addition to the analysis above."
           }
         >

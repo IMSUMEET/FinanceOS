@@ -210,7 +210,7 @@ describe("coverage100 openrouter", () => {
     vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
     const originalSetTimeout = globalThis.setTimeout;
     vi.spyOn(globalThis, "setTimeout").mockImplementation((handler, delay, ...args) => {
-      if (delay === 25000) {
+      if (delay === 18000) {
         queueMicrotask(() => (handler as (...a: unknown[]) => void)(...args));
         return 1 as unknown as ReturnType<typeof setTimeout>;
       }
@@ -229,13 +229,13 @@ describe("coverage100 openrouter", () => {
     );
 
     const insights = await generateInsightsWithOpenRouter(buildReportData([]));
-    expect(insights.score).toBe(50);
+    expect(insights.insights.score).toBe(50);
   });
 
   it("generateInsightsWithOpenRouter handles non-Error rejections", async () => {
     vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue("plain failure"));
     const insights = await generateInsightsWithOpenRouter(buildReportData([]));
-    expect(insights.summary).toContain("No transactions");
+    expect(insights.insights.summary).toContain("No transactions");
   });
 });

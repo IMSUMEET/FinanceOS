@@ -6,8 +6,11 @@ import { parseToIsoDateString } from "./csvAnalyze.js";
 import {
   buildReportData,
   generateStaticInsights,
+  buildEnrichedFinancialSummary,
   buildStaticInsightsContext,
   buildStaticInsightsPrompt,
+  buildInsightsLlmPrompt,
+  generateInsightsWithOpenRouter,
   mapToAllowedCategory,
   safeJsonParse,
   OPENROUTER_CHAT_COMPLETIONS_URL,
@@ -25,6 +28,9 @@ export const aiApp = new Hono();
 
 /** Set true to re-enable OpenRouter batch categorization (Call 1). Kept off to stay under API Gateway 30s. */
 export const USE_OPENROUTER_CATEGORIZATION = false;
+
+/** Set USE_OPENROUTER_INSIGHTS=true to call OpenRouter for ranked spend insights (falls back to static). */
+export const USE_OPENROUTER_INSIGHTS = process.env.USE_OPENROUTER_INSIGHTS === "true";
 
 // Custom CORS middleware for standalone Lambda 2
 aiApp.use("*", async (c, next) => {
@@ -451,10 +457,22 @@ async function handleAiAnalyzeRequest(c: any) {
 
   // 6. Build reportData
   const reportData = buildReportData(finalTransactions);
+  const enrichedFinancialSummary = buildEnrichedFinancialSummary(reportData);
 
-  // 7. Static summary; OpenRouter reserved for profile coach suggestions
-  const insights = generateStaticInsights(reportData);
-  const aiStatusInsights = "static";
+  // 7. Insights — enriched summary + optional OpenRouter; static fallback by default
+  let insights;
+  let aiStatusInsights: "static" | "openrouter" | "fallback" = "static";
+  let insightsLlmPrompt: string | undefined;
+
+  if (USE_OPENROUTER_INSIGHTS && hasApiKey) {
+    insightsLlmPrompt = buildInsightsLlmPrompt(enrichedFinancialSummary);
+    const insightResult = await generateInsightsWithOpenRouter(reportData);
+    insights = insightResult.insights;
+    aiStatusInsights = insightResult.source === "openrouter" ? "openrouter" : "fallback";
+  } else {
+    insights = generateStaticInsights(reportData);
+  }
+
   const staticInsightsPrompt = buildStaticInsightsPrompt(reportData);
   const staticInsightsInput = buildStaticInsightsContext(reportData);
 
@@ -465,10 +483,13 @@ async function handleAiAnalyzeRequest(c: any) {
       outcome: "success",
       openrouterConfigured: hasApiKey,
       openrouterCategorizationEnabled: USE_OPENROUTER_CATEGORIZATION,
+      openrouterInsightsEnabled: USE_OPENROUTER_INSIGHTS,
       aiStatus: {
         categorization: aiStatusCategorization,
         insights: aiStatusInsights,
       },
+      enrichedFinancialSummary,
+      insightsLlmPrompt,
       staticInsightsPrompt,
       staticInsightsInput,
       insightsResponse: {
