@@ -3,21 +3,20 @@ import {
   Activity,
   AlertTriangle,
   CalendarClock,
-  Lock,
   Repeat,
   TrendingDown,
   TrendingUp,
-  UserCircle,
 } from "lucide-react";
+import NoDataYet from "../components/common/NoDataYet";
+import MonthFilterSelect from "../components/filters/MonthFilterSelect";
 import Card from "../components/ui/Card";
 import Badge from "../components/ui/Badge";
-import CategoryDot from "../components/ui/CategoryDot";
+import CategoryBadge from "../components/ui/CategoryBadge";
 import SectionHeader from "../components/ui/SectionHeader";
 import { usePageFilters } from "../context/usePageFilters";
 import { useTransactions } from "../context/useTransactions";
 import { ALL_MONTHS_SENTINEL } from "../context/pageFilters";
 import useDocumentTitle from "../hooks/useDocumentTitle";
-import { useProfile } from "../hooks/useProfile";
 import {
   compareSelectedMonthToPrevious,
   detectRecurring,
@@ -68,7 +67,17 @@ function InsightsPage() {
   useDocumentTitle("Insights");
   const { transactions } = useTransactions();
   const { filtered, filters } = usePageFilters("insights");
-  const { hasProfile } = useProfile();
+
+  if (transactions.length === 0) {
+    return (
+      <section className="space-y-5 pt-2">
+        <NoDataYet
+          title="No insights yet"
+          description="Import bank statements to unlock spending trends, recurring charges, and anomaly detection."
+        />
+      </section>
+    );
+  }
 
   const isAllMonths = filters.month === ALL_MONTHS_SENTINEL;
   const mom = isAllMonths
@@ -82,7 +91,7 @@ function InsightsPage() {
 
   const annualizedRecurring = recurring.reduce((s, r) => s + r.annualized, 0);
   const momCopy = isAllMonths
-    ? "Select a month in the header to compare spending vs the prior month."
+    ? "Use the month filter above to compare spending vs the prior month."
     : mom.deltaPct == null
       ? `No data for the month before ${formatMonth(filters.month)}.`
       : `You spent ${formatCurrency(Math.abs(mom.deltaAbs))} ${
@@ -91,6 +100,9 @@ function InsightsPage() {
 
   return (
     <section className="space-y-5 pt-2">
+      <div className="flex justify-end">
+        <MonthFilterSelect pageKey="insights" />
+      </div>
       <Card variant="dark">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -133,10 +145,10 @@ function InsightsPage() {
               movers.slice(0, 4).map((m) => (
                 <div
                   key={m.category}
-                  className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60"
+                  className="surface-muted flex items-center justify-between px-4 py-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <CategoryDot category={m.category} />
+                    <CategoryBadge category={m.category} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate font-bold text-ink-900 dark:text-ink-50">
                         {m.category}
@@ -174,10 +186,10 @@ function InsightsPage() {
               recurring.slice(0, 5).map((r) => (
                 <div
                   key={r.merchant}
-                  className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60"
+                  className="surface-muted flex items-center justify-between px-4 py-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <CategoryDot category={r.category} />
+                    <CategoryBadge category={r.category} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate font-bold text-ink-900 dark:text-ink-50">
                         {r.merchant}
@@ -210,7 +222,7 @@ function InsightsPage() {
               anomalies.map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60"
+                  className="surface-muted flex items-center justify-between px-4 py-3"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-bold text-ink-900 dark:text-ink-50">
@@ -238,7 +250,7 @@ function InsightsPage() {
           )}% of your spend — adjust the lens via filters above.`}
         >
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
+            <div className="surface-muted p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">
                 Weekday
               </p>
@@ -249,7 +261,7 @@ function InsightsPage() {
                 {week.weekdayPct.toFixed(0)}%
               </p>
             </div>
-            <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
+            <div className="surface-muted p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-ink-500 dark:text-ink-400">
                 Weekend
               </p>
@@ -276,31 +288,6 @@ function InsightsPage() {
               : "Once we see a few recurring charges, we'll show specific cancellation savings."
           }
         />
-
-        <NarrativeCard
-          icon={UserCircle}
-          eyebrow="Profile"
-          title={hasProfile ? "Saved on this device" : "Profile required"}
-          tone={hasProfile ? "success" : "neutral"}
-          body={
-            hasProfile
-              ? "Your name and preferences are stored locally in this browser."
-              : "Guest mode works for browsing. Create a profile from the top-right tab to save your name and export data."
-          }
-        >
-          <div className="mt-4 rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60">
-            {hasProfile ? (
-              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                Profile active
-              </p>
-            ) : (
-              <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-600 dark:text-ink-300">
-                <Lock size={14} />
-                Locked until profile is created
-              </p>
-            )}
-          </div>
-        </NarrativeCard>
       </div>
     </section>
   );

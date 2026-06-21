@@ -5,6 +5,7 @@ import TransactionsPage from "./pages/TransactionsPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import InsightsPage from "./pages/InsightsPage";
 import UploadPage from "./pages/UploadPage";
+import HelpSupportPage from "./pages/HelpSupportPage";
 import HouseSaleCalculator from "./pages/HouseSaleCalculator";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -19,6 +20,7 @@ function App() {
           <Route path="/categories/:name" element={<CategoriesPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/upload" element={<UploadPage />} />
+          <Route path="/help" element={<HelpSupportPage />} />
           <Route path="/house-sale" element={<HouseSaleCalculator />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

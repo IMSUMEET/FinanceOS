@@ -1,14 +1,12 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, Upload } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { motion as Motion } from "framer-motion";
-import HeroCharacter from "./HeroCharacter";
+import { useMemo } from "react";
+import ClayWalletGraphic from "./ClayWalletGraphic";
 import CountUp from "../effects/CountUp";
 import { useTransactions } from "../../context/useTransactions";
-import { usePageFilters } from "../../context/usePageFilters";
-import { useProfile } from "../../hooks/useProfile";
-import { compareMonthOverMonth, totalSpend } from "../../utils/insights";
-import { classifyPersonality } from "../../utils/personality";
-import { formatCurrency, formatPct } from "../../utils/format";
+import { monthlyTotals } from "../../utils/insights";
+import { formatCurrency, formatMonth } from "../../utils/format";
 
 function greeting() {
   const h = new Date().getHours();
@@ -19,100 +17,98 @@ function greeting() {
   return "Hey night owl";
 }
 
-function WelcomeHero() {
-  const { transactions } = useTransactions();
-  const { filtered } = usePageFilters("overview");
-  const { profile, hasProfile } = useProfile();
-  const total = totalSpend(filtered);
-  const mom = compareMonthOverMonth(transactions);
-  const personality = classifyPersonality(transactions);
+function buildHeroSnapshot(transactions) {
+  const monthly = monthlyTotals(transactions);
+  if (!monthly.length) return null;
 
-  const momLabel =
-    mom.deltaPct == null ? "First period of data" : `${formatPct(mom.deltaPct)} vs last month`;
-  const momTone =
-    mom.deltaPct == null
-      ? "text-white/80"
-      : mom.deltaPct < 0
-        ? "text-emerald-200"
-        : "text-amber-200";
+  const latest = monthly[monthly.length - 1];
+  const monthCount = monthly.length;
+  const txnCount = transactions.filter((t) => t.category !== "Credit Card Payments").length;
+  const monthLabel = formatMonth(latest.month);
+
+  return {
+    label: monthCount > 1 ? `Latest month · ${monthLabel}` : `${monthLabel} spending`,
+    amount: latest.total,
+    context:
+      monthCount > 1
+        ? `${txnCount.toLocaleString()} transactions across ${monthCount} months of your statements`
+        : `${latest.count} transactions in your first imported month`,
+  };
+}
+
+function WelcomeHero({ compactGraphic = false }) {
+  const { transactions } = useTransactions();
+  const hasData = transactions.length > 0;
+  const snapshot = useMemo(() => buildHeroSnapshot(transactions), [transactions]);
+  const graphicSize = compactGraphic ? 300 : 320;
 
   return (
-    <section className="relative overflow-hidden rounded-xl3 bg-brand text-white shadow-brand">
-      {/* Decorative blurred blobs */}
-      <div className="pointer-events-none absolute -top-16 -left-16 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-20 right-1/3 h-72 w-72 rounded-full bg-violet-300/30 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-cyan-300/20 blur-3xl" />
+    <Motion.section
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      className="relative overflow-hidden rounded-xl3 border border-white/10 bg-gradient-to-br from-[#121c2c] via-[#09101d] to-[#070b14] text-white shadow-dark"
+    >
+      <div className="pointer-events-none absolute -top-16 -left-16 h-64 w-64 rounded-full bg-teal-500/10 blur-[80px]" />
+      <div className="pointer-events-none absolute -bottom-24 -right-16 h-80 w-80 rounded-full bg-brand-500/15 blur-[90px]" />
 
-      <div className="relative grid gap-6 p-6 md:p-8 lg:grid-cols-[1.2fr_1fr] lg:gap-4 lg:p-10">
-        {/* Left: copy + CTAs */}
-        <Motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="flex flex-col justify-center"
-        >
-          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-            <Sparkles size={12} /> Your spend snapshot
+      <div className="relative grid gap-6 p-6 md:p-8 lg:grid-cols-[1.25fr_minmax(280px,360px)] lg:items-stretch lg:gap-8 lg:p-9">
+        <div className="flex flex-col justify-center">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider backdrop-blur">
+            <Sparkles size={12} className="text-brand-300" />
+            Personal finance, simplified
           </span>
 
-          <h1 className="mt-4 text-3xl font-black leading-tight md:text-4xl lg:text-5xl">
-            {greeting()}, {hasProfile ? profile.name : "there"}.
+          <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight md:text-4xl lg:text-[2.35rem]">
+            {hasData ? `${greeting()} — manage your money.` : "Take control of your finances."}
           </h1>
-          <p className="mt-2 max-w-md text-sm text-white/80 md:text-base">
-            Here's how your money moved this period — broken down, demystified, and ready to act on.
+          <p className="mt-2 max-w-lg text-sm text-slate-300 md:text-base">
+            {hasData
+              ? "See spending across cards, spot trends, and make smarter decisions from your bank exports."
+              : "Upload bank statements to track spending, categorize transactions, and understand where your money goes."}
           </p>
 
-          <div className="mt-6 flex flex-wrap items-end gap-x-6 gap-y-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                Filtered total spend
+          {hasData && snapshot ? (
+            <div className="mt-6">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                {snapshot.label}
               </p>
-              <p className="tabular mt-1 text-4xl font-black md:text-5xl">
-                <CountUp value={total} format={(n) => formatCurrency(n)} />
+              <p className="tabular mt-1 text-4xl font-black tracking-tight text-white md:text-5xl">
+                <CountUp value={snapshot.amount} format={(n) => formatCurrency(n)} />
               </p>
-              <p className={`mt-1 text-sm font-semibold ${momTone}`}>{momLabel}</p>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-300">
+                {snapshot.context}
+              </p>
             </div>
+          ) : null}
 
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold backdrop-blur">
-              <span aria-hidden>{personality.emoji}</span>
-              {hasProfile ? personality.label : "Guest mode"}
-            </span>
-          </div>
-
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-7">
             <Link
-              to="/transactions"
-              className="group inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-brand-700 shadow-soft transition hover:bg-ink-50"
+              to={hasData ? "/transactions" : "/upload"}
+              className="group inline-flex h-11 items-center gap-2 rounded-full border border-brand-300/30 bg-gradient-to-br from-brand-400 to-brand-600 px-5 text-sm font-bold text-white shadow-brand transition hover:brightness-105 active:scale-[0.98]"
             >
-              View transactions
+              {hasData ? "View transactions" : "Import statements"}
               <ArrowRight size={16} className="transition group-hover:translate-x-0.5" />
             </Link>
-            <Link
-              to="/upload"
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-white/40 bg-white/10 px-5 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20"
-            >
-              <Upload size={16} />
-              Import CSV
-            </Link>
           </div>
-        </Motion.div>
+        </div>
 
-        {/* Right: floating character */}
         <Motion.div
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-          className="relative flex items-center justify-center"
+          className="relative hidden lg:flex lg:h-full lg:flex-col lg:justify-end lg:pb-2"
         >
-          <div className="absolute h-64 w-64 rounded-full bg-white/15 blur-2xl md:h-80 md:w-80" />
-          <HeroCharacter
-            variant={profile.avatarVariant}
-            size={300}
-            className="relative drop-shadow-[0_18px_28px_rgba(15,23,42,0.25)]"
-          />
+          <div className="relative flex items-center justify-center pt-6">
+            <div className="absolute h-72 w-72 rounded-full bg-brand-500/10 blur-3xl md:h-80 md:w-80" />
+            <ClayWalletGraphic
+              size={graphicSize}
+              className="relative translate-y-4 drop-shadow-[0_24px_38px_rgba(0,0,0,0.4)]"
+            />
+          </div>
         </Motion.div>
       </div>
-    </section>
+    </Motion.section>
   );
 }
 

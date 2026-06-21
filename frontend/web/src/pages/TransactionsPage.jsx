@@ -4,24 +4,28 @@ import Card from "../components/ui/Card";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import Pill from "../components/ui/Pill";
-import Badge from "../components/ui/Badge";
 import IconButton from "../components/ui/IconButton";
-import CategoryDot from "../components/ui/CategoryDot";
+import CategoryBadge from "../components/ui/CategoryBadge";
+import NoDataYet from "../components/common/NoDataYet";
 import EmptyState from "../components/ui/EmptyState";
 import Drawer from "../components/ui/Drawer";
 import Button from "../components/ui/Button";
+import AccountFilterBar from "../components/dashboard/AccountFilterBar";
+import MonthFilterSelect from "../components/filters/MonthFilterSelect";
 import { usePageFilters } from "../context/usePageFilters";
 import { useTransactions } from "../context/useTransactions";
+import { ALL_MONTHS_SENTINEL } from "../context/pageFilters";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { CATEGORIES } from "../utils/categories";
-import { formatAmountSpend, formatDate } from "../utils/format";
+import { listAccountsForPeriod } from "../utils/accountCards";
+import { formatAmountSpend, formatDate, formatMonth } from "../utils/format";
 
 function TransactionDetail({ tx, onClose, onUpdateCategory }) {
   if (!tx) return null;
   return (
     <Drawer open={!!tx} onClose={onClose} title={tx.merchant_normalized} subtitle={tx.category}>
       <div className="space-y-5">
-        <div className="rounded-xl2 bg-[#f8fbff] p-5 dark:bg-ink-800/60">
+        <div className="surface-muted p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
             Amount
           </p>
@@ -31,7 +35,7 @@ function TransactionDetail({ tx, onClose, onUpdateCategory }) {
         </div>
 
         <dl className="grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
+          <div className="surface-muted p-4">
             <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
               Date
             </dt>
@@ -39,7 +43,7 @@ function TransactionDetail({ tx, onClose, onUpdateCategory }) {
               {formatDate(tx.date, { year: "numeric", month: "short", day: "numeric" })}
             </dd>
           </div>
-          <div className="rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
+          <div className="surface-muted p-4">
             <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
               Card / Account
             </dt>
@@ -47,7 +51,7 @@ function TransactionDetail({ tx, onClose, onUpdateCategory }) {
               {tx.card_identity ?? tx.source}
             </dd>
           </div>
-          <div className="col-span-2 rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
+          <div className="col-span-2 surface-muted p-4">
             <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
               Description
             </dt>
@@ -55,7 +59,7 @@ function TransactionDetail({ tx, onClose, onUpdateCategory }) {
               {tx.description ?? "—"}
             </dd>
           </div>
-          <div className="col-span-2 rounded-xl2 bg-[#f8fbff] p-4 dark:bg-ink-800/60">
+          <div className="col-span-2 surface-muted p-4">
             <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
               Raw merchant
             </dt>
@@ -74,14 +78,13 @@ function TransactionDetail({ tx, onClose, onUpdateCategory }) {
                 type="button"
                 onClick={() => onUpdateCategory(tx.id, c)}
                 className={[
-                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+                  "rounded-full transition",
                   tx.category === c
-                    ? "border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-900/40 dark:text-brand-200"
-                    : "border-ink-200 bg-white text-ink-600 hover:border-brand-300 hover:text-brand-700 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-200 dark:hover:border-brand-500 dark:hover:text-brand-200",
+                    ? "ring-2 ring-brand-400/70 ring-offset-2 ring-offset-white dark:ring-offset-ink-900"
+                    : "",
                 ].join(" ")}
               >
-                <CategoryDot category={c} size={8} />
-                {c}
+                <CategoryBadge category={c} size="md" />
               </button>
             ))}
           </div>
@@ -97,23 +100,89 @@ function CategoryChip({ active, label, onToggle }) {
       type="button"
       onClick={onToggle}
       className={[
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+        "rounded-full transition",
         active
-          ? "border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-900/40 dark:text-brand-200"
-          : "border-ink-200 bg-white text-ink-600 hover:border-brand-300 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-200 dark:hover:border-brand-500",
+          ? "ring-2 ring-brand-400/70 ring-offset-2 ring-offset-white dark:ring-offset-ink-900"
+          : "opacity-90 hover:opacity-100",
       ].join(" ")}
     >
-      <CategoryDot category={label} size={8} />
-      {label}
+      <CategoryBadge category={label} size="md" />
+    </button>
+  );
+}
+
+function TransactionMerchant({ tx }) {
+  return (
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <p className="truncate font-bold text-ink-900 dark:text-ink-50">{tx.merchant_normalized}</p>
+        {tx.card_identity ? (
+          <span className="inline-block shrink-0 rounded bg-ink-100 px-1.5 py-0.5 text-[10px] font-medium text-ink-600 dark:bg-ink-800 dark:text-ink-300">
+            {tx.card_identity}
+          </span>
+        ) : null}
+      </div>
+      {tx.description ? (
+        <p className="truncate text-xs text-ink-500 dark:text-ink-400">{tx.description}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function TransactionAmount({ amount, className = "" }) {
+  return (
+    <p
+      className={`tabular shrink-0 whitespace-nowrap font-black text-ink-900 dark:text-ink-50 ${className}`.trim()}
+    >
+      -{formatAmountSpend(amount)}
+    </p>
+  );
+}
+
+function TransactionRow({ tx, onSelect }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(tx)}
+      className="w-full px-4 py-2.5 text-left transition hover:bg-ink-50 dark:hover:bg-ink-800/60"
+    >
+      <div className="md:hidden">
+        <div className="flex items-start justify-between gap-3">
+          <TransactionMerchant tx={tx} />
+          <TransactionAmount amount={tx.amount} />
+        </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          <CategoryBadge category={tx.category} />
+          <span className="text-xs text-ink-500 dark:text-ink-400">{formatDate(tx.date)}</span>
+        </div>
+      </div>
+
+      <div className="hidden md:grid md:grid-cols-[minmax(0,1fr)_7.5rem_9.5rem_6.5rem] md:items-center md:gap-x-4">
+        <TransactionMerchant tx={tx} />
+        <p className="whitespace-nowrap text-sm text-ink-600 dark:text-ink-300">
+          {formatDate(tx.date)}
+        </p>
+        <div className="min-w-0 max-w-[9.5rem]">
+          <CategoryBadge category={tx.category} />
+        </div>
+        <TransactionAmount amount={tx.amount} className="justify-self-end text-right" />
+      </div>
     </button>
   );
 }
 
 function TransactionsPage() {
   useDocumentTitle("Transactions");
+  const { transactions, updateCategory, setAccountFilter } = useTransactions();
   const { filtered, filters, setFilters } = usePageFilters("transactions");
-  const { updateCategory } = useTransactions();
   const [openTx, setOpenTx] = useState(null);
+
+  const accounts = useMemo(
+    () => listAccountsForPeriod(transactions, filters.month),
+    [transactions, filters.month],
+  );
+  const isAllMonths = filters.month === ALL_MONTHS_SENTINEL;
+  const periodLabel = isAllMonths ? "all time" : formatMonth(filters.month);
 
   const sorted = useMemo(
     () => [...filtered].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id)),
@@ -129,7 +198,8 @@ function TransactionsPage() {
     }));
   };
 
-  const clearAll = () =>
+  const clearAll = () => {
+    setAccountFilter(null);
     setFilters((f) => ({
       ...f,
       categories: [],
@@ -137,15 +207,34 @@ function TransactionsPage() {
       amountMin: null,
       amountMax: null,
     }));
+  };
 
   const activeFilters =
+    (filters.account ? 1 : 0) +
     filters.categories.length +
     (filters.search ? 1 : 0) +
     (filters.amountMin != null ? 1 : 0) +
     (filters.amountMax != null ? 1 : 0);
 
+  if (transactions.length === 0) {
+    return (
+      <section className="space-y-5 pt-2">
+        <NoDataYet title="No transactions yet" />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-5 pt-2">
+      {accounts.length > 1 ? (
+        <AccountFilterBar
+          accounts={accounts}
+          selectedAccount={filters.account}
+          onSelectAccount={setAccountFilter}
+          periodLabel={periodLabel}
+        />
+      ) : null}
+
       <div className="lg:static sticky top-[88px] z-20 -mx-4 px-4 md:mx-0 md:px-0">
         <Card>
           <div className="flex items-center justify-between gap-4">
@@ -155,7 +244,8 @@ function TransactionsPage() {
                 {sorted.length} transactions
               </h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <MonthFilterSelect pageKey="transactions" className="w-full sm:w-auto" />
               <Pill tone={activeFilters ? "brand" : "soft"}>
                 <Filter size={14} />
                 {activeFilters ? `${activeFilters} filters` : "No filters"}
@@ -234,7 +324,7 @@ function TransactionsPage() {
           />
         ) : (
           <div className="overflow-hidden rounded-xl2">
-            <div className="hidden grid-cols-[1.4fr_1fr_1fr_auto] gap-3 border-b border-ink-100 px-4 py-3 text-xs font-bold uppercase tracking-wider text-ink-500 md:grid dark:border-ink-800 dark:text-ink-400">
+            <div className="hidden border-b border-ink-100 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-ink-500 md:grid md:grid-cols-[minmax(0,1fr)_7.5rem_9.5rem_6.5rem] md:gap-x-4 dark:border-ink-800 dark:text-ink-400">
               <span>Merchant</span>
               <span>Date</span>
               <span>Category</span>
@@ -243,39 +333,7 @@ function TransactionsPage() {
             <ul className="divide-y divide-ink-100 dark:divide-ink-800">
               {sorted.map((t) => (
                 <li key={t.id}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenTx(t)}
-                    className="grid w-full grid-cols-[1.4fr_1fr_auto] gap-3 px-4 py-3 text-left transition hover:bg-[#f8fbff] md:grid-cols-[1.4fr_1fr_1fr_auto] dark:hover:bg-ink-800/60"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="truncate font-bold text-ink-900 dark:text-ink-50">
-                          {t.merchant_normalized}
-                        </p>
-                        {t.card_identity && (
-                          <span className="inline-block rounded bg-ink-100 px-1.5 py-0.5 text-[10px] font-medium text-ink-600 dark:bg-ink-800 dark:text-ink-300">
-                            {t.card_identity}
-                          </span>
-                        )}
-                      </div>
-                      <p className="truncate text-xs text-ink-500 dark:text-ink-400">
-                        {t.description}
-                      </p>
-                    </div>
-                    <p className="self-center text-sm text-ink-600 dark:text-ink-300">
-                      {formatDate(t.date)}
-                    </p>
-                    <div className="hidden self-center md:flex">
-                      <Badge tone="neutral">
-                        <CategoryDot category={t.category} size={8} />
-                        {t.category}
-                      </Badge>
-                    </div>
-                    <p className="tabular self-center text-right font-black text-ink-900 dark:text-ink-50">
-                      -{formatAmountSpend(t.amount)}
-                    </p>
-                  </button>
+                  <TransactionRow tx={t} onSelect={setOpenTx} />
                 </li>
               ))}
             </ul>

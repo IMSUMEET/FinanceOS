@@ -189,8 +189,8 @@ function ProfilePanel({ onClose }) {
             Create profile to unlock advanced features
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <label className="flex items-center gap-2 rounded-xl border border-ink-200 bg-white px-3 dark:border-ink-700 dark:bg-ink-900">
-              <User size={14} className="text-ink-400 dark:text-ink-300" />
+            <label className="flex items-center gap-2 rounded-xl px-3 clay-input-light">
+              <User size={14} className="text-ink-400 dark:text-ink-350" />
               <input
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
@@ -198,8 +198,8 @@ function ProfilePanel({ onClose }) {
                 className="h-10 w-full bg-transparent text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none dark:text-ink-100 dark:placeholder:text-ink-500"
               />
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-ink-200 bg-white px-3 dark:border-ink-700 dark:bg-ink-900">
-              <AtSign size={14} className="text-ink-400 dark:text-ink-300" />
+            <label className="flex items-center gap-2 rounded-xl px-3 clay-input-light">
+              <AtSign size={14} className="text-ink-400 dark:text-ink-350" />
               <input
                 value={handleInput}
                 onChange={(e) => setHandleInput(e.target.value)}

@@ -4,9 +4,14 @@ export const ALL_MONTHS_SENTINEL = "ALL";
 
 export const PAGE_KEYS = ["overview", "transactions", "categories", "insights"];
 
+function accountKeyForRow(tx) {
+  return tx.card_identity || tx.source || "Unknown";
+}
+
 export function createDefaultPageFilters() {
   return {
     month: ALL_MONTHS_SENTINEL,
+    account: null,
     categories: [],
     search: "",
     amountMin: null,
@@ -28,6 +33,9 @@ export function pathnameToPageKey(pathname) {
 export function applyFiltersToRows(rows, filters, { includeCategories = true } = {}) {
   return rows.filter((t) => {
     if (filters.month !== ALL_MONTHS_SENTINEL && monthKey(t.date) !== filters.month) {
+      return false;
+    }
+    if (filters.account && accountKeyForRow(t) !== filters.account) {
       return false;
     }
     if (

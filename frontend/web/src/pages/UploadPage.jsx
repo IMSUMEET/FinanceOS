@@ -1,15 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import {
-  Database,
-  FileSpreadsheet,
-  Trash2,
-  UploadCloud,
-  Wand2,
-  Loader2,
-  FolderOpen,
-} from "lucide-react";
+import { FileSpreadsheet, Trash2, UploadCloud, Wand2, Loader2, FolderOpen } from "lucide-react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Pill from "../components/ui/Pill";
@@ -19,7 +11,6 @@ import EmptyState from "../components/ui/EmptyState";
 import { useTransactions } from "../context/useTransactions";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { categorize, normalizeMerchant } from "../utils/categorize";
-import seed from "../data/mockTransactions";
 import { USE_MOCK } from "../api/client";
 import { analyzeCsvFormData } from "../services/analysis";
 import { summarizeTransactions } from "../utils/analysisSummary";
@@ -415,13 +406,8 @@ const FORMAT_LABELS = {
 
 function UploadPage() {
   useDocumentTitle("Import");
-  const {
-    transactions,
-    applyAnalysisResult,
-    clearSessionAnalysis,
-    restoredFromSession,
-    replaceAll,
-  } = useTransactions();
+  const { transactions, applyAnalysisResult, clearSessionAnalysis, restoredFromStorage } =
+    useTransactions();
 
   const [phase, setPhase] = useState("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -536,24 +522,14 @@ function UploadPage() {
     onChooseFiles(e.dataTransfer.files);
   };
 
-  const loadDemo = useCallback(async () => {
-    await clearSessionAnalysis();
-    if (!USE_MOCK) {
-      await replaceAll(seed);
-    }
-    setPhase("success");
-    setLastSummary(summarizeTransactions(seed));
-    setPendingFiles([]);
-  }, [clearSessionAnalysis, replaceAll]);
-
   const dragOver = useRef(false);
   const [dragHighlight, setDragHighlight] = useState(false);
 
   return (
     <section className="space-y-5 pt-2">
-      {restoredFromSession ? (
+      {restoredFromStorage ? (
         <p className="rounded-xl2 border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-100">
-          Restored from this browser session.
+          Restored your saved data from this device.
         </p>
       ) : null}
 
@@ -564,22 +540,22 @@ function UploadPage() {
           action={
             <div className="flex flex-wrap items-center gap-2">
               <Pill tone="soft">{transactions.length} in store</Pill>
-              <Button variant="ghost" icon={Database} onClick={loadDemo}>
-                Load demo
-              </Button>
-              <Button variant="ghost" icon={Trash2} onClick={clearSessionAnalysis}>
-                Clear session data
-              </Button>
+              {transactions.length > 0 ? (
+                <Button variant="ghost" icon={Trash2} onClick={clearSessionAnalysis}>
+                  Clear all data
+                </Button>
+              ) : null}
             </div>
           }
         />
 
         <p className="mt-2 text-sm text-ink-600 dark:text-ink-300">
-          Files are processed in memory and not stored on our servers.
+          Files are parsed on this device. Nothing is uploaded to our servers unless you connect a
+          backend API.
         </p>
         <p className="mt-1 text-xs text-ink-500 dark:text-ink-400">
-          For now, uploads are limited to 5 MB per file. Larger files will need S3-based async
-          processing later.
+          Supported exports from Chase, Amex, Citi, Capital One, Discover, and generic CSV. Max 5 MB
+          per file.
         </p>
 
         <div

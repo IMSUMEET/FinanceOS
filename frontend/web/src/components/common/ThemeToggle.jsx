@@ -11,7 +11,6 @@ function ThemeToggle({ className = "" }) {
       type="button"
       onClick={toggleTheme}
       whileTap={{ scale: 0.92 }}
-      whileHover={{ y: -1 }}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className={`relative inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-ink-200 bg-white text-ink-700 transition hover:bg-ink-50 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100 dark:hover:bg-ink-700 ${className}`}
     >

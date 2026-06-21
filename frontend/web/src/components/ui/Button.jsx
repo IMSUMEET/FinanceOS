@@ -15,12 +15,14 @@ function Button({
     lg: "h-12 px-6 text-base rounded-full",
   };
   const variants = {
-    primary: "bg-brand text-white shadow-brand hover:brightness-110 active:brightness-95",
-    dark: "bg-ink-900 text-white hover:bg-ink-800 active:bg-ink-900/95 dark:bg-ink-100 dark:text-ink-900 dark:hover:bg-white",
+    primary:
+      "bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-brand border border-brand-300/30 shadow-[inset_-3px_-3px_6px_rgba(0,0,0,0.15),inset_3px_3px_6px_rgba(255,255,255,0.25)] hover:brightness-105 active:scale-98",
+    dark: "clay-btn-dark text-white hover:brightness-105 active:scale-98",
     ghost:
-      "border border-ink-200 bg-white text-ink-700 hover:bg-ink-100 hover:text-brand-600 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-200 dark:hover:bg-ink-700 dark:hover:text-brand-300",
-    soft: "bg-white/70 border border-white/70 text-ink-700 backdrop-blur hover:bg-white dark:bg-ink-800/70 dark:border-ink-700 dark:text-ink-200 dark:hover:bg-ink-800",
-    danger: "bg-rose-500 text-white hover:bg-rose-600",
+      "clay-btn-light text-ink-700 dark:text-ink-200 hover:text-brand-600 dark:hover:text-brand-300 active:scale-98",
+    soft: "clay-btn-light text-ink-700 dark:text-ink-200 active:scale-98",
+    danger:
+      "bg-gradient-to-br from-rose-400 to-rose-600 text-white border border-rose-300/30 shadow-[inset_-3px_-3px_6px_rgba(0,0,0,0.15),inset_3px_3px_6px_rgba(255,255,255,0.25)] hover:brightness-105 active:scale-98",
   };
 
   return (

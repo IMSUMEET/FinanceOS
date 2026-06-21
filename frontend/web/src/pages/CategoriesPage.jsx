@@ -1,16 +1,19 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import NoDataYet from "../components/common/NoDataYet";
+import MonthFilterSelect from "../components/filters/MonthFilterSelect";
 import Card from "../components/ui/Card";
 import Pill from "../components/ui/Pill";
 import IconButton from "../components/ui/IconButton";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
-import CategoryDot from "../components/ui/CategoryDot";
+import CategoryBadge from "../components/ui/CategoryBadge";
 import EmptyState from "../components/ui/EmptyState";
 import SectionHeader from "../components/ui/SectionHeader";
 import MiniSparkline from "../components/charts/MiniSparkline";
 import MonthlyCategoryBars from "../components/charts/MonthlyCategoryBars";
+import { useTransactions } from "../context/useTransactions";
 import { usePageFilters } from "../context/usePageFilters";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { categoryColor } from "../utils/categories";
@@ -55,12 +58,7 @@ function CategoryGrid() {
             <Card className="h-full transition hover:shadow-softLg">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <CategoryDot category={c.category} size={10} />
-                    <p className="text-sm font-semibold text-ink-500 dark:text-ink-400">
-                      {c.category}
-                    </p>
-                  </div>
+                  <CategoryBadge category={c.category} size="sm" />
                   <p className="tabular mt-3 text-3xl font-black text-ink-900 dark:text-ink-50">
                     {formatCurrency(c.total)}
                   </p>
@@ -120,7 +118,7 @@ function CategoryDetail({ name }) {
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <CategoryDot category={name} size={12} />
+                <CategoryBadge category={name} size="md" />
                 <p className="text-sm font-semibold text-ink-500 dark:text-ink-400">Category</p>
               </div>
               <h2 className="mt-1 text-3xl font-black text-ink-900 dark:text-ink-50">{name}</h2>
@@ -145,7 +143,7 @@ function CategoryDetail({ name }) {
             {merchantsForCat.slice(0, 6).map((m) => (
               <div
                 key={m.merchant}
-                className="flex items-center justify-between rounded-xl2 bg-[#f8fbff] px-4 py-3 dark:bg-ink-800/60"
+                className="surface-muted flex items-center justify-between px-4 py-3"
               >
                 <div className="min-w-0">
                   <p className="truncate font-bold text-ink-900 dark:text-ink-50">{m.merchant}</p>
@@ -180,7 +178,7 @@ function CategoryDetail({ name }) {
             {txns.map((t) => (
               <li
                 key={t.id}
-                className="grid grid-cols-[1.4fr_1fr_auto] gap-3 px-4 py-3 hover:bg-[#f8fbff] dark:hover:bg-ink-800/60"
+                className="grid grid-cols-[1.4fr_1fr_auto] gap-3 px-4 py-3 hover:bg-ink-50 dark:hover:bg-ink-800/60"
               >
                 <div className="min-w-0">
                   <p className="truncate font-bold text-ink-900 dark:text-ink-50">
@@ -213,14 +211,26 @@ function CategoryDetail({ name }) {
 
 function CategoriesPage() {
   const { name } = useParams();
+  const { transactions } = useTransactions();
   useDocumentTitle(name ? decodeURIComponent(name) : "Categories");
 
   if (name) return <CategoryDetail name={decodeURIComponent(name)} />;
 
+  if (transactions.length === 0) {
+    return (
+      <section className="space-y-5 pt-2">
+        <NoDataYet title="No categories yet" />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-5 pt-2">
       <Card>
-        <SectionHeader eyebrow="Categories" title="How your money is split" />
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <SectionHeader eyebrow="Categories" title="How your money is split" />
+          <MonthFilterSelect pageKey="categories" />
+        </div>
       </Card>
       <CategoryGrid />
     </section>

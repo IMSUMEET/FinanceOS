@@ -1,7 +1,7 @@
 /**
  * Transactions service — the rest of the app should import from here, never
- * call `apiClient` directly. While `USE_MOCK` is true (the default for local
- * dev) every function resolves with seeded mock data so the UI keeps working.
+ * call `apiClient` directly. In mock mode the in-memory store starts empty and
+ * is filled only after the user imports data in the UI.
  *
  * Each method's return shape matches `src/types/schema.json` exactly. The
  * inline `@example` blocks document the response payload the backend should
@@ -10,10 +10,9 @@
 
 import { apiClient, USE_MOCK } from "../api/client";
 import { ENDPOINTS } from "../api/endpoints";
-import seed from "../data/mockTransactions";
 import { categorize, normalizeMerchant } from "../utils/categorize";
 
-let mockStore = [...seed];
+let mockStore = [];
 
 function nextId() {
   return mockStore.reduce((m, r) => Math.max(m, r.id ?? 0), 0) + 1;
@@ -99,6 +98,6 @@ export async function _replaceAllMock(rows) {
 export const _mock = {
   read: () => clone(mockStore),
   reset: () => {
-    mockStore = [...seed];
+    mockStore = [];
   },
 };

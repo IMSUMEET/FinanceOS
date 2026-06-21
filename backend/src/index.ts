@@ -181,3 +181,46 @@ app.post("/api/analyze", async (c) => {
     );
   }
 });
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+app.post("/api/support", async (c) => {
+  let body: { name?: string; email?: string; subject?: string; message?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ ok: false, message: "Invalid JSON body." }, 400);
+  }
+
+  const name = String(body.name ?? "").trim();
+  const email = String(body.email ?? "").trim();
+  const subject = String(body.subject ?? "").trim();
+  const message = String(body.message ?? "").trim();
+
+  if (!name || !email || !subject || !message) {
+    return c.json({ ok: false, message: "All fields are required." }, 400);
+  }
+  if (!EMAIL_RE.test(email)) {
+    return c.json({ ok: false, message: "Invalid email address." }, 400);
+  }
+  if (message.length > 5000) {
+    return c.json({ ok: false, message: "Message is too long." }, 400);
+  }
+
+  const to = process.env.SUPPORT_TO_EMAIL ?? "support@financeos.local";
+  console.log(
+    JSON.stringify({
+      event: "support",
+      to,
+      from: email,
+      name,
+      subject,
+      messagePreview: message.slice(0, 200),
+    }),
+  );
+
+  return c.json({
+    ok: true,
+    message: "Thanks — your message was received. We'll reply by email soon.",
+  });
+});

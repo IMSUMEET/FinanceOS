@@ -1,24 +1,7 @@
-import { Cell, Pie, PieChart, ResponsiveContainer, Sector } from "recharts";
-import { categoryColor } from "../../utils/categories";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { categoryColor, categoryEmoji } from "../../utils/categories";
 import { formatCurrency } from "../../utils/format";
-
-function ActiveShape(props) {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-  return (
-    <g>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius + 8}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-        style={{ filter: "drop-shadow(0 6px 14px rgba(15, 23, 42, 0.18))" }}
-      />
-    </g>
-  );
-}
+import { useTheme } from "../../hooks/useTheme";
 
 function CategoryDonut({
   data,
@@ -28,6 +11,8 @@ function CategoryDonut({
   activeIndex,
   onActiveChange,
 }) {
+  const { theme } = useTheme();
+  const emptySliceColor = theme === "dark" ? "#475569" : "#e5e7eb";
   const safeData = data?.length ? data : [{ category: "—", total: 1 }];
   const sum = total ?? safeData.reduce((acc, d) => acc + (d.total ?? 0), 0);
   const active = activeIndex != null ? safeData[activeIndex] : null;
@@ -50,18 +35,28 @@ function CategoryDonut({
             paddingAngle={2}
             stroke="none"
             isAnimationActive={false}
-            activeIndex={activeIndex ?? -1}
-            activeShape={ActiveShape}
             onMouseLeave={() => setActive(null)}
           >
-            {safeData.map((d, i) => (
-              <Cell
-                key={d.category}
-                fill={d.category === "—" ? "#e5e7eb" : categoryColor(d.category)}
-                onMouseEnter={() => setActive(i)}
-                style={{ cursor: "pointer", outline: "none" }}
-              />
-            ))}
+            {safeData.map((d, i) => {
+              const isActive = activeIndex === i;
+              const hasSelection = activeIndex != null;
+              const fill = d.category === "—" ? emptySliceColor : categoryColor(d.category);
+              return (
+                <Cell
+                  key={d.category}
+                  fill={fill}
+                  fillOpacity={hasSelection ? (isActive ? 1 : 0.35) : 0.88}
+                  stroke={isActive ? fill : "transparent"}
+                  strokeWidth={isActive ? 2 : 0}
+                  onMouseEnter={() => setActive(i)}
+                  style={{
+                    cursor: "pointer",
+                    outline: "none",
+                    transition: "fill-opacity 0.15s ease",
+                  }}
+                />
+              );
+            })}
           </Pie>
         </PieChart>
       </ResponsiveContainer>
@@ -69,10 +64,13 @@ function CategoryDonut({
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
         {active ? (
           <>
-            <p className="truncate text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
+            <span className="text-2xl leading-none" aria-hidden>
+              {categoryEmoji(active.category)}
+            </span>
+            <p className="mt-1 truncate text-xs font-semibold uppercase tracking-wide text-ink-500 dark:text-ink-400">
               {active.category}
             </p>
-            <p className="tabular mt-1 text-2xl font-black text-ink-900 dark:text-ink-50">
+            <p className="tabular mt-1 text-xl font-black text-ink-900 dark:text-ink-50">
               {formatCurrency(active.total, { compact: true })}
             </p>
             {share != null ? (
