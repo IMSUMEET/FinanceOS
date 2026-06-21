@@ -37,15 +37,15 @@ const TOPICS = [
 function TopicRow({ icon, label, hint, color }) {
   const TopicIcon = icon;
   return (
-    <div className="flex items-start gap-3 rounded-xl2 border border-white/5 bg-white/[0.03] px-3.5 py-3">
+    <div className="flex items-start gap-3 rounded-xl2 border border-ink-200/80 bg-white/80 px-3.5 py-3 dark:border-ink-600/45 dark:bg-ink-800/75">
       <div
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${color} shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]`}
       >
         <TopicIcon size={16} className="text-white" aria-hidden />
       </div>
       <div className="min-w-0">
-        <p className="text-sm font-bold text-ink-100">{label}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-ink-400">{hint}</p>
+        <p className="text-sm font-bold text-ink-900 dark:text-ink-100">{label}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-ink-500 dark:text-ink-400">{hint}</p>
       </div>
     </div>
   );
@@ -53,12 +53,14 @@ function TopicRow({ icon, label, hint, color }) {
 
 function HelpSupportAside({ onPickSubject }) {
   return (
-    <div className="flex h-full flex-col rounded-xl3 bg-gradient-to-br from-[#0c1424] via-[#09101d] to-[#070b14] p-6 lg:p-8">
+    <div className="flex h-full flex-col rounded-xl3 border border-ink-200/70 bg-gradient-to-br from-slate-50 via-brand-50/50 to-teal-50/60 p-6 shadow-soft dark:border-l dark:border-ink-700/80 dark:from-slate-900 dark:via-ink-900 dark:to-slate-950 dark:shadow-none lg:p-8">
       <div className="flex flex-1 flex-col justify-center">
         <HelpToolsGraphic size={260} />
 
-        <p className="mt-6 text-center text-lg font-black text-white">Support tools</p>
-        <p className="mx-auto mt-2 max-w-xs text-center text-sm leading-relaxed text-slate-400">
+        <p className="mt-6 text-center text-lg font-black text-ink-900 dark:text-white">
+          Support tools
+        </p>
+        <p className="mx-auto mt-2 max-w-xs text-center text-sm leading-relaxed text-ink-600 dark:text-ink-300">
           Pick a topic below or send a message — we typically reply within one business day.
         </p>
 
@@ -76,8 +78,8 @@ function HelpSupportAside({ onPickSubject }) {
         </div>
       </div>
 
-      <div className="mt-6 flex items-center gap-2 rounded-xl2 border border-white/5 bg-white/[0.03] px-4 py-3 text-xs text-slate-400">
-        <Clock3 size={14} className="shrink-0 text-brand-300" />
+      <div className="mt-6 flex items-center gap-2 rounded-xl2 border border-ink-200/80 bg-white/70 px-4 py-3 text-xs text-ink-500 dark:border-ink-600/45 dark:bg-ink-800/75 dark:text-ink-300">
+        <Clock3 size={14} className="shrink-0 text-brand-600 dark:text-brand-300" />
         <span>Include your bank/card name in the message if the issue is import-related.</span>
       </div>
     </div>

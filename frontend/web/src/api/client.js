@@ -61,12 +61,17 @@ async function request(path, { method = "GET", query, body, headers } = {}) {
     method,
     headers: {
       Accept: "application/json",
-      ...(body !== undefined ? { "Content-Type": "application/json" } : null),
       ...headers,
     },
     credentials: "same-origin",
   };
-  if (body !== undefined) init.body = JSON.stringify(body);
+
+  if (body instanceof FormData) {
+    init.body = body;
+  } else if (body !== undefined) {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(body);
+  }
 
   const response = await fetch(url.toString(), init);
   const data = await parseBody(response);

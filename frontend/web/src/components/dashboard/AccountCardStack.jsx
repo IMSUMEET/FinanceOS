@@ -87,8 +87,8 @@ function UsagePointer({ account }) {
       >
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <TrendingUp size={14} className="text-brand-500" />
-            <span className="text-xs font-bold uppercase tracking-wider text-ink-500 dark:text-ink-400">
+            <TrendingUp size={14} className="text-brand-500 dark:text-brand-300" />
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-600 dark:text-ink-300">
               Spend share
             </span>
           </div>
@@ -96,9 +96,9 @@ function UsagePointer({ account }) {
             {share.toFixed(0)}%
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-ink-200/70 dark:bg-ink-700/70">
+        <div className="h-2.5 overflow-hidden rounded-full bg-ink-200 dark:bg-ink-800/90">
           <Motion.div
-            className={`h-full rounded-full bg-gradient-to-r ${theme.gradient}`}
+            className={`h-full rounded-full bg-gradient-to-r ${theme.barGradient ?? theme.gradient} shadow-[0_0_10px_rgba(99,102,241,0.45)] dark:shadow-[0_0_12px_rgba(167,139,250,0.55)]`}
             initial={{ width: 0 }}
             animate={{ width: `${Math.max(share, 4)}%` }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
@@ -146,11 +146,7 @@ function CardInsights({ account, grandTotal }) {
           <InsightTile
             label="Top category"
             value={
-              account.topCategory ? (
-                <CategoryBadge category={account.topCategory} size="xs" />
-              ) : (
-                "—"
-              )
+              account.topCategory ? <CategoryBadge category={account.topCategory} size="xs" /> : "—"
             }
             sub={
               account.topCategoryTotal
@@ -292,9 +288,7 @@ function AccountCardStack({ accounts, selectedAccount, onSelectAccount, layout =
           ) : null}
         </div>
         <p className="mt-0.5 text-sm text-ink-600 dark:text-ink-300">
-          {hasMultiple
-            ? "One card at a time — rotates automatically"
-            : `${formatCurrency(grandTotal, { compact: true })} · ${totalTxns} txns`}
+          {formatCurrency(grandTotal, { compact: true })} · {totalTxns} txns
         </p>
       </div>
 

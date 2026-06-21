@@ -154,9 +154,9 @@ body {
 }
 
 .dark .clay-input-light {
-  background: rgba(22, 30, 46, 0.88);
-  border: 1px solid rgba(71, 85, 105, 0.5);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  background: rgba(51, 65, 85, 0.55);
+  border: 1px solid rgba(100, 116, 139, 0.55);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 @layer components {
