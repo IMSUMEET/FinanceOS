@@ -13,7 +13,7 @@ const Input = forwardRef(function Input(
       ) : null}
       <input
         ref={ref}
-        className={`h-11 w-full bg-transparent text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none dark:text-ink-100 dark:placeholder:text-ink-500 ${className}`}
+        className={`h-11 w-full bg-transparent text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none dark:text-ink-50 dark:placeholder:text-ink-400 ${className}`}
         {...rest}
       />
     </div>

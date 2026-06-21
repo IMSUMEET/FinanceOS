@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { FileSpreadsheet, Trash2, UploadCloud, Wand2, Loader2, FolderOpen } from "lucide-react";
@@ -406,6 +407,7 @@ const FORMAT_LABELS = {
 
 function UploadPage() {
   useDocumentTitle("Import");
+  const navigate = useNavigate();
   const { transactions, applyAnalysisResult, clearSessionAnalysis, restoredFromStorage } =
     useTransactions();
 
@@ -480,9 +482,8 @@ function UploadPage() {
           throw new Error(result.message || "Analysis failed.");
         }
         await applyAnalysisResult(result);
-        setLastSummary(result.summary);
-        setPhase("success");
         setPendingFiles([]);
+        navigate("/");
         return;
       }
 
@@ -505,16 +506,15 @@ function UploadPage() {
       }
       const analysis = buildMockAnalysisFromRows(allRows, fileMetas);
       await applyAnalysisResult(analysis);
-      setLastSummary(analysis.summary);
-      setPhase("success");
       setPendingFiles([]);
+      navigate("/");
     } catch (e) {
       const msg =
         e?.message || (typeof e === "string" ? e : "Something went wrong. Please try again.");
       setPhase("error");
       setErrorMessage(msg);
     }
-  }, [pendingFiles, applyAnalysisResult]);
+  }, [pendingFiles, applyAnalysisResult, navigate]);
 
   const onDrop = (e) => {
     e.preventDefault();

@@ -3,6 +3,7 @@ import Card from "../components/ui/Card";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import HelpSupportAside from "../components/help/HelpSupportAside";
+import SupportAttachments from "../components/help/SupportAttachments";
 import { submitSupportRequest } from "../services/support";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { Mail, MessageSquare, Send, User } from "lucide-react";
@@ -13,6 +14,8 @@ function HelpSupportPage() {
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [attachments, setAttachments] = useState([]);
+  const [attachmentError, setAttachmentError] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
@@ -20,14 +23,16 @@ function HelpSupportPage() {
   async function onSubmit(e) {
     e.preventDefault();
     setError("");
+    setAttachmentError("");
     setBusy(true);
     try {
-      await submitSupportRequest({ name, email, subject, message });
+      await submitSupportRequest({ name, email, subject, message, attachments });
       setSent(true);
       setName("");
       setEmail("");
       setSubject("");
       setMessage("");
+      setAttachments([]);
     } catch (err) {
       setError(err?.message || "Could not send your message. Please try again.");
     } finally {
@@ -40,11 +45,17 @@ function HelpSupportPage() {
     setSent(false);
   }
 
+  function handleAttachmentsChange(next, err) {
+    setAttachments(next);
+    setAttachmentError(err || "");
+    if (err) setError("");
+  }
+
   return (
     <section className="mx-auto max-w-6xl pt-2">
       <Card padding="none" className="overflow-hidden">
         <div className="grid lg:min-h-[640px] lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="flex flex-col p-6 md:p-8 lg:p-10">
+          <div className="flex flex-col border-b border-ink-200/70 p-6 dark:border-ink-700/80 md:p-8 lg:border-b-0 lg:p-10">
             <p className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-300">
               Help &amp; support
             </p>
@@ -52,8 +63,8 @@ function HelpSupportPage() {
               How can we help?
             </h1>
             <p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-600 dark:text-ink-300">
-              Send us a message about imports, bugs, or feature ideas. We&apos;ll reply to your
-              email.
+              Send us a message about imports, bugs, or feature ideas. Attach screenshots or files
+              if helpful — we&apos;ll reply to your email.
             </p>
 
             <div className="mt-8 flex-1">
@@ -97,9 +108,19 @@ function HelpSupportPage() {
                       required
                       rows={8}
                       placeholder="Describe your issue or question…"
-                      className="w-full rounded-xl2 border border-ink-200 bg-white px-4 py-3 text-sm text-ink-900 shadow-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-200 dark:border-ink-700 dark:bg-ink-800 dark:text-ink-100 dark:focus:border-brand-500 dark:focus:ring-brand-900/40"
+                      className="w-full rounded-xl2 border border-ink-200 bg-white px-4 py-3 text-sm text-ink-900 shadow-sm outline-none transition placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-200 dark:border-ink-600 dark:bg-ink-800/75 dark:text-ink-50 dark:placeholder:text-ink-400 dark:focus:border-brand-500 dark:focus:ring-brand-900/40"
                     />
                   </div>
+                  <SupportAttachments
+                    attachments={attachments}
+                    onChange={handleAttachmentsChange}
+                    disabled={busy}
+                  />
+                  {attachmentError ? (
+                    <p className="rounded-xl2 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">
+                      {attachmentError}
+                    </p>
+                  ) : null}
                   {error ? (
                     <p className="rounded-xl2 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">
                       {error}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { Loader2, UploadCloud, X } from "lucide-react";
@@ -7,6 +8,7 @@ import { useTransactions } from "../../context/useTransactions";
 import { importStatementFiles } from "../../services/statementImport";
 
 function UploadPromptModal({ open, onDismiss }) {
+  const navigate = useNavigate();
   const { applyAnalysisResult } = useTransactions();
   const panelRef = useRef(null);
   const inputRef = useRef(null);
@@ -23,13 +25,15 @@ function UploadPromptModal({ open, onDismiss }) {
       try {
         const analysis = await importStatementFiles(fileList);
         await applyAnalysisResult(analysis);
+        onDismiss?.();
+        navigate("/");
       } catch (e) {
         setError(e?.message || "Could not import those files.");
       } finally {
         setBusy(false);
       }
     },
-    [applyAnalysisResult],
+    [applyAnalysisResult, navigate, onDismiss],
   );
 
   const onDrop = (e) => {
