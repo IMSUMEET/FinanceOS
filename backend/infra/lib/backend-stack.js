@@ -52,7 +52,7 @@ class BackendStack extends Stack {
     const httpApi = new apigwv2.HttpApi(this, "HttpApi", {
       description: "FinanceOS HTTP API (Hono Lambda)",
       corsPreflight: {
-        allowHeaders: ["content-type", "authorization"],
+        allowHeaders: ["content-type", "authorization", "accept"],
         allowMethods: [
           apigwv2.CorsHttpMethod.GET,
           apigwv2.CorsHttpMethod.POST,

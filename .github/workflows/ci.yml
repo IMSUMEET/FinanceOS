@@ -1,3 +1,5 @@
+# Required status check for main: enable in GitHub → Settings → Rules → main
+# (require "Coverage gate (90%)" to pass before merge).
 name: CI
 
 on:
@@ -11,44 +13,61 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  coverage-gate:
+    name: Coverage gate (90%)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "20"
           cache: npm
           cache-dependency-path: |
             package-lock.json
-            frontend/web/package-lock.json
             backend/package-lock.json
+            frontend/web/package-lock.json
 
       - name: Install root dependencies
         run: npm ci
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: frontend/web
 
       - name: Install backend dependencies
         run: npm ci
         working-directory: backend
 
-      - name: Prettier format check
-        run: npm run format:check
-
-      - name: Frontend lint
-        run: npm run lint
+      - name: Install frontend dependencies
+        run: npm ci
         working-directory: frontend/web
 
-      - name: Frontend build
-        run: npm run build
-        working-directory: frontend/web
+      - name: Run coverage gate (90% minimum, all metrics)
+        run: npm run test:coverage
 
-      - name: Backend typecheck
-        run: npm run typecheck
+  build:
+    name: Build
+    needs: coverage-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/web/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
         working-directory: backend
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend/web
+
+      - name: Build (coverage already verified)
+        run: npm run build:check

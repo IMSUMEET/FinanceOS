@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { COVERAGE_THRESHOLD } from "./coverage-threshold.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -21,13 +22,22 @@ const RED = "\x1b[31m";
 
 function bar(pct, width = 24) {
   const filled = Math.round((pct / 100) * width);
-  const color = pct >= 100 ? GREEN : pct >= 90 ? GREEN : pct >= 75 ? YELLOW : RED;
+  const color =
+    pct >= COVERAGE_THRESHOLD ? GREEN : pct >= 75 ? YELLOW : RED;
   return `${color}${"█".repeat(filled)}${DIM}${"░".repeat(Math.max(0, width - filled))}${RESET}`;
 }
 
 function fmtPct(pct) {
-  const color = pct >= 100 ? GREEN : pct >= 90 ? GREEN : pct >= 75 ? YELLOW : RED;
+  const color =
+    pct >= COVERAGE_THRESHOLD ? GREEN : pct >= 75 ? YELLOW : RED;
   return `${color}${pct.toFixed(1).padStart(5)}%${RESET}`;
+}
+
+function meetsThreshold(summary) {
+  const total = summary.total;
+  return ["lines", "statements", "functions", "branches"].every(
+    (metric) => total[metric].pct >= COVERAGE_THRESHOLD,
+  );
 }
 
 function readSummary(packageDir) {
@@ -79,7 +89,7 @@ function printPackageReport({ label, accent }, summary) {
 function printHeader() {
   console.log(`\n${BOLD}╔══════════════════════════════════════════════════════╗${RESET}`);
   console.log(`${BOLD}║${RESET}           ${BOLD}FinanceOS Coverage Report${RESET}                 ${BOLD}║${RESET}`);
-  console.log(`${BOLD}║${RESET}           ${DIM}minimum threshold: 100% all metrics${RESET}     ${BOLD}║${RESET}`);
+  console.log(`${BOLD}║${RESET}           ${DIM}minimum threshold: ${COVERAGE_THRESHOLD}% all metrics${RESET}      ${BOLD}║${RESET}`);
   console.log(`${BOLD}╚══════════════════════════════════════════════════════╝${RESET}`);
 }
 
@@ -101,9 +111,13 @@ function printFooter(allPassed, summaries) {
   }
 
   if (allPassed) {
-    console.log(`\n${GREEN}${BOLD}  ✓ All packages meet the 100% coverage threshold.${RESET}\n`);
+    console.log(
+      `\n${GREEN}${BOLD}  ✓ All packages meet the ${COVERAGE_THRESHOLD}% coverage threshold.${RESET}\n`,
+    );
   } else {
-    console.log(`\n${RED}${BOLD}  ✗ Coverage below threshold or tests failed.${RESET}\n`);
+    console.log(
+      `\n${RED}${BOLD}  ✗ Coverage below ${COVERAGE_THRESHOLD}% threshold or tests failed.${RESET}\n`,
+    );
     process.exit(1);
   }
 }
@@ -117,9 +131,9 @@ for (const pkg of PACKAGES) {
   results.push({ pkg, ok, summary });
 }
 
-const allPassed = results.every((r) => r.ok && r.summary);
+const allPassed = results.every((r) => r.ok && r.summary && meetsThreshold(r.summary));
 if (!allPassed) {
-  console.error(`\n${RED}Coverage run failed.${RESET}`);
+  console.error(`\n${RED}Coverage run failed or below ${COVERAGE_THRESHOLD}%.${RESET}`);
   process.exit(1);
 }
 
@@ -127,4 +141,4 @@ for (const { pkg, summary } of results) {
   printPackageReport(pkg, summary);
 }
 
-printFooter(true, results);
+printFooter(allPassed, results);

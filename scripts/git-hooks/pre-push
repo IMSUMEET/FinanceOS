@@ -1,0 +1,6 @@
+#!/bin/sh
+# Blocks push when scoped coverage is below the repo threshold (see scripts/coverage-threshold.mjs).
+set -e
+cd "$(git rev-parse --show-toplevel)"
+echo "Running coverage gate before push..."
+npm run test:coverage

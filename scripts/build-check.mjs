@@ -2,7 +2,6 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COVERAGE_THRESHOLD } from "./coverage-threshold.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -20,11 +19,10 @@ function run(label, command, args, cwd = root) {
   }
 }
 
-console.log(`\n${BOLD}FinanceOS build${RESET}`);
+console.log(`\n${BOLD}FinanceOS build (compile only)${RESET}`);
 
-run(`Coverage gate (${COVERAGE_THRESHOLD}%)`, "node", ["scripts/coverage-report.mjs"], root);
 run("Backend typecheck", "npm", ["run", "typecheck"], path.join(root, "backend"));
 run("Backend bundle", "npm", ["run", "build"], path.join(root, "backend"));
 run("Frontend production build", "npm", ["run", "build"], path.join(root, "frontend/web"));
 
-console.log(`\n${GREEN}${BOLD}✓ Build complete — all checks passed.${RESET}\n`);
+console.log(`\n${GREEN}${BOLD}✓ Compile complete.${RESET}\n`);

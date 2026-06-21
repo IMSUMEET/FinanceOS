@@ -24,7 +24,16 @@ function throwIfNotOk(res, body) {
   throw err;
 }
 
-/** Build upload-page summary from Lambda JSON (Lambda 1/2 omit `summary`). */
+/** Resolve AI analyzer POST URL (dedicated API Gateway vs local combined server). */
+export function resolveAiAnalyzeUrl() {
+  const base = AI_ANALYZER_BASE_URL;
+  const dedicatedAi = Boolean(String(import.meta.env.VITE_AI_ANALYZER_URL ?? "").trim());
+  if (dedicatedAi && base !== API_BASE_URL) {
+    return `${base}/`;
+  }
+  return `${base}${ENDPOINTS.aiAnalyze}`;
+}
+
 export function normalizeAnalysisResponse(body) {
   if (!body || body.status !== "success") return body;
 
@@ -101,15 +110,13 @@ export async function analyzeCsvWithLlm(csvText) {
     throw new Error("AI analyzer URL is not configured (set VITE_AI_ANALYZER_URL).");
   }
 
-  const url = `${AI_ANALYZER_BASE_URL}${ENDPOINTS.aiAnalyze}`;
+  const url = resolveAiAnalyzeUrl();
   const res = await fetch(url, {
     method: "POST",
     headers: {
-      Accept: "application/json",
       "Content-Type": "text/csv",
     },
     body: csvText,
-    credentials: "same-origin",
   });
 
   const body = await parseJsonResponse(res);

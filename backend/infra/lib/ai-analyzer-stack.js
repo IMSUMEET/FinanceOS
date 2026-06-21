@@ -51,8 +51,9 @@ class FinanceOsAiCsvAnalyzerStack extends Stack {
     const httpApi = new apigwv2.HttpApi(this, "AiAnalyzerHttpApi", {
       description: "FinanceOS AI CSV Analyzer HTTP API Gateway",
       corsPreflight: {
-        allowHeaders: ["content-type", "authorization"],
+        allowHeaders: ["content-type", "authorization", "accept"],
         allowMethods: [
+          apigwv2.CorsHttpMethod.GET,
           apigwv2.CorsHttpMethod.POST,
           apigwv2.CorsHttpMethod.OPTIONS,
         ],
@@ -65,12 +66,18 @@ class FinanceOsAiCsvAnalyzerStack extends Stack {
 
     httpApi.addRoutes({
       path: "/",
-      methods: [apigwv2.HttpMethod.POST, apigwv2.HttpMethod.OPTIONS],
+      methods: [apigwv2.HttpMethod.ANY],
+      integration,
+    });
+
+    httpApi.addRoutes({
+      path: "/{proxy+}",
+      methods: [apigwv2.HttpMethod.ANY],
       integration,
     });
 
     new CfnOutput(this, "AiAnalyzerUrl", {
-      description: "Endpoint URL for the AI CSV Analyzer HTTP API",
+      description: "Endpoint URL for the AI CSV Analyzer HTTP API (POST / or /api/ai-analyze)",
       value: httpApi.apiEndpoint,
     });
   }

@@ -24,7 +24,7 @@ export const aiApp = new Hono();
 aiApp.use("*", async (c, next) => {
   await next();
   c.header("Access-Control-Allow-Origin", "*");
-  c.header("Access-Control-Allow-Headers", "content-type");
+  c.header("Access-Control-Allow-Headers", "content-type, authorization, accept");
   c.header("Access-Control-Allow-Methods", "POST,OPTIONS");
 });
 
@@ -352,7 +352,7 @@ export function mergeAiCategories(transactions: any[], aiResults: any[]): any[] 
   });
 }
 
-aiApp.post("/", async (c) => {
+async function handleAiAnalyzeRequest(c: any) {
   let csvText = "";
 
   // 1. Accept uploaded CSV
@@ -459,7 +459,10 @@ aiApp.post("/", async (c) => {
       insights: aiStatusInsights,
     },
   });
-});
+}
+
+aiApp.post("/", handleAiAnalyzeRequest);
+aiApp.post("/api/ai-analyze", handleAiAnalyzeRequest);
 
 /* v8 ignore next -- AWS Lambda adapter entrypoint */
 export const handler = handle(aiApp);

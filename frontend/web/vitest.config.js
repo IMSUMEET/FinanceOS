@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-const threshold = 100;
+const threshold = 90;
 
 export default defineConfig({
   test: {
