@@ -57,14 +57,14 @@ Run `npm run ci` before push or opening a PR. Fix failures locally — do not di
 | `git commit`    | Husky → lint-staged → Prettier on staged files                              |
 | VS Code save    | Prettier format (if extension installed)                                    |
 | PR to `main`    | GitHub Actions [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) |
-| Merge to `main` | Blocked until `CI / check` passes                                           |
+| Merge to `main` | Blocked until the `check` CI job passes                                     |
 
 ## Branch protection (GitHub)
 
 The **Protect main** ruleset is active on `Oblivion-Labs-Dev/FinanceOS`:
 
 - Pull requests required (no direct pushes to `main`)
-- Required status check: `CI / check`
+- Required status check: `check` (GitHub Actions CI workflow)
 - Force push and branch deletion blocked on `main`
 
 Contributors should:
@@ -89,7 +89,7 @@ Human-readable notes: [`.github/BRANCH_PROTECTION.md`](../../.github/BRANCH_PROT
 2. Work on a feature branch, not `main`
 3. Before commit: staged files will auto-format via Husky
 4. Before push/PR: `npm run ci` from repo root
-5. Open PR to `main`; do not merge until `CI / check` is green
+5. Open PR to `main`; do not merge until the `check` job is green
 
 ## Related guides
 

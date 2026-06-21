@@ -25,7 +25,7 @@ From the **repo root**:
 npm run ci
 ```
 
-This runs Prettier check, frontend ESLint + build, and backend TypeScript typecheck — the same gates as GitHub Actions (`CI / check`).
+This runs Prettier check, frontend ESLint + build, and backend TypeScript typecheck — the same gates as the GitHub Actions `check` job.
 
 Individual steps:
 
@@ -43,7 +43,7 @@ On commit, Husky runs `lint-staged`, which auto-formats staged files with Pretti
 `main` is protected by the **Protect main** ruleset:
 
 - **No direct pushes to `main`** — use a PR
-- **`CI / check` must pass** before merge
+- **The `check` CI job must pass** before merge
 - **No force push** or branch deletion on `main`
 
 Typical workflow:
