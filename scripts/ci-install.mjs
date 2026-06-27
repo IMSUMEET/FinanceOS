@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * CI/Vercel install: build Arsenal from source and link via file: overrides.
- * Avoids GitHub Packages 403 when FinanceOS lacks read_package access.
+ * CI/Vercel install: link Arsenal via vendored tarballs or a local checkout.
+ * Vendored tarballs avoid GitHub Packages 403 and private-repo checkout in CI.
  */
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -11,6 +11,12 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ARSENAL_REPO = "https://github.com/Oblivion-Labs-Dev/Arsenal.git";
 const ARSENAL_REF = process.env.ARSENAL_REF || "feat/initial-monorepo";
+const VENDOR_DIR = path.join(root, "vendor/arsenal");
+const VENDOR_PACKAGES = {
+  "@oblivion-labs-dev/arsenal-shared": "oblivion-labs-dev-arsenal-shared-0.1.0.tgz",
+  "@oblivion-labs-dev/arsenal-backend": "oblivion-labs-dev-arsenal-backend-0.1.0.tgz",
+  "@oblivion-labs-dev/arsenal-frontend": "oblivion-labs-dev-arsenal-frontend-0.1.0.tgz",
+};
 
 const args = process.argv.slice(2);
 const cloneArsenal = args.includes("--clone-arsenal");
@@ -18,6 +24,12 @@ const skipRoot = args.includes("--skip-root");
 const prefixOnly = args.includes("--prefix")
   ? args[args.indexOf("--prefix") + 1]
   : null;
+
+function hasVendorTarballs() {
+  return Object.values(VENDOR_PACKAGES).every((tgz) =>
+    fs.existsSync(path.join(VENDOR_DIR, tgz)),
+  );
+}
 
 function resolveArsenalPath() {
   if (process.env.ARSENAL_PATH) {
@@ -62,12 +74,20 @@ function buildArsenal(arsenalPath) {
   execSync("pnpm run build", { cwd: arsenalPath, stdio: "inherit" });
 }
 
-function arsenalFileDep(baseDir, arsenalPath, pkg) {
-  const rel = path.relative(baseDir, path.join(arsenalPath, "packages", pkg));
+function toFileDep(baseDir, targetPath) {
+  const rel = path.relative(baseDir, targetPath);
   return `file:${rel.split(path.sep).join("/")}`;
 }
 
-function installPrefix(prefix, arsenalPath) {
+function arsenalDep(baseDir, name, arsenalPath, useVendor) {
+  if (useVendor) {
+    return toFileDep(baseDir, path.join(VENDOR_DIR, VENDOR_PACKAGES[name]));
+  }
+  const short = name.replace("@oblivion-labs-dev/arsenal-", "");
+  return toFileDep(baseDir, path.join(arsenalPath, "packages", short));
+}
+
+function installPrefix(prefix, arsenalPath, useVendor) {
   const dir = path.join(root, prefix);
   const pkgPath = path.join(dir, "package.json");
   const original = fs.readFileSync(pkgPath, "utf8");
@@ -83,16 +103,21 @@ function installPrefix(prefix, arsenalPath) {
     return;
   }
 
-  const overrides = { ...(pkg.overrides || {}) };
-  for (const name of arsenalDeps) {
-    const short = name.replace("@oblivion-labs-dev/arsenal-", "");
-    pkg.dependencies[name] = arsenalFileDep(dir, arsenalPath, short);
+  if (useVendor) {
+    const overrides = { ...(pkg.overrides || {}) };
+    for (const [name] of Object.entries(VENDOR_PACKAGES)) {
+      overrides[name] = arsenalDep(dir, name, arsenalPath, true);
+    }
+    pkg.overrides = overrides;
   }
 
-  pkg.overrides = overrides;
+  for (const name of arsenalDeps) {
+    pkg.dependencies[name] = arsenalDep(dir, name, arsenalPath, useVendor);
+  }
+
   fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
   try {
-    console.log(`Installing ${prefix} with local Arsenal file deps...`);
+    console.log(`Installing ${prefix} with local Arsenal deps...`);
     execSync("npm install", { cwd: dir, stdio: "inherit" });
   } finally {
     fs.writeFileSync(pkgPath, original);
@@ -100,19 +125,25 @@ function installPrefix(prefix, arsenalPath) {
 }
 
 function main() {
-  let arsenalPath = resolveArsenalPath();
-  if (!arsenalPath && cloneArsenal) {
-    arsenalPath = path.join(root, "Arsenal");
-    cloneArsenalRepo(arsenalPath);
-  }
-  if (!arsenalPath) {
-    console.error(
-      "Arsenal not found. Set ARSENAL_PATH, checkout to Arsenal/, or pass --clone-arsenal.",
-    );
-    process.exit(1);
-  }
+  const useVendor = hasVendorTarballs();
+  let arsenalPath = null;
 
-  buildArsenal(arsenalPath);
+  if (useVendor) {
+    console.log("Using vendored Arsenal tarballs from vendor/arsenal/");
+  } else {
+    arsenalPath = resolveArsenalPath();
+    if (!arsenalPath && cloneArsenal) {
+      arsenalPath = path.join(root, "Arsenal");
+      cloneArsenalRepo(arsenalPath);
+    }
+    if (!arsenalPath) {
+      console.error(
+        "Arsenal not found. Commit vendor/arsenal tarballs, set ARSENAL_PATH, or pass --clone-arsenal.",
+      );
+      process.exit(1);
+    }
+    buildArsenal(arsenalPath);
+  }
 
   if (!skipRoot) {
     console.log("Installing root dependencies...");
@@ -121,7 +152,7 @@ function main() {
 
   const prefixes = prefixOnly ? [prefixOnly] : ["backend", "frontend/web"];
   for (const prefix of prefixes) {
-    installPrefix(prefix, arsenalPath);
+    installPrefix(prefix, arsenalPath, useVendor);
   }
 }
 

@@ -21,12 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/checkout@v4
-        with:
-          repository: Oblivion-Labs-Dev/Arsenal
-          path: Arsenal
-          ref: feat/initial-monorepo
-
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -36,13 +30,7 @@ jobs:
             backend/package-lock.json
             frontend/web/package-lock.json
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
       - name: Install dependencies
-        env:
-          ARSENAL_PATH: ${{ github.workspace }}/Arsenal
         run: node scripts/ci-install.mjs
 
       - name: Install Playwright browsers
