@@ -23,7 +23,7 @@ export const USE_MOCK = String(RAW_MOCK).toLowerCase() === "true" || API_BASE_UR
 /** True when VITE_AI_ANALYZER_URL points at the dedicated AI analyzer API. */
 export const LLM_ANALYSIS_AVAILABLE = !USE_MOCK && AI_ANALYZER_BASE_URL !== "";
 
-import { ApiError } from "@oblivion-labs/arsenal-frontend";
+import { ApiError } from "@oblivion-labs-dev/arsenal-frontend";
 
 export { ApiError };
 

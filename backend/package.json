@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",
-    "@oblivion-labs/arsenal-backend": "file:../../Arsenal/packages/backend",
-    "@oblivion-labs/arsenal-shared": "file:../../Arsenal/packages/shared",
+    "@oblivion-labs-dev/arsenal-backend": "^0.1.0",
+    "@oblivion-labs-dev/arsenal-shared": "^0.1.0",
     "hono": "^4.6.0",
     "papaparse": "^5.4.1",
     "xlsx": "^0.18.5"

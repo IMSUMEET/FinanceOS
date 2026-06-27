@@ -1,4 +1,7 @@
-import { clearSessionStorageKeys, migrateSessionToLocal } from "@oblivion-labs/arsenal-frontend";
+import {
+  clearSessionStorageKeys,
+  migrateSessionToLocal,
+} from "@oblivion-labs-dev/arsenal-frontend";
 
 /** localStorage key for user-imported analysis (not raw files). */
 export const ANALYSIS_STORAGE_KEY = "finance_os_user_analysis_v1";

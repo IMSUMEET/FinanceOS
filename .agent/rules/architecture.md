@@ -6,7 +6,7 @@ FinanceOS is a **guest-first** spend analyzer:
 
 - **Frontend:** React 19 + Vite + Tailwind (dark mode via `class`)
 - **Backend:** Hono on AWS Lambda (single stack: health, analyze, coach, ai-analyze)
-- **Shared:** `@oblivion-labs/arsenal-*` packages (file dependencies)
+- **Shared:** `@oblivion-labs-dev/arsenal-*` packages (file dependencies)
 
 ## Data flow
 

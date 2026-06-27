@@ -1,4 +1,4 @@
-import { createDocumentTitleHook } from "@oblivion-labs/arsenal-frontend";
+import { createDocumentTitleHook } from "@oblivion-labs-dev/arsenal-frontend";
 
 const useDocumentTitle = createDocumentTitleHook("FinanceOS");
 

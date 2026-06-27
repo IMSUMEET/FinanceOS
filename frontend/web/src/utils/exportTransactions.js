@@ -1,4 +1,4 @@
-import { csvFilename, downloadCsv } from "@oblivion-labs/arsenal-frontend";
+import { csvFilename, downloadCsv } from "@oblivion-labs-dev/arsenal-frontend";
 
 const EXPORT_COLUMNS = [
   "id",

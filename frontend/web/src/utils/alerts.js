@@ -1,4 +1,4 @@
-import { clearSeenIds, markIdsSeen, readSeenIds } from "@oblivion-labs/arsenal-frontend";
+import { clearSeenIds, markIdsSeen, readSeenIds } from "@oblivion-labs-dev/arsenal-frontend";
 import { detectRecurring, topAnomalies, topCategoryMovers } from "./insights";
 import { formatAmountSpend, formatCurrency, formatPct } from "./format";
 import { ALERTS_SEEN_KEY } from "../constants/storage";

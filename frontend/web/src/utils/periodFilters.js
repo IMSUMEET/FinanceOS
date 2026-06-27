@@ -5,7 +5,7 @@ import {
   availableYears as availableYearsShared,
   filterByPeriod,
   buildPeriodOptions,
-} from "@oblivion-labs/arsenal-shared";
+} from "@oblivion-labs-dev/arsenal-shared";
 
 export { FLOW_PERIOD_ALL, FLOW_PERIOD_LAST_12, FLOW_PERIOD_THIS_YEAR };
 

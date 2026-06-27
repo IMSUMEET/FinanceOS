@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { usePersistedState } from "@oblivion-labs/arsenal-frontend";
+import { usePersistedState } from "@oblivion-labs-dev/arsenal-frontend";
 import { AVATAR_VARIANTS } from "../utils/personality";
 
 const STORAGE_KEY = "financeos.profile.v4";

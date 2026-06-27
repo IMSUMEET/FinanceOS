@@ -4,7 +4,7 @@
  * real backend is wired up.
  */
 
-import { safeLocalStorage } from "@oblivion-labs/arsenal-frontend";
+import { safeLocalStorage } from "@oblivion-labs-dev/arsenal-frontend";
 import { apiClient, USE_MOCK } from "../api/client";
 import { ENDPOINTS } from "../api/endpoints";
 

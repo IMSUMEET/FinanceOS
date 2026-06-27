@@ -2,8 +2,8 @@ import {
   OPENROUTER_DEFAULT_BASE_URL,
   OPENROUTER_CHAT_COMPLETIONS_PATH,
   mapToAllowedCategory,
-} from "@oblivion-labs/arsenal-shared";
-import { safeJsonParse } from "@oblivion-labs/arsenal-backend";
+} from "@oblivion-labs-dev/arsenal-shared";
+import { safeJsonParse } from "@oblivion-labs-dev/arsenal-backend";
 import {
   endpointLabel,
   isOpenRouterTimeoutError,

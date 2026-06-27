@@ -5,4 +5,4 @@ export {
   formatDate,
   formatMonth,
   monthKey,
-} from "@oblivion-labs/arsenal-shared";
+} from "@oblivion-labs-dev/arsenal-shared";

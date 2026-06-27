@@ -1,4 +1,4 @@
-import { createThemeHook } from "@oblivion-labs/arsenal-frontend";
+import { createThemeHook } from "@oblivion-labs-dev/arsenal-frontend";
 
 export const useTheme = createThemeHook({
   storageKey: "financeos.theme",

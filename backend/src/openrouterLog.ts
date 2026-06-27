@@ -5,7 +5,7 @@ import {
   Logger,
   readErrorBody,
   truncateForLog,
-} from "@oblivion-labs/arsenal-backend";
+} from "@oblivion-labs-dev/arsenal-backend";
 
 export type OpenRouterOperation = "insights" | "categorization" | "coach_suggestions";
 
@@ -23,7 +23,7 @@ export { endpointLabel };
 export function logOpenRouter(event: OpenRouterLogEvent, data: Record<string, unknown>) {
   openRouterLogger.info(
     event,
-    data as Record<string, import("@oblivion-labs/arsenal-shared").JSONValue | undefined>,
+    data as Record<string, import("@oblivion-labs-dev/arsenal-shared").JSONValue | undefined>,
   );
 }
 

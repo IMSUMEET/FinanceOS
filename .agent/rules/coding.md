@@ -9,8 +9,8 @@
 
 ## Imports
 
-- Backend Arsenal: `@oblivion-labs/arsenal-backend`, `@oblivion-labs/arsenal-shared`
-- Frontend Arsenal: `@oblivion-labs/arsenal-frontend`, `@oblivion-labs/arsenal-shared`
+- Backend Arsenal: `@oblivion-labs-dev/arsenal-backend`, `@oblivion-labs-dev/arsenal-shared`
+- Frontend Arsenal: `@oblivion-labs-dev/arsenal-frontend`, `@oblivion-labs-dev/arsenal-shared`
 - Use `.js` extension in backend TS imports for ESM
 
 ## Error handling
