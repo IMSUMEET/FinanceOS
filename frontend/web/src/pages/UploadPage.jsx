@@ -26,7 +26,6 @@ function UploadPage() {
   const [lastSummary, setLastSummary] = useState(null);
   const [lastAnalysisMode, setLastAnalysisMode] = useState(null);
   const {
-    phase,
     setPhase,
     runningMode,
     setRunningMode,
@@ -51,26 +50,29 @@ function UploadPage() {
     if (folderInputRef.current) folderInputRef.current.value = "";
   }, [resetRunState]);
 
-  const onChooseFiles = useCallback(async (fileList) => {
-    if (!fileList?.length) return;
-    setFlowPhase("idle");
-    setErrorMessage("");
-    resetRunState();
+  const onChooseFiles = useCallback(
+    async (fileList) => {
+      if (!fileList?.length) return;
+      setFlowPhase("idle");
+      setErrorMessage("");
+      resetRunState();
 
-    try {
-      const prepared = await prepareStatementFiles(fileList);
-      setPendingFiles((prev) => {
-        const byName = new Map(prev.map((pf) => [pf.name, pf]));
-        for (const pf of prepared) {
-          byName.set(pf.name, pf);
-        }
-        return Array.from(byName.values());
-      });
-    } catch (e) {
-      setFlowPhase("error");
-      setErrorMessage(e?.message || "Error reading CSV files.");
-    }
-  }, [resetRunState]);
+      try {
+        const prepared = await prepareStatementFiles(fileList);
+        setPendingFiles((prev) => {
+          const byName = new Map(prev.map((pf) => [pf.name, pf]));
+          for (const pf of prepared) {
+            byName.set(pf.name, pf);
+          }
+          return Array.from(byName.values());
+        });
+      } catch (e) {
+        setFlowPhase("error");
+        setErrorMessage(e?.message || "Error reading CSV files.");
+      }
+    },
+    [resetRunState],
+  );
 
   const runAnalysis = useCallback(
     async (mode) => {

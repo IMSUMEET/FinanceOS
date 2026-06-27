@@ -4,7 +4,7 @@ import { formatCurrency } from "@oblivion-labs-dev/arsenal-shared";
 
 describe("Arsenal dependency wiring", () => {
   it("imports cn from @oblivion-labs-dev/arsenal-frontend", () => {
-    expect(cn("a", false && "b", "c")).toBe("a c");
+    expect(cn("a", "c")).toBe("a c");
   });
 
   it("imports formatters from @oblivion-labs-dev/arsenal-shared", () => {

@@ -6,7 +6,9 @@ function CategoryReport({ transactions }) {
   const [selectedCat, setSelectedCat] = useState(null);
 
   const data = useMemo(() => {
-    const expenseTx = transactions.filter(t => t.amount < 0 && t.category !== "Credit Card Payments");
+    const expenseTx = transactions.filter(
+      (t) => t.amount < 0 && t.category !== "Credit Card Payments",
+    );
     const totalSpent = expenseTx.reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
     const expenseMap = {};
@@ -14,16 +16,27 @@ function CategoryReport({ transactions }) {
       expenseMap[t.category] = (expenseMap[t.category] ?? 0) + Math.abs(t.amount);
     }
 
-    return Object.entries(expenseMap).map(([cat, total]) => ({
-      name: cat,
-      value: Math.round(total),
-      percentage: totalSpent > 0 ? ((total / totalSpent) * 100).toFixed(1) : 0,
-    })).sort((a, b) => b.value - a.value);
+    return Object.entries(expenseMap)
+      .map(([cat, total]) => ({
+        name: cat,
+        value: Math.round(total),
+        percentage: totalSpent > 0 ? ((total / totalSpent) * 100).toFixed(1) : 0,
+      }))
+      .sort((a, b) => b.value - a.value);
   }, [transactions]);
 
-  const COLORS = ["#EF4444", "#3B82F6", "#F59E0B", "#EC4899", "#8B5CF6", "#10B981", "#6B7280", "#06B6D4"];
+  const COLORS = [
+    "#EF4444",
+    "#3B82F6",
+    "#F59E0B",
+    "#EC4899",
+    "#8B5CF6",
+    "#10B981",
+    "#6B7280",
+    "#06B6D4",
+  ];
 
-  const handleSliceClick = (data, index) => {
+  const handleSliceClick = (data, _index) => {
     setSelectedCat(selectedCat === data.name ? null : data.name);
   };
 
@@ -47,27 +60,27 @@ function CategoryReport({ transactions }) {
       <div className="flex flex-col md:flex-row items-center gap-6">
         <SafeResponsiveContainer className="h-[300px] w-full md:w-[45%]">
           <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={95}
-                paddingAngle={3}
-                dataKey="value"
-                onClick={handleSliceClick}
-              >
-                {data.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                    stroke={selectedCat === entry.name ? "#000" : "none"}
-                    strokeWidth={2}
-                    className="cursor-pointer hover:opacity-90 transition"
-                  />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={95}
+              paddingAngle={3}
+              dataKey="value"
+              onClick={handleSliceClick}
+            >
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[index % COLORS.length]}
+                  stroke={selectedCat === entry.name ? "#000" : "none"}
+                  strokeWidth={2}
+                  className="cursor-pointer hover:opacity-90 transition"
+                />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
           </PieChart>
         </SafeResponsiveContainer>
 
