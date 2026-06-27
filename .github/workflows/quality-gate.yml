@@ -38,8 +38,8 @@ jobs:
           NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm ci
-          npm ci --prefix backend
-          npm ci --prefix frontend/web
+          npm install --prefix backend
+          npm install --prefix frontend/web
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
