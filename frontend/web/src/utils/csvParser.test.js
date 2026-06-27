@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import * as XLSX from "xlsx";
 import {
   detectFormat,
@@ -19,20 +19,21 @@ describe("detectFormat extended", () => {
     expect(
       detectFormat(["Appears On Your Statement As", "Reference", "Extended Details"], "Amex"),
     ).toBe("amex_credit_card");
+    expect(detectFormat(["Date", "Description", "Amount"], "My Amex Card")).toBe(
+      "amex_credit_card",
+    );
+    expect(detectFormat(["Status", "Debit", "Credit", "Description"])).toBe("citi_credit_card");
+    expect(detectFormat(["Location", "Category", "Date", "Description", "Amount"])).toBe(
+      "playstation_credit_card",
+    );
+    expect(detectFormat(["Trans. Date", "Post Date", "Description", "Amount", "Category"])).toBe(
+      "discover_credit_card",
+    );
     expect(
-      detectFormat(["Date", "Description", "Amount"], "My Amex Card"),
-    ).toBe("amex_credit_card");
-    expect(
-      detectFormat(["Status", "Debit", "Credit", "Description"]),
-    ).toBe("citi_credit_card");
-    expect(
-      detectFormat(["Location", "Category", "Date", "Description", "Amount"]),
-    ).toBe("playstation_credit_card");
-    expect(
-      detectFormat(["Trans. Date", "Post Date", "Description", "Amount", "Category"]),
-    ).toBe("discover_credit_card");
-    expect(
-      detectFormat(["Transaction Date", "Post Date", "Category", "Description", "Amount"], "Chase Amazon"),
+      detectFormat(
+        ["Transaction Date", "Post Date", "Category", "Description", "Amount"],
+        "Chase Amazon",
+      ),
     ).toBe("chase_amazon");
   });
 });
@@ -91,7 +92,10 @@ describe("sheetToRows", () => {
   });
 
   it("returns empty rows when workbook has no usable content", () => {
-    const ws = XLSX.utils.aoa_to_sheet([["", ""], ["", ""]]);
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["", ""],
+      ["", ""],
+    ]);
     expect(sheetToRows(ws)).toEqual([]);
   });
 
@@ -110,12 +114,14 @@ describe("parseRows extended", () => {
   });
 
   it("parses chase amazon rows", () => {
-    const rows = [{
-      "Transaction Date": "06/15/2026",
-      Description: "Store",
-      Amount: "-10.00",
-      Category: "Shopping",
-    }];
+    const rows = [
+      {
+        "Transaction Date": "06/15/2026",
+        Description: "Store",
+        Amount: "-10.00",
+        Category: "Shopping",
+      },
+    ];
     const { mapped } = parseRows(rows, "chase_amazon");
     expect(mapped[0].card_identity).toBe("Chase Amazon");
   });
@@ -130,18 +136,26 @@ describe("parseRows extended", () => {
     const rows = [{ Date: "06/15/2026", Description: "Store", Amount: "12.00" }];
     const positive = parseRows(rows, "unknown");
     expect(positive.mapped[0].amount).toBe(-12);
-    const negative = parseRows([{ Date: "06/15/2026", Description: "Refund", Amount: "-12.00" }], "unknown");
+    const negative = parseRows(
+      [{ Date: "06/15/2026", Description: "Refund", Amount: "-12.00" }],
+      "unknown",
+    );
     expect(negative.mapped[0].amount).toBe(-12);
   });
 
   it("parses capital one credit as positive income-like amount", () => {
-    const rows = [{ "Transaction Date": "06/15/2026", Description: "Refund", Debit: "", Credit: "15.00" }];
+    const rows = [
+      { "Transaction Date": "06/15/2026", Description: "Refund", Debit: "", Credit: "15.00" },
+    ];
     const { mapped } = parseRows(rows, "capital_one_credit_card");
     expect(mapped[0].amount).toBe(15);
   });
 
   it("parses amex and discover as negative spend", () => {
-    const amex = parseRows([{ Date: "06/15/2026", Description: "Store", Amount: "12.00" }], "amex_credit_card");
+    const amex = parseRows(
+      [{ Date: "06/15/2026", Description: "Store", Amount: "12.00" }],
+      "amex_credit_card",
+    );
     expect(amex.mapped[0].amount).toBe(-12);
 
     const discover = parseRows(
@@ -152,7 +166,9 @@ describe("parseRows extended", () => {
   });
 
   it("handles playstation payment category as positive amount", () => {
-    const rows = [{ Date: "06/15/2026", Description: "Payment", Amount: "100", Category: "Payment" }];
+    const rows = [
+      { Date: "06/15/2026", Description: "Payment", Amount: "100", Category: "Payment" },
+    ];
     const { mapped } = parseRows(rows, "playstation_credit_card");
     expect(mapped[0].amount).toBe(100);
     expect(mapped[0].category).toBe("Credit Card Payments");
@@ -169,17 +185,20 @@ describe("parseRows extended", () => {
   });
 
   it("throws descriptive errors for invalid rows", () => {
-    expect(() => parseRows([{ Date: "", Description: "Store", Amount: "1" }], "chase_checking", "file.csv")).toThrow(
-      /Missing date value/,
-    );
-    expect(() => parseRows([{ Date: "06/15/2026", Description: "", Amount: "1" }], "chase_checking")).toThrow(
-      /Missing merchant description/,
-    );
+    expect(() =>
+      parseRows([{ Date: "", Description: "Store", Amount: "1" }], "chase_checking", "file.csv"),
+    ).toThrow(/Missing date value/);
+    expect(() =>
+      parseRows([{ Date: "06/15/2026", Description: "", Amount: "1" }], "chase_checking"),
+    ).toThrow(/Missing merchant description/);
     expect(() =>
       parseRows([{ Date: "06/15/2026", Description: "Store", Amount: "bad" }], "chase_checking"),
     ).toThrow(/Invalid amount value/);
     expect(() =>
-      parseRows([{ Date: "06/15/2026", Description: "Store", Debit: "", Credit: "" }], "citi_credit_card"),
+      parseRows(
+        [{ Date: "06/15/2026", Description: "Store", Debit: "", Credit: "" }],
+        "citi_credit_card",
+      ),
     ).toThrow(/Missing or invalid amount/);
   });
 });

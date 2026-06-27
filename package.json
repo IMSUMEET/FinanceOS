@@ -19,16 +19,31 @@
     "prepare": "husky && node scripts/install-git-hooks.mjs",
     "setup:hooks": "node scripts/install-git-hooks.mjs",
     "test": "npm --prefix backend test && npm --prefix frontend/web test",
+    "test:contracts": "vitest run --config tests/vitest.config.ts tests/contracts",
+    "test:golden": "vitest run --config tests/vitest.config.ts tests/golden",
+    "test:evals": "vitest run --config tests/vitest.config.ts tests/evals",
+    "test:integration": "vitest run --config tests/vitest.config.ts tests/integration",
+    "test:cross": "vitest run --config tests/vitest.config.ts tests/contracts tests/golden tests/evals tests/integration",
     "test:coverage": "node scripts/coverage-report.mjs",
-    "test:e2e": "playwright test --project=api-mock",
+    "test:e2e": "playwright test --project=api-mock --project=ui",
+    "test:e2e:api": "playwright test --project=api-mock",
+    "test:e2e:ui": "playwright test --project=ui",
     "test:e2e:live": "playwright test --project=openrouter-live",
+    "test:quality": "node scripts/quality-gate.mjs",
+    "quality:report": "tsx scripts/generate-quality-report.ts",
     "typecheck": "npm run typecheck --prefix backend"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
+    "@types/node": "^20.17.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.9"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,md,yml,yaml,html}": "prettier --write"

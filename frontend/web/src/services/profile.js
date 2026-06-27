@@ -4,6 +4,7 @@
  * real backend is wired up.
  */
 
+import { safeLocalStorage } from "@oblivion-labs-dev/arsenal-frontend";
 import { apiClient, USE_MOCK } from "../api/client";
 import { ENDPOINTS } from "../api/endpoints";
 
@@ -16,21 +17,12 @@ const DEFAULT_PROFILE = {
 };
 
 function readLocal() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_PROFILE;
-    return { ...DEFAULT_PROFILE, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_PROFILE;
-  }
+  const stored = safeLocalStorage.read(STORAGE_KEY, DEFAULT_PROFILE);
+  return { ...DEFAULT_PROFILE, ...stored };
 }
 
 function writeLocal(next) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // ignore quota / private mode errors
-  }
+  safeLocalStorage.write(STORAGE_KEY, next);
 }
 
 /**

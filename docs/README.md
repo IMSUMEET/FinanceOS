@@ -10,7 +10,13 @@ If you're new, read in this order:
 4. [`design/design-system.md`](./design/design-system.md) — colors, motion, components
 5. [`adr/`](./adr) — accepted architectural decisions
 
-For coding conventions, see [`../CONTRIBUTING.md`](../CONTRIBUTING.md) and [`../skills/`](../skills).
+For coding conventions, see [`../CONTRIBUTING.md`](../CONTRIBUTING.md), [`.agent/`](../.agent), and [`quality/`](./quality).
+
+## Quality engineering
+
+- [`quality/testing-strategy.md`](./quality/testing-strategy.md) — test layers and when to add tests
+- [`quality/coverage.md`](./quality/coverage.md) — thresholds and reports
+- [`quality/architecture.md`](./quality/architecture.md) — self-validating engineering system
 
 ## Layout
 

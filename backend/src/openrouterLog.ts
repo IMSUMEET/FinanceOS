@@ -1,3 +1,12 @@
+import {
+  endpointLabel,
+  errorMessage,
+  isAbortError,
+  Logger,
+  readErrorBody,
+  truncateForLog,
+} from "@oblivion-labs-dev/arsenal-backend";
+
 export type OpenRouterOperation = "insights" | "categorization" | "coach_suggestions";
 
 export type OpenRouterLogEvent =
@@ -7,24 +16,14 @@ export type OpenRouterLogEvent =
   | "openrouter_failure"
   | "openrouter_skipped";
 
-function truncate(str: string, max = 400): string {
-  if (!str) return "";
-  const oneLine = str.replace(/\s+/g, " ").trim();
-  return oneLine.length <= max ? oneLine : `${oneLine.slice(0, max)}…`;
-}
+const openRouterLogger = new Logger({ service: "openrouter" });
 
-export function endpointLabel(url: string): string {
-  return url.includes("openrouter.ai") ? "openrouter" : "custom";
-}
+export { endpointLabel };
 
 export function logOpenRouter(event: OpenRouterLogEvent, data: Record<string, unknown>) {
-  console.log(
-    JSON.stringify({
-      event,
-      service: "openrouter",
-      ts: new Date().toISOString(),
-      ...data,
-    }),
+  openRouterLogger.info(
+    event,
+    data as Record<string, import("@oblivion-labs-dev/arsenal-shared").JSONValue | undefined>,
   );
 }
 
@@ -48,7 +47,7 @@ export function logOpenRouterResponse(
   let parsedPreview: string | undefined;
   if (content) {
     try {
-      parsedPreview = truncate(JSON.stringify(JSON.parse(content)), 1200);
+      parsedPreview = truncateForLog(JSON.stringify(JSON.parse(content)), 1200);
     } catch {
       parsedPreview = undefined;
     }
@@ -61,26 +60,20 @@ export function logOpenRouterResponse(
     responseModel: (fields.resJson as { model?: string })?.model,
     responseId: (fields.resJson as { id?: string })?.id,
     contentLength: content.length,
-    contentPreview: truncate(content, 1200),
+    contentPreview: truncateForLog(content, 1200),
     parsedPreview,
     usage: extractUsage(fields.resJson),
   });
 }
 
 export async function readOpenRouterErrorBody(res: Response): Promise<string> {
-  try {
-    return truncate(await res.text());
-  } catch {
-    return "";
-  }
+  return readErrorBody(res);
 }
 
 export function isOpenRouterTimeoutError(err: unknown): boolean {
-  if (!err || typeof err !== "object") return false;
-  return (err as { name?: string }).name === "AbortError";
+  return isAbortError(err);
 }
 
 export function openRouterErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  return String(err);
+  return errorMessage(err);
 }

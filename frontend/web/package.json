@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:e2e": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -12,6 +13,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@oblivion-labs-dev/arsenal-frontend": "^0.1.0",
+    "@oblivion-labs-dev/arsenal-shared": "^0.1.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.7.0",
     "papaparse": "^5.5.3",

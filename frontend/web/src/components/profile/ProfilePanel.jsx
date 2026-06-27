@@ -90,8 +90,10 @@ function exportCsv(rows) {
 }
 
 function impactTone(impact) {
-  if (impact === "high") return "border-emerald-200 bg-emerald-50/70 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200";
-  if (impact === "low") return "border-ink-200 bg-ink-50/80 text-ink-700 dark:border-ink-700 dark:bg-ink-900/50 dark:text-ink-300";
+  if (impact === "high")
+    return "border-emerald-200 bg-emerald-50/70 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200";
+  if (impact === "low")
+    return "border-ink-200 bg-ink-50/80 text-ink-700 dark:border-ink-700 dark:bg-ink-900/50 dark:text-ink-300";
   return "border-brand-200 bg-brand-50/60 text-brand-800 dark:border-brand-900/50 dark:bg-brand-950/25 dark:text-brand-200";
 }
 
@@ -115,10 +117,7 @@ function ProfilePanel({ onClose }) {
 
   useEffect(() => {
     if (!hasProfile || !transactions.length) {
-      setCoachSuggestions([]);
-      setCoachSource(null);
-      setCoachError("");
-      return;
+      return undefined;
     }
 
     let cancelled = false;

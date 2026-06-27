@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, transition } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Download, RefreshCw, Filter, Calendar } from "lucide-react";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -19,7 +19,7 @@ import HealthDashboardReport from "../components/reports/HealthDashboardReport";
 import AIInsights from "../components/reports/AIInsights";
 
 function ReportsPage() {
-  const { transactions, months } = useTransactions();
+  const { transactions } = useTransactions();
   const [selectedReport, setSelectedReport] = useState(() => {
     return localStorage.getItem("financeos-reports-tab") || "sankey";
   });
@@ -40,9 +40,16 @@ function ReportsPage() {
   };
 
   const handleExport = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + ["Date,Merchant,Amount,Category,Account"].join(",") + "\n"
-      + filteredTransactions.map(t => `${t.date},"${t.merchant_normalized || t.merchant_raw}",${t.amount},"${t.category}","${t.card_identity || "Unknown"}"`).join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      ["Date,Merchant,Amount,Category,Account"].join(",") +
+      "\n" +
+      filteredTransactions
+        .map(
+          (t) =>
+            `${t.date},"${t.merchant_normalized || t.merchant_raw}",${t.amount},"${t.category}","${t.card_identity || "Unknown"}"`,
+        )
+        .join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -54,18 +61,18 @@ function ReportsPage() {
 
   // Extract unique accounts & categories for filter options
   const accountOptions = useMemo(() => {
-    const set = new Set(transactions.map(t => t.card_identity).filter(Boolean));
+    const set = new Set(transactions.map((t) => t.card_identity).filter(Boolean));
     return ["all", ...Array.from(set)];
   }, [transactions]);
 
   const categoryOptions = useMemo(() => {
-    const set = new Set(transactions.map(t => t.category).filter(Boolean));
+    const set = new Set(transactions.map((t) => t.category).filter(Boolean));
     return ["all", ...Array.from(set)];
   }, [transactions]);
 
   // Apply filters locally for Reports
   const filteredTransactions = useMemo(() => {
-    const list = transactions.filter(t => {
+    const list = transactions.filter((t) => {
       // Date Range Filter
       if (dateRange.start && t.date < dateRange.start) return false;
       if (dateRange.end && t.date > dateRange.end) return false;
@@ -80,9 +87,9 @@ function ReportsPage() {
     });
 
     // Synthesize mock paycheck if there are no positive income entries, to make reports look complete and beautiful
-    const hasIncome = list.some(t => t.amount > 0 && t.category !== "Credit Card Payments");
+    const hasIncome = list.some((t) => t.amount > 0 && t.category !== "Credit Card Payments");
     if (!hasIncome && list.length > 0) {
-      const dates = list.map(t => t.date).sort();
+      const dates = list.map((t) => t.date).sort();
       const firstDate = dates[0] || "2026-04-01";
 
       list.push({
@@ -91,7 +98,7 @@ function ReportsPage() {
         merchant_raw: "Corporate Payroll Direct Deposit",
         merchant_normalized: "Paychecks",
         description: "Monthly salary paycheck",
-        amount: 4200.00,
+        amount: 4200.0,
         category: "Income",
         card_identity: "Chase Checking",
       });
@@ -110,21 +117,21 @@ function ReportsPage() {
           {/* Date Picker */}
           <div className="flex items-center gap-2 rounded-xl border border-ink-200 bg-white px-3 py-1.5 dark:border-ink-800 dark:bg-ink-900">
             <Calendar size={15} className="text-ink-400" />
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={dateRange.start}
-              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+              onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
               className="bg-transparent text-xs focus:outline-none dark:text-ink-50"
             />
             <span className="text-xs text-ink-400">to</span>
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={dateRange.end}
-              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+              onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
               className="bg-transparent text-xs focus:outline-none dark:text-ink-50"
             />
             {(dateRange.start || dateRange.end) && (
-              <button 
+              <button
                 onClick={() => setDateRange({ start: "", end: "" })}
                 className="text-[10px] text-rose-500 font-semibold hover:underline"
               >
@@ -140,9 +147,13 @@ function ReportsPage() {
             className="rounded-xl border border-ink-200 bg-white px-3 py-2 text-xs font-semibold focus:outline-none dark:border-ink-800 dark:bg-ink-900 dark:text-ink-50"
           >
             <option value="all">All Accounts</option>
-            {accountOptions.filter(acc => acc !== "all").map(acc => (
-              <option key={acc} value={acc}>{acc}</option>
-            ))}
+            {accountOptions
+              .filter((acc) => acc !== "all")
+              .map((acc) => (
+                <option key={acc} value={acc}>
+                  {acc}
+                </option>
+              ))}
           </select>
 
           {/* Category Filter */}
@@ -152,13 +163,28 @@ function ReportsPage() {
             className="rounded-xl border border-ink-200 bg-white px-3 py-2 text-xs font-semibold focus:outline-none dark:border-ink-800 dark:bg-ink-900 dark:text-ink-50"
           >
             <option value="all">All Categories</option>
-            {categoryOptions.filter(cat => cat !== "all").map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
+            {categoryOptions
+              .filter((cat) => cat !== "all")
+              .map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
           </select>
 
-          <Button variant="ghost" icon={RefreshCw} onClick={handleRefresh} className={loading ? "animate-spin" : ""} title="Refresh reports" />
-          <Button variant="ghost" icon={Download} onClick={handleExport} title="Export active report dataset" />
+          <Button
+            variant="ghost"
+            icon={RefreshCw}
+            onClick={handleRefresh}
+            className={loading ? "animate-spin" : ""}
+            title="Refresh reports"
+          />
+          <Button
+            variant="ghost"
+            icon={Download}
+            onClick={handleExport}
+            title="Export active report dataset"
+          />
         </div>
       </Card>
 
@@ -173,9 +199,12 @@ function ReportsPage() {
         {filteredTransactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Filter size={48} className="text-ink-300 dark:text-ink-700 mb-4" />
-            <h3 className="text-lg font-bold text-ink-900 dark:text-ink-100">No data matches your filters</h3>
+            <h3 className="text-lg font-bold text-ink-900 dark:text-ink-100">
+              No data matches your filters
+            </h3>
             <p className="text-sm text-ink-500 dark:text-ink-400 mt-1 max-w-sm">
-              Try adjusting your date range, category, or account filters to display the chart visualizations.
+              Try adjusting your date range, category, or account filters to display the chart
+              visualizations.
             </p>
           </div>
         ) : (
@@ -183,14 +212,22 @@ function ReportsPage() {
             {selectedReport === "sankey" && <SankeyReport transactions={filteredTransactions} />}
             {selectedReport === "treemap" && <TreemapReport transactions={filteredTransactions} />}
             {selectedReport === "trends" && <TrendReport transactions={filteredTransactions} />}
-            {selectedReport === "category" && <CategoryReport transactions={filteredTransactions} />}
+            {selectedReport === "category" && (
+              <CategoryReport transactions={filteredTransactions} />
+            )}
             {selectedReport === "budget" && <BudgetReport transactions={filteredTransactions} />}
-            {selectedReport === "waterfall" && <WaterfallReport transactions={filteredTransactions} />}
+            {selectedReport === "waterfall" && (
+              <WaterfallReport transactions={filteredTransactions} />
+            )}
             {selectedReport === "heatmap" && <HeatmapReport transactions={filteredTransactions} />}
             {selectedReport === "income" && <IncomeReport transactions={filteredTransactions} />}
             {selectedReport === "savings" && <SavingsReport transactions={filteredTransactions} />}
-            {selectedReport === "networth" && <NetWorthReport transactions={filteredTransactions} />}
-            {selectedReport === "health" && <HealthDashboardReport transactions={filteredTransactions} />}
+            {selectedReport === "networth" && (
+              <NetWorthReport transactions={filteredTransactions} />
+            )}
+            {selectedReport === "health" && (
+              <HealthDashboardReport transactions={filteredTransactions} />
+            )}
           </div>
         )}
       </Card>

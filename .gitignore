@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+.pack-cache/
 
 # Build / bundler output
 dist/
@@ -32,6 +33,7 @@ lerna-debug.log*
 # Test / coverage
 coverage/
 .nyc_output/
+quality-reports/
 playwright-report/
 test-results/
 .playwright/

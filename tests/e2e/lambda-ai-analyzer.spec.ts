@@ -3,7 +3,7 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 import { fetchOpenRouterMockRequests } from "./helpers/openrouter-mock.js";
 
-const sampleCsvPath = path.resolve("e2e/fixtures/sample.csv");
+const sampleCsvPath = path.resolve("tests/e2e/fixtures/sample.csv");
 
 test.describe("Lambda 2 — AI analyzer API", () => {
   test("POST /api/ai-analyze categorizes CSV and returns static insights", async ({ request }) => {
@@ -23,8 +23,8 @@ test.describe("Lambda 2 — AI analyzer API", () => {
     expect(body.aiStatus.categorization).toBe("local");
     expect(body.aiStatus.insights).toBe("static");
 
-    const foodTxn = body.transactions.find(
-      (t: { description: string }) => t.description.includes("Whole Foods"),
+    const foodTxn = body.transactions.find((t: { description: string }) =>
+      t.description.includes("Whole Foods"),
     );
     expect(foodTxn?.finalCategory ?? foodTxn?.category).toBe("Food");
 

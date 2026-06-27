@@ -1,0 +1,6 @@
+{
+  "status": "success",
+  "suggestionCount": 3,
+  "impacts": ["high", "medium", "low"],
+  "sources": ["fallback", "openrouter"]
+}

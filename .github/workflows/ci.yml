@@ -1,73 +1,15 @@
-# Required status check for main: enable in GitHub → Settings → Rules → main
-# (require "Coverage gate (90%)" to pass before merge).
-name: CI
+# CI — superseded by Quality Gate workflow
+#
+# Branch protection should require: "Quality Gate" (see .github/workflows/quality-gate.yml)
+# This file is kept for manual triggers only to avoid duplicate CI runs.
+
+name: CI (legacy)
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch:
 
 jobs:
-  coverage-gate:
-    name: Coverage gate (90%)
+  note:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            backend/package-lock.json
-            frontend/web/package-lock.json
-
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Install backend dependencies
-        run: npm ci
-        working-directory: backend
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: frontend/web
-
-      - name: Run coverage gate (90% minimum, all metrics)
-        run: npm run test:coverage
-
-  build:
-    name: Build
-    needs: coverage-gate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            backend/package-lock.json
-            frontend/web/package-lock.json
-
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Install backend dependencies
-        run: npm ci
-        working-directory: backend
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: frontend/web
-
-      - name: Build (coverage already verified)
-        run: npm run build:check
+      - run: echo "Use .github/workflows/quality-gate.yml for PR checks"

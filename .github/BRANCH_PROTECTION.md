@@ -1,6 +1,8 @@
-# Main branch protection (90% coverage)
+# Main branch protection (Quality Gate)
 
-CI enforces **≥ 90%** coverage (lines, statements, functions, branches) on scoped modules in backend and frontend before build.
+CI enforces the full **Quality Gate** (typecheck → lint → unit → coverage ≥90% → contracts → golden → integration → Playwright → AI evals → build).
+
+Workflow: [`.github/workflows/quality-gate.yml`](./workflows/quality-gate.yml)
 
 ## GitHub rules (one-time setup)
 

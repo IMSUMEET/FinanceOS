@@ -1,16 +1,6 @@
-import { useEffect } from "react";
+import { createDocumentTitleHook } from "@oblivion-labs-dev/arsenal-frontend";
 
-const DEFAULT_SUFFIX = "FinanceOS";
+const useDocumentTitle = createDocumentTitleHook("FinanceOS");
 
-export function useDocumentTitle(title) {
-  useEffect(() => {
-    if (typeof document === "undefined") return undefined;
-    const previous = document.title;
-    document.title = title ? `${title} · ${DEFAULT_SUFFIX}` : DEFAULT_SUFFIX;
-    return () => {
-      document.title = previous;
-    };
-  }, [title]);
-}
-
+export { useDocumentTitle };
 export default useDocumentTitle;

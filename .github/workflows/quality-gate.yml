@@ -1,0 +1,104 @@
+name: Quality Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: quality-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/web/package-lock.json
+
+      - name: Install dependencies
+        run: node scripts/ci-install.mjs
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Unit Tests
+        run: npm test
+
+      - name: Coverage
+        run: npm run test:coverage
+
+      - name: Contract Tests
+        run: npm run test:contracts
+
+      - name: Golden Tests
+        run: npm run test:golden
+
+      - name: Integration Tests
+        run: npm run test:integration
+
+      - name: Playwright
+        run: npm run test:e2e
+        env:
+          CI: "1"
+
+      - name: AI Evaluation Tests
+        run: npm run test:evals
+
+      - name: Build
+        run: npm run build:check
+
+      - name: Generate quality report
+        if: always()
+        run: npm run quality:report
+
+      - name: Upload quality artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-reports
+          path: |
+            quality-reports/
+            backend/coverage/
+            frontend/web/coverage/
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+      - name: Write gate results for PR report
+        if: success()
+        run: |
+          node -e "
+          const fs=require('fs');
+          const steps=['TypeScript','ESLint','Unit Tests','Coverage','Contract Tests','Golden Tests','Integration Tests','Playwright','AI Evaluation Tests','Build'];
+          fs.mkdirSync('quality-reports',{recursive:true});
+          fs.writeFileSync('quality-reports/gate-results.json', JSON.stringify({passed:true, results: steps.map(n=>({name:n, ok:true, durationMs:0}))}, null, 2));
+          "
+
+      - name: Re-upload reports after gate results
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-reports-final
+          path: quality-reports/
+          retention-days: 14

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { test, expect } from "@playwright/test";
 
-const sampleCsvPath = path.resolve("e2e/fixtures/sample.csv");
+const sampleCsvPath = path.resolve("tests/e2e/fixtures/sample.csv");
 
 test.describe("Lambda 1 — CSV analyze API", () => {
   test("GET /health returns ok", async ({ request }) => {

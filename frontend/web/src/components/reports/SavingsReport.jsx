@@ -17,19 +17,21 @@ function SavingsReport({ transactions }) {
       }
     }
 
-    const list = Object.entries(monthsMap).map(([m, val]) => {
-      const saved = val.income > val.expenses ? val.income - val.expenses : 0;
-      const rate = val.income > 0 ? (saved / val.income) * 100 : 0;
-      return {
-        month: m,
-        saved: Math.round(saved),
-        rate: Math.round(rate),
-      };
-    }).sort((a, b) => a.month.localeCompare(b.month));
+    const list = Object.entries(monthsMap)
+      .map(([m, val]) => {
+        const saved = val.income > val.expenses ? val.income - val.expenses : 0;
+        const rate = val.income > 0 ? (saved / val.income) * 100 : 0;
+        return {
+          month: m,
+          saved: Math.round(saved),
+          rate: Math.round(rate),
+        };
+      })
+      .sort((a, b) => a.month.localeCompare(b.month));
 
     // Calculate cumulative savings
     let runningTotal = 0;
-    list.forEach(item => {
+    list.forEach((item) => {
       runningTotal += item.saved;
       item.cumulative = runningTotal;
     });
@@ -40,8 +42,7 @@ function SavingsReport({ transactions }) {
   const stats = useMemo(() => {
     if (!data.length) return { avgRate: 0, bestMonth: "N/A", worstMonth: "N/A", currentRate: 0 };
 
-    const totalSaved = data.reduce((sum, item) => sum + item.saved, 0);
-    const rates = data.map(item => item.rate);
+    const rates = data.map((item) => item.rate);
     const avgRate = rates.reduce((sum, r) => sum + r, 0) / rates.length;
     const currentRate = data[data.length - 1]?.rate ?? 0;
 
@@ -50,7 +51,7 @@ function SavingsReport({ transactions }) {
     let worstVal = Infinity;
     let worstMonth = "";
 
-    data.forEach(item => {
+    data.forEach((item) => {
       if (item.saved > bestVal) {
         bestVal = item.saved;
         bestMonth = item.month;
@@ -92,18 +93,28 @@ function SavingsReport({ transactions }) {
       </div>
 
       <div>
-        <h3 className="text-md font-bold text-ink-900 dark:text-ink-50">Savings Rate & Accumulation</h3>
-        <p className="text-xs text-ink-500">Dual chart plotting monthly saved cash vs overall savings rate</p>
+        <h3 className="text-md font-bold text-ink-900 dark:text-ink-50">
+          Savings Rate & Accumulation
+        </h3>
+        <p className="text-xs text-ink-500">
+          Dual chart plotting monthly saved cash vs overall savings rate
+        </p>
       </div>
 
       <SafeResponsiveContainer className="h-[320px] w-full">
         <ComposedChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="month" stroke="#888" fontSize={10} />
-            <YAxis stroke="#888" fontSize={10} />
-            <Tooltip />
-            <Bar dataKey="saved" fill="#3B82F6" name="Amount Saved ($)" radius={[4, 4, 0, 0]} />
-            <Line type="monotone" dataKey="rate" stroke="#10B981" strokeWidth={2.5} name="Savings Rate (%)" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="month" stroke="#888" fontSize={10} />
+          <YAxis stroke="#888" fontSize={10} />
+          <Tooltip />
+          <Bar dataKey="saved" fill="#3B82F6" name="Amount Saved ($)" radius={[4, 4, 0, 0]} />
+          <Line
+            type="monotone"
+            dataKey="rate"
+            stroke="#10B981"
+            strokeWidth={2.5}
+            name="Savings Rate (%)"
+          />
         </ComposedChart>
       </SafeResponsiveContainer>
     </div>
