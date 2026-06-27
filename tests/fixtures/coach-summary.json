@@ -1,0 +1,10 @@
+{
+  "period": { "start": "2026-01-01", "end": "2026-06-01" },
+  "totalTransactions": 5,
+  "totalIncome": 4000,
+  "totalExpenses": 2500,
+  "netCashFlow": 1500,
+  "savingsRate": 37.5,
+  "topCategories": [{ "category": "Food", "total": 600 }],
+  "topMerchants": [{ "merchant": "Whole Foods", "total": 200 }]
+}

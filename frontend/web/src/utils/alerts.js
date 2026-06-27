@@ -1,35 +1,18 @@
+import { clearSeenIds, markIdsSeen, readSeenIds } from "@oblivion-labs/arsenal-frontend";
 import { detectRecurring, topAnomalies, topCategoryMovers } from "./insights";
 import { formatAmountSpend, formatCurrency, formatPct } from "./format";
 import { ALERTS_SEEN_KEY } from "../constants/storage";
 
 export function readSeenAlertIds() {
-  try {
-    const raw = localStorage.getItem(ALERTS_SEEN_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw);
-    return new Set(Array.isArray(parsed) ? parsed : []);
-  } catch {
-    return new Set();
-  }
+  return readSeenIds(ALERTS_SEEN_KEY);
 }
 
 export function markAlertsSeen(ids) {
-  if (!ids?.length) return;
-  const seen = readSeenAlertIds();
-  for (const id of ids) seen.add(id);
-  try {
-    localStorage.setItem(ALERTS_SEEN_KEY, JSON.stringify([...seen]));
-  } catch {
-    /* ignore */
-  }
+  markIdsSeen(ALERTS_SEEN_KEY, ids);
 }
 
 export function clearSeenAlerts() {
-  try {
-    localStorage.removeItem(ALERTS_SEEN_KEY);
-  } catch {
-    /* ignore */
-  }
+  clearSeenIds(ALERTS_SEEN_KEY);
 }
 
 export function buildAlerts(transactions) {

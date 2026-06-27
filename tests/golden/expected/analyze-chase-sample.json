@@ -1,0 +1,15 @@
+{
+  "status": "success",
+  "mode": "local-categorization-static-suggestions",
+  "transactionCount": 3,
+  "merchants": ["Employer Payroll", "Netflix Subscription", "Whole Foods Market"],
+  "categories": ["Entertainment", "Food", "Other"],
+  "reportData": {
+    "totalIncome": 3200,
+    "totalExpenses": 58,
+    "netCashFlow": 3142,
+    "savingsRate": 98.17
+  },
+  "aiStatus": "static",
+  "insightKeys": ["anomalies", "observations", "recommendations", "riskLevel", "score", "summary"]
+}

@@ -47,8 +47,22 @@ describe("buildReportData branch coverage", () => {
 
   it("sorts monthly trend, reuses merchant totals, and uses localCategory fallback", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-07-15", amount: 1000, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "2", date: "2026-06-01", amount: -40, type: "expense", localCategory: "Food", merchant: "Cafe" },
+      {
+        id: "1",
+        date: "2026-07-15",
+        amount: 1000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "2",
+        date: "2026-06-01",
+        amount: -40,
+        type: "expense",
+        localCategory: "Food",
+        merchant: "Cafe",
+      },
       { id: "3", date: "2026-06-10", amount: -10, type: "expense", merchant: "Cafe" },
       { id: "4", date: "2026-07-20", amount: undefined, type: "expense", merchant: "Store" },
     ]);
@@ -57,12 +71,46 @@ describe("buildReportData branch coverage", () => {
     expect(report.monthlyTrend[1]?.month).toBe("2026-07");
     expect(report.topMerchants.find((m) => m.merchant === "Cafe")?.count).toBe(2);
   });
+
+  it("excludes Transfers from expense totals and monthly expenses", () => {
+    const report = buildReportData([
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 3000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Pay",
+      },
+      {
+        id: "2",
+        date: "2026-06-02",
+        amount: -800,
+        type: "expense",
+        finalCategory: "Transfers",
+        merchant: "Xfer",
+      },
+      {
+        id: "3",
+        date: "2026-06-03",
+        amount: -120,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Cafe",
+      },
+    ]);
+    expect(report.totalExpenses).toBe(120);
+    expect(report.categoryTotals.Transfers).toBe(800);
+  });
 });
 
 describe("validateInsights branch coverage", () => {
   it("falls back for NaN score values", () => {
     const report = buildReportData([]);
-    const validated = validateInsights({ summary: "ok", score: Number.NaN, riskLevel: "low" }, report);
+    const validated = validateInsights(
+      { summary: "ok", score: Number.NaN, riskLevel: "low" },
+      report,
+    );
     expect(validated.score).toBe(70);
   });
 
@@ -73,24 +121,30 @@ describe("validateInsights branch coverage", () => {
         summary: "ok",
         score: 75,
         riskLevel: "high",
-        observations: [{
-          title: "Spending",
-          message: "High food spend",
-          severity: "warning",
-          category: "Food",
-        }],
-        recommendations: [{
-          title: "Cut dining",
-          message: "Cook more",
-          impact: "high",
-          estimatedMonthlySavings: 120,
-        }],
-        anomalies: [{
-          title: "Large charge",
-          message: "Unusual",
-          severity: "critical",
-          amount: 500,
-        }],
+        observations: [
+          {
+            title: "Spending",
+            message: "High food spend",
+            severity: "warning",
+            category: "Food",
+          },
+        ],
+        recommendations: [
+          {
+            title: "Cut dining",
+            message: "Cook more",
+            impact: "high",
+            estimatedMonthlySavings: 120,
+          },
+        ],
+        anomalies: [
+          {
+            title: "Large charge",
+            message: "Unusual",
+            severity: "critical",
+            amount: 500,
+          },
+        ],
       },
       report,
     );
@@ -101,15 +155,31 @@ describe("validateInsights branch coverage", () => {
 
   it("pads recommendations to exactly three items", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
-      { id: "2", date: "2026-06-02", amount: -50, type: "expense", finalCategory: "Food", merchant: "Cafe" },
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 1000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Job",
+      },
+      {
+        id: "2",
+        date: "2026-06-02",
+        amount: -50,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Cafe",
+      },
     ]);
     const validated = validateInsights(
       {
         summary: "ok",
         score: 60,
         riskLevel: "low",
-        recommendations: [{ title: "Only one", message: "Trim food", impact: "medium", estimatedMonthlySavings: 5 }],
+        recommendations: [
+          { title: "Only one", message: "Trim food", impact: "medium", estimatedMonthlySavings: 5 },
+        ],
       },
       report,
     );
@@ -119,9 +189,30 @@ describe("validateInsights branch coverage", () => {
 
   it("preserves recommendation breakdown arrays from LLM output", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
-      { id: "2", date: "2026-06-02", amount: -500, type: "expense", finalCategory: "Food", merchant: "Cafe" },
-      { id: "3", date: "2026-06-03", amount: -300, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 1000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Job",
+      },
+      {
+        id: "2",
+        date: "2026-06-02",
+        amount: -500,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Cafe",
+      },
+      {
+        id: "3",
+        date: "2026-06-03",
+        amount: -300,
+        type: "expense",
+        finalCategory: "Transportation",
+        merchant: "Shell",
+      },
     ]);
     const validated = validateInsights(
       {
@@ -149,7 +240,14 @@ describe("validateInsights branch coverage", () => {
 
   it("normalizes invalid breakdown entries from LLM output", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 1000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Job",
+      },
     ]);
     const validated = validateInsights(
       {
@@ -195,18 +293,20 @@ describe("generateInsightsWithOpenRouter branch coverage", () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              summary: "All good",
-              score: 80,
-              riskLevel: "low",
-              observations: [],
-              recommendations: [],
-              anomalies: [],
-            }),
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                summary: "All good",
+                score: 80,
+                riskLevel: "low",
+                observations: [],
+                recommendations: [],
+                anomalies: [],
+              }),
+            },
           },
-        }],
+        ],
       }),
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -222,17 +322,47 @@ describe("generateInsightsWithOpenRouter branch coverage", () => {
 describe("generateStaticInsights", () => {
   it("builds a deterministic summary from reportData", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 3200, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "2", date: "2026-06-02", amount: -42.5, type: "expense", finalCategory: "Food", merchant: "Whole Foods" },
-      { id: "3", date: "2026-06-03", amount: -120, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
-      { id: "4", date: "2026-06-04", amount: -80, type: "expense", finalCategory: "Shopping", merchant: "Amazon" },
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 3200,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "2",
+        date: "2026-06-02",
+        amount: -42.5,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Whole Foods",
+      },
+      {
+        id: "3",
+        date: "2026-06-03",
+        amount: -120,
+        type: "expense",
+        finalCategory: "Transportation",
+        merchant: "Shell",
+      },
+      {
+        id: "4",
+        date: "2026-06-04",
+        amount: -80,
+        type: "expense",
+        finalCategory: "Shopping",
+        merchant: "Amazon",
+      },
     ]);
     const insights = generateStaticInsights(report);
     expect(insights.summary).toContain("income");
     expect(insights.summary).toContain("Transportation");
     expect(insights.observations.length).toBeGreaterThan(0);
     expect(insights.recommendations).toHaveLength(3);
-    expect(insights.recommendations[0]?.title).toMatch(/Trim your top spending categories|Where you spend most/);
+    expect(insights.recommendations[0]?.title).toMatch(
+      /Trim your top spending categories|Where you spend most/,
+    );
     expect(insights.recommendations[0]?.breakdown?.length).toBeGreaterThan(0);
     expect(insights.recommendations[0]?.estimatedMonthlySavings).toBeLessThan(200);
     expect(insights.score).toBeGreaterThan(0);
@@ -240,51 +370,178 @@ describe("generateStaticInsights", () => {
 
   it("merges top categories and adds trend recommendation when spending rises", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "2", date: "2026-01-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
-      { id: "3", date: "2026-01-10", amount: -600, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
-      { id: "4", date: "2026-02-05", amount: -1200, type: "expense", finalCategory: "Food", merchant: "Grocer" },
-      { id: "5", date: "2026-02-10", amount: -900, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
-      { id: "6", date: "2026-02-12", amount: -300, type: "expense", finalCategory: "Shopping", merchant: "Amazon" },
+      {
+        id: "1",
+        date: "2026-01-01",
+        amount: 5000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "2",
+        date: "2026-01-05",
+        amount: -900,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
+      {
+        id: "3",
+        date: "2026-01-10",
+        amount: -600,
+        type: "expense",
+        finalCategory: "Transportation",
+        merchant: "Shell",
+      },
+      {
+        id: "4",
+        date: "2026-02-05",
+        amount: -1200,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
+      {
+        id: "5",
+        date: "2026-02-10",
+        amount: -900,
+        type: "expense",
+        finalCategory: "Transportation",
+        merchant: "Shell",
+      },
+      {
+        id: "6",
+        date: "2026-02-12",
+        amount: -300,
+        type: "expense",
+        finalCategory: "Shopping",
+        merchant: "Amazon",
+      },
     ]);
     const insights = generateStaticInsights(report);
     expect(insights.recommendations[0]?.title).toBe("Trim your top spending categories");
     expect(insights.recommendations[0]?.breakdown?.length).toBe(3);
-    expect(insights.recommendations.some((r) => r.title === "Reverse the spending uptick")).toBe(true);
+    expect(insights.recommendations.some((r) => r.title === "Reverse the spending uptick")).toBe(
+      true,
+    );
     expect(insights.observations[0]?.title).toBe("Spending concentration");
   });
 
   it("uses cash-flow and savings recommendations for distinct actions", () => {
     const deficit = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
-      { id: "2", date: "2026-06-02", amount: -800, type: "expense", finalCategory: "Food", merchant: "Cafe" },
-      { id: "3", date: "2026-06-03", amount: -600, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 1000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Job",
+      },
+      {
+        id: "2",
+        date: "2026-06-02",
+        amount: -800,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Cafe",
+      },
+      {
+        id: "3",
+        date: "2026-06-03",
+        amount: -600,
+        type: "expense",
+        finalCategory: "Transportation",
+        merchant: "Shell",
+      },
     ]);
     const deficitInsights = generateStaticInsights(deficit);
-    expect(deficitInsights.recommendations.some((r) => r.title === "Close the cash-flow gap")).toBe(true);
-
-    const lowSavings = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Job" },
-      { id: "2", date: "2026-06-02", amount: -4800, type: "expense", finalCategory: "Food", merchant: "Cafe" },
-    ]);
-    const lowSavingsInsights = generateStaticInsights(lowSavings);
-    expect(lowSavingsInsights.recommendations.some((r) => r.title === "Grow your savings rate")).toBe(true);
-
-    const healthy = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Job" },
-      { id: "2", date: "2026-06-02", amount: -2000, type: "expense", finalCategory: "Food", merchant: "Cafe" },
-      { id: "3", date: "2026-06-03", amount: -500, type: "expense", finalCategory: "Shopping", merchant: "Amazon" },
-    ]);
-    expect(generateStaticInsights(healthy).recommendations.some((r) => r.title === "Set monthly category caps")).toBe(
+    expect(deficitInsights.recommendations.some((r) => r.title === "Close the cash-flow gap")).toBe(
       true,
     );
+
+    const lowSavings = buildReportData([
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 5000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Job",
+      },
+      {
+        id: "2",
+        date: "2026-06-02",
+        amount: -4800,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Cafe",
+      },
+    ]);
+    const lowSavingsInsights = generateStaticInsights(lowSavings);
+    expect(
+      lowSavingsInsights.recommendations.some((r) => r.title === "Grow your savings rate"),
+    ).toBe(true);
+
+    const healthy = buildReportData([
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 5000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Job",
+      },
+      {
+        id: "2",
+        date: "2026-06-02",
+        amount: -2000,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Cafe",
+      },
+      {
+        id: "3",
+        date: "2026-06-03",
+        amount: -500,
+        type: "expense",
+        finalCategory: "Shopping",
+        merchant: "Amazon",
+      },
+    ]);
+    expect(
+      generateStaticInsights(healthy).recommendations.some(
+        (r) => r.title === "Set monthly category caps",
+      ),
+    ).toBe(true);
   });
 
   it("buildStaticInsightsPrompt includes category ranks and month count", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "2", date: "2026-01-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
-      { id: "3", date: "2026-02-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      {
+        id: "1",
+        date: "2026-01-01",
+        amount: 5000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "2",
+        date: "2026-01-05",
+        amount: -900,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
+      {
+        id: "3",
+        date: "2026-02-05",
+        amount: -900,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
     ]);
     const prompt = buildStaticInsightsPrompt(report);
     expect(prompt).toContain("enrichedFinancialSummary");
@@ -296,10 +553,38 @@ describe("generateStaticInsights", () => {
 
   it("buildEnrichedFinancialSummary pre-computes percentages and trend fields", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "2", date: "2026-01-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
-      { id: "3", date: "2026-02-05", amount: -1200, type: "expense", finalCategory: "Food", merchant: "Grocer" },
-      { id: "4", date: "2026-02-10", amount: -300, type: "expense", finalCategory: "Transportation", merchant: "Shell" },
+      {
+        id: "1",
+        date: "2026-01-01",
+        amount: 5000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "2",
+        date: "2026-01-05",
+        amount: -900,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
+      {
+        id: "3",
+        date: "2026-02-05",
+        amount: -1200,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
+      {
+        id: "4",
+        date: "2026-02-10",
+        amount: -300,
+        type: "expense",
+        finalCategory: "Transportation",
+        merchant: "Shell",
+      },
     ]);
     const enriched = buildEnrichedFinancialSummary(report);
     expect(enriched.categoryPercentages.Food).toBeGreaterThan(0);
@@ -313,27 +598,104 @@ describe("generateStaticInsights", () => {
 
   it("computes flat and down spending trend directions", () => {
     const flatReport = buildReportData([
-      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "2", date: "2026-01-05", amount: -1000, type: "expense", finalCategory: "Food", merchant: "Grocer" },
-      { id: "3", date: "2026-02-05", amount: -1020, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      {
+        id: "1",
+        date: "2026-01-01",
+        amount: 5000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "2",
+        date: "2026-01-05",
+        amount: -1000,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
+      {
+        id: "3",
+        date: "2026-02-05",
+        amount: -1020,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
     ]);
     expect(buildEnrichedFinancialSummary(flatReport).spendingTrendDirection).toBe("flat");
 
     const downReport = buildReportData([
-      { id: "1", date: "2026-01-01", amount: 5000, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "2", date: "2026-01-05", amount: -1500, type: "expense", finalCategory: "Food", merchant: "Grocer" },
-      { id: "3", date: "2026-02-05", amount: -900, type: "expense", finalCategory: "Food", merchant: "Grocer" },
+      {
+        id: "1",
+        date: "2026-01-01",
+        amount: 5000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "2",
+        date: "2026-01-05",
+        amount: -1500,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
+      {
+        id: "3",
+        date: "2026-02-05",
+        amount: -900,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Grocer",
+      },
     ]);
     expect(buildEnrichedFinancialSummary(downReport).spendingTrendDirection).toBe("down");
   });
 
   it("flags large expense anomalies in static insights", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-05-01", amount: 3000, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "2", date: "2026-05-02", amount: -40, type: "expense", finalCategory: "Food", merchant: "Cafe" },
-      { id: "3", date: "2026-06-01", amount: 3000, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "4", date: "2026-06-02", amount: -50, type: "expense", finalCategory: "Food", merchant: "Cafe" },
-      { id: "5", date: "2026-06-03", amount: -2500, type: "expense", finalCategory: "Shopping", merchant: "Electronics" },
+      {
+        id: "1",
+        date: "2026-05-01",
+        amount: 3000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "2",
+        date: "2026-05-02",
+        amount: -40,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Cafe",
+      },
+      {
+        id: "3",
+        date: "2026-06-01",
+        amount: 3000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "4",
+        date: "2026-06-02",
+        amount: -50,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Cafe",
+      },
+      {
+        id: "5",
+        date: "2026-06-03",
+        amount: -2500,
+        type: "expense",
+        finalCategory: "Shopping",
+        merchant: "Electronics",
+      },
     ]);
     const insights = generateStaticInsights(report);
     expect(insights.anomalies.length).toBeGreaterThan(0);
@@ -342,7 +704,14 @@ describe("generateStaticInsights", () => {
 
   it("buildInsightsLlmPrompt includes deduplication rules", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Job" },
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 1000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Job",
+      },
     ]);
     const prompt = buildInsightsLlmPrompt(buildEnrichedFinancialSummary(report));
     expect(prompt).toContain("Recommendation uniqueness");
@@ -358,7 +727,14 @@ describe("generateStaticInsights", () => {
 describe("fallbackInsights", () => {
   it("delegates to generateStaticInsights", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 100, type: "income", finalCategory: "Income", merchant: "Job" },
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 100,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Job",
+      },
     ]);
     const insights = fallbackInsights(report);
     expect(insights.observations[0]?.category).toBeTruthy();
@@ -401,6 +777,14 @@ describe("coach suggestions", () => {
     expect(result.source).toBe("fallback");
   });
 
+  it("customizes first fallback suggestion for top merchant", () => {
+    const result = fallbackCoachSuggestions({
+      ...sampleSummary,
+      topMerchants: [{ merchant: "Whole Foods", total: 400 }],
+    });
+    expect(result.suggestions[0]?.title).toContain("Whole Foods");
+  });
+
   it("pads validateCoachSuggestions to three items", () => {
     const suggestions = validateCoachSuggestions(
       [{ title: "One", message: "Do it", impact: "high", estimatedMonthlySavings: 10 }],
@@ -410,6 +794,21 @@ describe("coach suggestions", () => {
     expect(suggestions[0]?.title).toBe("One");
   });
 
+  it("coerces invalid coach suggestion fields from fallback slots", () => {
+    const suggestions = validateCoachSuggestions(
+      [
+        { title: 42, message: null, impact: "critical", estimatedMonthlySavings: "n/a" },
+        null,
+        { title: "Keep", message: "Valid", impact: "low", estimatedMonthlySavings: 12 },
+      ],
+      sampleSummary,
+    );
+    expect(suggestions).toHaveLength(3);
+    expect(typeof suggestions[0]?.title).toBe("string");
+    expect(["low", "medium", "high"]).toContain(suggestions[0]?.impact);
+    expect(typeof suggestions[1]?.estimatedMonthlySavings).toBe("number");
+  });
+
   it("calls OpenRouter for coach suggestions when key is set", async () => {
     vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
     vi.stubGlobal(
@@ -417,17 +816,24 @@ describe("coach suggestions", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
-          choices: [{
-            message: {
-              content: JSON.stringify({
-                suggestions: [
-                  { title: "A", message: "First", impact: "high", estimatedMonthlySavings: 50 },
-                  { title: "B", message: "Second", impact: "medium", estimatedMonthlySavings: 30 },
-                  { title: "C", message: "Third", impact: "low", estimatedMonthlySavings: 10 },
-                ],
-              }),
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  suggestions: [
+                    { title: "A", message: "First", impact: "high", estimatedMonthlySavings: 50 },
+                    {
+                      title: "B",
+                      message: "Second",
+                      impact: "medium",
+                      estimatedMonthlySavings: 30,
+                    },
+                    { title: "C", message: "Third", impact: "low", estimatedMonthlySavings: 10 },
+                  ],
+                }),
+              },
             },
-          }],
+          ],
         }),
       }),
     );
@@ -469,6 +875,28 @@ describe("coach suggestions", () => {
         }),
       }),
     );
+    const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
+    expect(result.source).toBe("fallback");
+  });
+
+  it("falls back when coach HTTP response is not ok", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+        text: async () => "bad gateway",
+      }),
+    );
+    const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
+    expect(result.source).toBe("fallback");
+    expect(result.suggestions).toHaveLength(3);
+  });
+
+  it("falls back when coach fetch throws", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "mock-key");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
     expect(result.source).toBe("fallback");
   });

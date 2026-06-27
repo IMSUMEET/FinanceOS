@@ -7,6 +7,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     setupFiles: ["src/test/setup.js"],
+    reporters: ["default", ["junit", { outputFile: "coverage/junit.xml" }]],
     coverage: {
       provider: "v8",
       include: [
@@ -19,11 +20,8 @@ export default defineConfig({
         "src/utils/houseSaleChartData.js",
         "src/utils/personality.js",
       ],
-      exclude: [
-        "src/utils/**/*.test.js",
-        "src/utils/csvParser.js",
-      ],
-      reporter: ["text", "json-summary", "html"],
+      exclude: ["src/utils/**/*.test.js", "src/utils/csvParser.js"],
+      reporter: ["text", "json-summary", "html", "lcov"],
       reportsDirectory: "./coverage",
       thresholds: {
         statements: threshold,

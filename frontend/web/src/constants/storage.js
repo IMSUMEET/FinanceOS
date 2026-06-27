@@ -1,3 +1,5 @@
+import { clearSessionStorageKeys, migrateSessionToLocal } from "@oblivion-labs/arsenal-frontend";
+
 /** localStorage key for user-imported analysis (not raw files). */
 export const ANALYSIS_STORAGE_KEY = "finance_os_user_analysis_v1";
 
@@ -14,24 +16,9 @@ export const LEGACY_ANALYSIS_SESSION_KEYS = ["finance_os_latest_analysis"];
 export const LEGACY_SESSION_ANALYSIS_KEY = "finance_os_user_analysis_v1";
 
 export function clearLegacyAnalysisSessions() {
-  for (const key of LEGACY_ANALYSIS_SESSION_KEYS) {
-    try {
-      sessionStorage.removeItem(key);
-    } catch {
-      /* ignore */
-    }
-  }
+  clearSessionStorageKeys(LEGACY_ANALYSIS_SESSION_KEYS);
 }
 
 export function migrateSessionAnalysisToLocal() {
-  try {
-    const raw = sessionStorage.getItem(LEGACY_SESSION_ANALYSIS_KEY);
-    if (!raw) return;
-    if (!localStorage.getItem(ANALYSIS_STORAGE_KEY)) {
-      localStorage.setItem(ANALYSIS_STORAGE_KEY, raw);
-    }
-    sessionStorage.removeItem(LEGACY_SESSION_ANALYSIS_KEY);
-  } catch {
-    /* ignore */
-  }
+  migrateSessionToLocal(LEGACY_SESSION_ANALYSIS_KEY, ANALYSIS_STORAGE_KEY);
 }

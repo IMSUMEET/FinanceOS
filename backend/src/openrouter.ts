@@ -1,4 +1,10 @@
 import {
+  OPENROUTER_DEFAULT_BASE_URL,
+  OPENROUTER_CHAT_COMPLETIONS_PATH,
+  mapToAllowedCategory,
+} from "@oblivion-labs/arsenal-shared";
+import { safeJsonParse } from "@oblivion-labs/arsenal-backend";
+import {
   endpointLabel,
   isOpenRouterTimeoutError,
   logOpenRouter,
@@ -6,6 +12,8 @@ import {
   openRouterErrorMessage,
   readOpenRouterErrorBody,
 } from "./openrouterLog.js";
+
+export { mapToAllowedCategory, safeJsonParse };
 
 export interface ReportData {
   period: {
@@ -68,7 +76,13 @@ export interface EnrichedFinancialSummary {
     monthlyAvg: number;
     sharePct: number;
   }[];
-  topMerchants: { merchant: string; total: number; count: number; sharePct: number; monthlyAvg: number }[];
+  topMerchants: {
+    merchant: string;
+    total: number;
+    count: number;
+    sharePct: number;
+    monthlyAvg: number;
+  }[];
 }
 
 export interface InsightsGenerationResult {
@@ -108,21 +122,8 @@ export interface AIInsights {
 
 /** Override with OPENROUTER_API_URL in tests (Playwright mock server). */
 export const OPENROUTER_CHAT_COMPLETIONS_URL =
-  process.env.OPENROUTER_API_URL ?? "https://openrouter.ai/api/v1/chat/completions";
-
-export function mapToAllowedCategory(cat: string): string {
-  const c = (cat || "").toLowerCase().trim();
-  if (c.includes("income") || c.includes("salary") || c.includes("paycheck")) return "Income";
-  if (c.includes("housing") || c.includes("rent") || c.includes("mortgage") || c.includes("repairs")) return "Housing";
-  if (c.includes("food") || c.includes("dining") || c.includes("groceries") || c.includes("restaurant") || c.includes("coffee") || c.includes("starbucks") || c.includes("sweetgreen")) return "Food";
-  if (c.includes("transport") || c.includes("gas") || c.includes("car") || c.includes("ride") || c.includes("uber") || c.includes("lyft") || c.includes("fuel") || c.includes("chevron") || c.includes("shell")) return "Transportation";
-  if (c.includes("shopping") || c.includes("amazon") || c.includes("target") || c.includes("walmart") || c.includes("retail")) return "Shopping";
-  if (c.includes("bill") || c.includes("utility") || c.includes("utilities") || c.includes("verizon") || c.includes("internet") || c.includes("phone")) return "Bills & Utilities";
-  if (c.includes("health") || c.includes("medical") || c.includes("pharmacy")) return "Health";
-  if (c.includes("entertainment") || c.includes("subscription") || c.includes("subscriptions") || c.includes("netflix") || c.includes("spotify") || c.includes("movie") || c.includes("game")) return "Entertainment";
-  if (c.includes("transfer") || c.includes("payments") || c.includes("payment") || c.includes("payup")) return "Transfers";
-  return "Other";
-}
+  process.env.OPENROUTER_API_URL ??
+  `${OPENROUTER_DEFAULT_BASE_URL}${OPENROUTER_CHAT_COMPLETIONS_PATH}`;
 
 export function buildReportData(transactions: any[]): ReportData {
   const allowedCategories = [
@@ -135,7 +136,7 @@ export function buildReportData(transactions: any[]): ReportData {
     "Health",
     "Entertainment",
     "Transfers",
-    "Other"
+    "Other",
   ];
 
   const dates = transactions.map((t) => t.date).sort();
@@ -542,7 +543,11 @@ function buildCategorySpendRecommendation(
   const monthly = monthlyFromPeriod(periodTotal, monthCount);
   const savings = savingsFromMonthlyCut(monthly);
   const rankLabel =
-    rank === 1 ? "Where you spend most" : rank === 2 ? "Second-biggest category" : "Third-biggest category";
+    rank === 1
+      ? "Where you spend most"
+      : rank === 2
+        ? "Second-biggest category"
+        : "Third-biggest category";
 
   return {
     title: `${rankLabel}: ${category}`,
@@ -553,7 +558,9 @@ function buildCategorySpendRecommendation(
 }
 
 /** One recommendation card for the top 2–3 categories (deduplicated root cause). */
-function buildMergedCategoryRecommendation(enriched: EnrichedFinancialSummary): RecommendationItem | null {
+function buildMergedCategoryRecommendation(
+  enriched: EnrichedFinancialSummary,
+): RecommendationItem | null {
   const rows = enriched.topCategories.slice(0, 3);
   if (rows.length === 0) return null;
 
@@ -611,7 +618,7 @@ function buildMerchantSpendRecommendation(
   count: number,
   monthCount: number,
 ): RecommendationItem {
-  const monthly = monthlyFromPeriod( periodTotal, monthCount);
+  const monthly = monthlyFromPeriod(periodTotal, monthCount);
   const savings = savingsFromMonthlyCut(monthly, 0.15);
 
   return {
@@ -699,7 +706,8 @@ function buildSpendingRecommendations(reportData: ReportData): RecommendationIte
   while (unique.length < 3) {
     unique.push({
       title: "Review your import",
-      message: "Re-run AI analysis after adding another month of transactions for sharper category comparisons.",
+      message:
+        "Re-run AI analysis after adding another month of transactions for sharper category comparisons.",
       impact: "low",
       estimatedMonthlySavings: 0,
     });
@@ -733,7 +741,8 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
         },
         {
           title: "Run AI analysis",
-          message: "Use the Import page AI analyzer to generate three personalized savings suggestions.",
+          message:
+            "Use the Import page AI analyzer to generate three personalized savings suggestions.",
           impact: "low",
           estimatedMonthlySavings: 0,
         },
@@ -809,8 +818,7 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
   if (topMerchant) {
     observations.push({
       title: `Largest merchant: ${topMerchant.merchant}`,
-      message:
-        `${topMerchant.merchant} is ${topMerchant.sharePct}% of spend (~$${topMerchant.monthlyAvg.toLocaleString()}/mo, ${topMerchant.count} transaction(s)).`,
+      message: `${topMerchant.merchant} is ${topMerchant.sharePct}% of spend (~$${topMerchant.monthlyAvg.toLocaleString()}/mo, ${topMerchant.count} transaction(s)).`,
       severity: "info",
       category: topCatName,
     });
@@ -823,8 +831,7 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
         : "n/a";
     observations.push({
       title: "Spending trend",
-      message:
-        `Expenses ${spendingTrendDirection === "up" ? "rose" : spendingTrendDirection === "down" ? "fell" : "held steady"} from $${monthOverMonthChange.previousExpenses.toLocaleString()} (${monthOverMonthChange.previousMonth}) to $${monthOverMonthChange.currentExpenses.toLocaleString()} (${monthOverMonthChange.currentMonth}), ${pctLabel} month-over-month.`,
+      message: `Expenses ${spendingTrendDirection === "up" ? "rose" : spendingTrendDirection === "down" ? "fell" : "held steady"} from $${monthOverMonthChange.previousExpenses.toLocaleString()} (${monthOverMonthChange.previousMonth}) to $${monthOverMonthChange.currentExpenses.toLocaleString()} (${monthOverMonthChange.currentMonth}), ${pctLabel} month-over-month.`,
       severity: spendingTrendDirection === "up" ? "warning" : "info",
       category: "Trend",
     });
@@ -856,8 +863,7 @@ export function generateStaticInsights(reportData: ReportData): AIInsights {
   ) {
     anomalies.push({
       title: "Large expense",
-      message:
-        `${highestTransaction.merchant} on ${highestTransaction.date} was $${highestTransaction.amount.toLocaleString()}, well above your ~$${averageMonthlySpend.toLocaleString()}/mo average.`,
+      message: `${highestTransaction.merchant} on ${highestTransaction.date} was $${highestTransaction.amount.toLocaleString()}, well above your ~$${averageMonthlySpend.toLocaleString()}/mo average.`,
       severity: "warning",
       amount: highestTransaction.amount,
     });
@@ -878,33 +884,6 @@ export function fallbackInsights(reportData: ReportData): AIInsights {
   return generateStaticInsights(reportData);
 }
 
-export function safeJsonParse(text: string): any {
-  try {
-    let clean = text.trim();
-    // Strip markdown JSON block if present
-    if (clean.startsWith("```")) {
-      const match = clean.match(/^(?:```[a-zA-Z]*\n?)([\s\S]*?)(?:\n?```)$/);
-      if (match && match[1]) {
-        clean = match[1].trim();
-      }
-    }
-    return JSON.parse(clean);
-  } catch (e) {
-    // Try to extract json from text if extra characters exist
-    try {
-      const startIdx = text.indexOf("{");
-      const endIdx = text.lastIndexOf("}");
-      if (startIdx !== -1 && endIdx !== -1) {
-        const sliced = text.slice(startIdx, endIdx + 1);
-        return JSON.parse(sliced);
-      }
-    } catch {
-      // ignore
-    }
-    return null;
-  }
-}
-
 export function validateInsights(insights: any, reportData: ReportData): AIInsights {
   const fallback = fallbackInsights(reportData);
   if (!insights || typeof insights !== "object") {
@@ -915,14 +894,18 @@ export function validateInsights(insights: any, reportData: ReportData): AIInsig
   let score = typeof insights.score === "number" ? insights.score : fallback.score;
   if (score < 0 || score > 100 || isNaN(score)) score = 70;
 
-  const riskLevel = ["low", "medium", "high"].includes(insights.riskLevel) ? insights.riskLevel : "low";
+  const riskLevel = ["low", "medium", "high"].includes(insights.riskLevel)
+    ? insights.riskLevel
+    : "low";
 
-  const observations = Array.isArray(insights.observations) ? insights.observations.map((o: any) => ({
-    title: typeof o?.title === "string" ? o.title : "Observation",
-    message: typeof o?.message === "string" ? o.message : "",
-    severity: ["info", "warning", "critical"].includes(o?.severity) ? o.severity : "info",
-    category: typeof o?.category === "string" ? o.category : "General",
-  })) : fallback.observations;
+  const observations = Array.isArray(insights.observations)
+    ? insights.observations.map((o: any) => ({
+        title: typeof o?.title === "string" ? o.title : "Observation",
+        message: typeof o?.message === "string" ? o.message : "",
+        severity: ["info", "warning", "critical"].includes(o?.severity) ? o.severity : "info",
+        category: typeof o?.category === "string" ? o.category : "General",
+      }))
+    : fallback.observations;
 
   const recommendations = Array.isArray(insights.recommendations)
     ? insights.recommendations.map((r: any) => ({
@@ -1011,7 +994,7 @@ export async function generateInsightsWithOpenRouter(
     const res = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": appUrl,
         "X-OpenRouter-Title": "FinanceOS",
@@ -1019,7 +1002,7 @@ export async function generateInsightsWithOpenRouter(
       body: JSON.stringify({
         model: model,
         messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
       }),
       signal: controller.signal,
     });
@@ -1131,7 +1114,8 @@ export function fallbackCoachSuggestions(summary: CoachSummary): CoachSuggestion
           ? `Net cash flow is positive ($${summary.netCashFlow}). Automate transfers to savings on payday.`
           : `Expenses exceed income by $${Math.abs(summary.netCashFlow)}. Trim discretionary ${topCat} purchases first.`,
       impact: summary.netCashFlow >= 0 ? "medium" : "high",
-      estimatedMonthlySavings: summary.netCashFlow >= 0 ? 50 : Math.round(summary.totalExpenses * 0.08) || 40,
+      estimatedMonthlySavings:
+        summary.netCashFlow >= 0 ? 50 : Math.round(summary.totalExpenses * 0.08) || 40,
     },
   ];
 
@@ -1154,13 +1138,15 @@ export function validateCoachSuggestions(raw: unknown, summary: CoachSummary): C
   const parsed: CoachSuggestion[] = raw
     .filter((item) => item && typeof item === "object")
     .map((item: any, idx) => ({
-      title: typeof item.title === "string" ? item.title : fallback[idx]?.title ?? "Suggestion",
-      message: typeof item.message === "string" ? item.message : fallback[idx]?.message ?? "",
-      impact: ["low", "medium", "high"].includes(item.impact) ? item.impact : fallback[idx]?.impact ?? "medium",
+      title: typeof item.title === "string" ? item.title : (fallback[idx]?.title ?? "Suggestion"),
+      message: typeof item.message === "string" ? item.message : (fallback[idx]?.message ?? ""),
+      impact: ["low", "medium", "high"].includes(item.impact)
+        ? item.impact
+        : (fallback[idx]?.impact ?? "medium"),
       estimatedMonthlySavings:
         typeof item.estimatedMonthlySavings === "number"
           ? item.estimatedMonthlySavings
-          : fallback[idx]?.estimatedMonthlySavings ?? 0,
+          : (fallback[idx]?.estimatedMonthlySavings ?? 0),
     }))
     .slice(0, 3);
 
@@ -1284,7 +1270,10 @@ ${JSON.stringify(summary, null, 2)}`;
       });
     }
 
-    const suggestions = validateCoachSuggestions(parsed.suggestions, summary);
+    const suggestions = validateCoachSuggestions(
+      (parsed as { suggestions?: unknown }).suggestions,
+      summary,
+    );
     logOpenRouter("openrouter_success", {
       operation: "coach_suggestions",
       model,

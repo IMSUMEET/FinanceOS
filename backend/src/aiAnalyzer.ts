@@ -144,9 +144,18 @@ export function getLocalCategoryHint(transaction: any) {
     const rawText = `${transaction.merchant || ""} ${transaction.description || ""}`.toLowerCase();
     if (rawText.includes("payroll") || rawText.includes("salary") || rawText.includes("paycheck")) {
       allowed = "Income";
-    } else if (rawText.includes("rent") || rawText.includes("mortgage") || rawText.includes("housing")) {
+    } else if (
+      rawText.includes("rent") ||
+      rawText.includes("mortgage") ||
+      rawText.includes("housing")
+    ) {
       allowed = "Housing";
-    } else if (rawText.includes("zelle") || rawText.includes("venmo") || rawText.includes("transfer") || rawText.includes("wire")) {
+    } else if (
+      rawText.includes("zelle") ||
+      rawText.includes("venmo") ||
+      rawText.includes("transfer") ||
+      rawText.includes("wire")
+    ) {
       allowed = "Transfers";
     }
   }
@@ -256,7 +265,7 @@ ${JSON.stringify(
     localConfidence: t.localConfidence,
   })),
   null,
-  2
+  2,
 )}`;
 
   const controller = new AbortController();
@@ -266,7 +275,7 @@ ${JSON.stringify(
     const res = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": appUrl,
         "X-OpenRouter-Title": "FinanceOS",
@@ -274,7 +283,7 @@ ${JSON.stringify(
       body: JSON.stringify({
         model: model,
         messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
       }),
       signal: controller.signal,
     });
@@ -302,7 +311,7 @@ ${JSON.stringify(
       return failCategorization({ status: res.status, error: "empty_response" });
     }
 
-    const parsed = safeJsonParse(content);
+    const parsed = safeJsonParse(content) as { categorizedTransactions?: unknown[] } | null;
     const categorized = parsed?.categorizedTransactions || [];
     if (!categorized.length) {
       return failCategorization({
@@ -347,12 +356,13 @@ export function mergeAiCategories(transactions: any[], aiResults: any[]): any[] 
     "Health",
     "Entertainment",
     "Transfers",
-    "Other"
+    "Other",
   ];
 
   return transactions.map((t) => {
     const aiRes = aiMap.get(t.id);
-    const aiCategory = aiRes?.aiCategory && allowedCategories.includes(aiRes.aiCategory) ? aiRes.aiCategory : null;
+    const aiCategory =
+      aiRes?.aiCategory && allowedCategories.includes(aiRes.aiCategory) ? aiRes.aiCategory : null;
     const aiConfidence = typeof aiRes?.aiConfidence === "number" ? aiRes.aiConfidence : 0;
 
     let finalCategory = "Other";
@@ -380,141 +390,141 @@ export function mergeAiCategories(transactions: any[], aiResults: any[]): any[] 
       category: finalCategory,
       source: "csv-analyze",
       card_identity: "Unknown",
-      created_at: transactionCreatedAt(t.date)
+      created_at: transactionCreatedAt(t.date),
     };
   });
 }
 
 async function handleAiAnalyzeRequest(c: any) {
   try {
-  let csvText = "";
+    let csvText = "";
 
-  // 1. Accept uploaded CSV
-  try {
-    const contentType = c.req.header("content-type") || "";
+    // 1. Accept uploaded CSV
+    try {
+      const contentType = c.req.header("content-type") || "";
 
-    if (contentType.toLowerCase().includes("application/json")) {
-      const body = await c.req.json();
-      csvText = body.csv || "";
-    } else if (contentType.toLowerCase().includes("multipart/form-data")) {
-      const body = await c.req.parseBody();
-      // Look for the "files" or "file" field
-      const file = body.files || body.file;
-      if (file instanceof File) {
-        csvText = await file.text();
-      } else if (typeof file === "string") {
-        csvText = file;
+      if (contentType.toLowerCase().includes("application/json")) {
+        const body = await c.req.json();
+        csvText = body.csv || "";
+      } else if (contentType.toLowerCase().includes("multipart/form-data")) {
+        const body = await c.req.parseBody();
+        // Look for the "files" or "file" field
+        const file = body.files || body.file;
+        if (file instanceof File) {
+          csvText = await file.text();
+        } else if (typeof file === "string") {
+          csvText = file;
+        }
+      } else {
+        csvText = await c.req.text();
       }
+
+      // Support base64 encoded body from API Gateway
+      const rawBody: any = c.req.raw;
+      /* v8 ignore next 3 -- API Gateway base64 payloads are environment-specific */
+      if (rawBody && rawBody.isBase64Encoded) {
+        csvText = Buffer.from(csvText, "base64").toString("utf-8");
+      }
+    } catch (e) {
+      return c.json({ status: "error", message: "Failed to read CSV input payload" }, 400);
+    }
+
+    if (!csvText.trim()) {
+      return c.json({ status: "error", message: "Empty CSV content" }, 400);
+    }
+
+    // 2. Parse CSV
+    let rawTransactions = parseCsvToTransactions(csvText);
+    if (!rawTransactions.length) {
+      return c.json({ status: "error", message: "No valid transactions parsed from CSV" }, 400);
+    }
+
+    // 3. Local category hints
+    const transactionsWithHints = rawTransactions.map((t) => {
+      const hint = getLocalCategoryHint(t);
+      return {
+        ...t,
+        localCategory: hint.category,
+        localConfidence: hint.confidence,
+      };
+    });
+
+    // 4. Categories — local rules by default; OpenRouter batch optional (see USE_OPENROUTER_CATEGORIZATION)
+    let aiStatusCategorization: "local" | "success" | "fallback" = "local";
+    let aiResults: any[] = [];
+    const hasApiKey = !!process.env.OPENROUTER_API_KEY;
+
+    if (USE_OPENROUTER_CATEGORIZATION && hasApiKey) {
+      const batchSize = 40;
+      const batch = transactionsWithHints.slice(0, batchSize);
+      const batchResults = await categorizeTransactionsWithOpenRouter(batch);
+      aiResults.push(...batchResults);
+      aiStatusCategorization = aiResults.length > 0 ? "success" : "fallback";
+    }
+
+    // 5. Merge categories (empty aiResults → local hints win)
+    const finalTransactions = mergeAiCategories(transactionsWithHints, aiResults);
+
+    // 6. Build reportData
+    const reportData = buildReportData(finalTransactions);
+    const enrichedFinancialSummary = buildEnrichedFinancialSummary(reportData);
+
+    // 7. Insights — enriched summary + optional OpenRouter; static fallback by default
+    let insights;
+    let aiStatusInsights: "static" | "openrouter" | "fallback" = "static";
+    let insightsLlmPrompt: string | undefined;
+
+    if (USE_OPENROUTER_INSIGHTS && hasApiKey) {
+      insightsLlmPrompt = buildInsightsLlmPrompt(enrichedFinancialSummary);
+      const insightResult = await generateInsightsWithOpenRouter(reportData);
+      insights = insightResult.insights;
+      aiStatusInsights = insightResult.source === "openrouter" ? "openrouter" : "fallback";
     } else {
-      csvText = await c.req.text();
+      insights = generateStaticInsights(reportData);
     }
 
-    // Support base64 encoded body from API Gateway
-    const rawBody: any = c.req.raw;
-    /* v8 ignore next 3 -- API Gateway base64 payloads are environment-specific */
-    if (rawBody && rawBody.isBase64Encoded) {
-      csvText = Buffer.from(csvText, "base64").toString("utf-8");
-    }
-  } catch (e) {
-    return c.json({ status: "error", message: "Failed to read CSV input payload" }, 400);
-  }
+    const staticInsightsPrompt = buildStaticInsightsPrompt(reportData);
+    const staticInsightsInput = buildStaticInsightsContext(reportData);
 
-  if (!csvText.trim()) {
-    return c.json({ status: "error", message: "Empty CSV content" }, 400);
-  }
+    console.log(
+      JSON.stringify({
+        event: "ai-analyze",
+        transactionCount: rawTransactions.length,
+        outcome: "success",
+        openrouterConfigured: hasApiKey,
+        openrouterCategorizationEnabled: USE_OPENROUTER_CATEGORIZATION,
+        openrouterInsightsEnabled: USE_OPENROUTER_INSIGHTS,
+        aiStatus: {
+          categorization: aiStatusCategorization,
+          insights: aiStatusInsights,
+        },
+        enrichedFinancialSummary,
+        insightsLlmPrompt,
+        staticInsightsPrompt,
+        staticInsightsInput,
+        insightsResponse: {
+          summary: insights.summary,
+          score: insights.score,
+          riskLevel: insights.riskLevel,
+          recommendationCount: insights.recommendations.length,
+          recommendations: insights.recommendations,
+          observations: insights.observations.slice(0, 5),
+          anomalies: insights.anomalies,
+        },
+      }),
+    );
 
-  // 2. Parse CSV
-  let rawTransactions = parseCsvToTransactions(csvText);
-  if (!rawTransactions.length) {
-    return c.json({ status: "error", message: "No valid transactions parsed from CSV" }, 400);
-  }
-
-  // 3. Local category hints
-  const transactionsWithHints = rawTransactions.map((t) => {
-    const hint = getLocalCategoryHint(t);
-    return {
-      ...t,
-      localCategory: hint.category,
-      localConfidence: hint.confidence,
-    };
-  });
-
-  // 4. Categories — local rules by default; OpenRouter batch optional (see USE_OPENROUTER_CATEGORIZATION)
-  let aiStatusCategorization: "local" | "success" | "fallback" = "local";
-  let aiResults: any[] = [];
-  const hasApiKey = !!process.env.OPENROUTER_API_KEY;
-
-  if (USE_OPENROUTER_CATEGORIZATION && hasApiKey) {
-    const batchSize = 40;
-    const batch = transactionsWithHints.slice(0, batchSize);
-    const batchResults = await categorizeTransactionsWithOpenRouter(batch);
-    aiResults.push(...batchResults);
-    aiStatusCategorization = aiResults.length > 0 ? "success" : "fallback";
-  }
-
-  // 5. Merge categories (empty aiResults → local hints win)
-  const finalTransactions = mergeAiCategories(transactionsWithHints, aiResults);
-
-  // 6. Build reportData
-  const reportData = buildReportData(finalTransactions);
-  const enrichedFinancialSummary = buildEnrichedFinancialSummary(reportData);
-
-  // 7. Insights — enriched summary + optional OpenRouter; static fallback by default
-  let insights;
-  let aiStatusInsights: "static" | "openrouter" | "fallback" = "static";
-  let insightsLlmPrompt: string | undefined;
-
-  if (USE_OPENROUTER_INSIGHTS && hasApiKey) {
-    insightsLlmPrompt = buildInsightsLlmPrompt(enrichedFinancialSummary);
-    const insightResult = await generateInsightsWithOpenRouter(reportData);
-    insights = insightResult.insights;
-    aiStatusInsights = insightResult.source === "openrouter" ? "openrouter" : "fallback";
-  } else {
-    insights = generateStaticInsights(reportData);
-  }
-
-  const staticInsightsPrompt = buildStaticInsightsPrompt(reportData);
-  const staticInsightsInput = buildStaticInsightsContext(reportData);
-
-  console.log(
-    JSON.stringify({
-      event: "ai-analyze",
-      transactionCount: rawTransactions.length,
-      outcome: "success",
-      openrouterConfigured: hasApiKey,
-      openrouterCategorizationEnabled: USE_OPENROUTER_CATEGORIZATION,
-      openrouterInsightsEnabled: USE_OPENROUTER_INSIGHTS,
+    return c.json({
+      status: "success",
+      mode: "local-categorization-static-suggestions",
+      transactions: finalTransactions,
+      reportData,
+      insights,
       aiStatus: {
         categorization: aiStatusCategorization,
         insights: aiStatusInsights,
       },
-      enrichedFinancialSummary,
-      insightsLlmPrompt,
-      staticInsightsPrompt,
-      staticInsightsInput,
-      insightsResponse: {
-        summary: insights.summary,
-        score: insights.score,
-        riskLevel: insights.riskLevel,
-        recommendationCount: insights.recommendations.length,
-        recommendations: insights.recommendations,
-        observations: insights.observations.slice(0, 5),
-        anomalies: insights.anomalies,
-      },
-    }),
-  );
-
-  return c.json({
-    status: "success",
-    mode: "local-categorization-static-suggestions",
-    transactions: finalTransactions,
-    reportData,
-    insights,
-    aiStatus: {
-      categorization: aiStatusCategorization,
-      insights: aiStatusInsights,
-    },
-  });
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "unknown";
     console.log(
@@ -525,7 +535,11 @@ async function handleAiAnalyzeRequest(c: any) {
       }),
     );
     return c.json(
-      { status: "error", message: "AI analysis failed. Check CSV dates and try again.", code: "AI_ANALYZE_FAILED" },
+      {
+        status: "error",
+        message: "AI analysis failed. Check CSV dates and try again.",
+        code: "AI_ANALYZE_FAILED",
+      },
       500,
     );
   }
