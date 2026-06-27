@@ -21,6 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          registry-url: https://npm.pkg.github.com
+          scope: "@oblivion-labs-dev"
           cache: npm
           cache-dependency-path: |
             package-lock.json
@@ -28,6 +30,8 @@ jobs:
             frontend/web/package-lock.json
 
       - name: Install dependencies
+        env:
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm ci
           npm ci --prefix backend
