@@ -10,7 +10,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  packages: read
 
 jobs:
   report:
@@ -23,21 +22,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: https://npm.pkg.github.com
-          scope: "@oblivion-labs-dev"
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            backend/package-lock.json
-            frontend/web/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        env:
-          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm ci
-          npm install --prefix backend
-          npm install --prefix frontend/web
+      - name: Install root dependencies
+        run: npm ci
 
       - name: Download quality artifacts
         if: github.event_name == 'workflow_run'

@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install",
+  "installCommand": "node ../../scripts/ci-install.mjs --prefix frontend/web --clone-arsenal --skip-root",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "build": {

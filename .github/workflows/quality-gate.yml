@@ -12,7 +12,6 @@ concurrency:
 
 permissions:
   contents: read
-  packages: read
 
 jobs:
   quality-gate:
@@ -22,24 +21,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/checkout@v4
+        with:
+          repository: Oblivion-Labs-Dev/Arsenal
+          path: Arsenal
+          ref: feat/initial-monorepo
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: https://npm.pkg.github.com
-          scope: "@oblivion-labs-dev"
           cache: npm
           cache-dependency-path: |
             package-lock.json
             backend/package-lock.json
             frontend/web/package-lock.json
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Install dependencies
         env:
-          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm ci
-          npm install --prefix backend
-          npm install --prefix frontend/web
+          ARSENAL_PATH: ${{ github.workspace }}/Arsenal
+        run: node scripts/ci-install.mjs
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
