@@ -2,7 +2,7 @@ import { createContext, useCallback, useEffect, useMemo, useState } from "react"
 import { monthKey } from "../utils/format";
 import { matchTransfersAndClassify } from "../utils/transferMatcher.js";
 import { CLASSIFICATION_TYPES } from "../utils/classification.js";
-import { categorize } from "../utils/categorize.js";
+import { categorize, mapCanonicalCategory } from "../utils/categorize.js";
 import {
   categoryBreakdown,
   merchantBreakdown,
@@ -211,12 +211,80 @@ export function TransactionsProvider({ children }) {
       manualMatches,
     });
 
+    let merchantRules = {};
+    try {
+      const rawRules = localStorage.getItem("finance_os_merchant_rules");
+      if (rawRules) merchantRules = JSON.parse(rawRules);
+    } catch {
+      /* ignore */
+    }
+
     const renamed = matched.transactions.map((tx) => {
-      const originalKey = tx.card_identity || tx.source;
-      if (originalKey && accountNicknames[originalKey]) {
-        return { ...tx, card_identity: accountNicknames[originalKey] };
+      let updatedTx = { ...tx };
+      const mKey = (
+        tx.merchant_normalized ||
+        tx.merchant ||
+        tx.merchant_raw ||
+        tx.description ||
+        ""
+      )
+        .trim()
+        .toLowerCase();
+
+      // Manual merchant rules from localStorage permanently take priority over AI & rule classifications
+      if (!updatedTx.manual_override && merchantRules[mKey]) {
+        updatedTx.category = merchantRules[mKey];
+        updatedTx.category_source = "manual";
+        updatedTx.manual_override = true;
       }
-      return tx;
+
+      const desc =
+        `${tx.description || ""} ${tx.merchant || ""} ${tx.merchant_raw || ""}`.toLowerCase();
+      const isPayrollOrDeposit = /payroll|edipayment|direct\s+deposit|salary|wages|employer/i.test(
+        desc,
+      );
+
+      if (
+        /zelle\s+(payment\s+from|from|credit|received|deposit)/i.test(desc) ||
+        isPayrollOrDeposit
+      ) {
+        updatedTx.amount = Math.abs(Number(tx.amount || 0));
+        updatedTx.transaction_type = "income";
+        updatedTx.type = "income";
+        if (!updatedTx.manual_override) {
+          updatedTx.category =
+            updatedTx.category === "Other" || updatedTx.category === "Income" || !updatedTx.category
+              ? "Salary"
+              : updatedTx.category;
+        }
+      } else if (/zelle\s+(payment\s+to|to|sent)/i.test(desc)) {
+        updatedTx.amount = -Math.abs(Number(tx.amount || 0));
+        if (updatedTx.type !== "expense") updatedTx.type = "expense";
+      } else if (!updatedTx.transaction_type || updatedTx.transaction_type === "income") {
+        if (tx.category !== "Income" && tx.category !== "Refund" && !desc.includes("refund")) {
+          updatedTx.transaction_type = "expense";
+          updatedTx.type = "expense";
+        }
+      }
+
+      // Enforce exact 10 canonical categories across all transaction records unless manually overridden
+      if (!updatedTx.manual_override) {
+        const mappedCat = mapCanonicalCategory(updatedTx.category);
+        if (mappedCat !== "Other") {
+          updatedTx.category = mappedCat;
+        } else {
+          updatedTx.category = categorize(
+            updatedTx.merchant || updatedTx.merchant_normalized || updatedTx.description,
+            updatedTx.description,
+          );
+        }
+      }
+
+      const originalKey = updatedTx.card_identity || updatedTx.source;
+      if (originalKey && accountNicknames[originalKey]) {
+        return { ...updatedTx, card_identity: accountNicknames[originalKey] };
+      }
+      return updatedTx;
     });
 
     return {
@@ -362,17 +430,86 @@ export function TransactionsProvider({ children }) {
       return;
     }
 
+    // Filter unresolved transactions for Qwen categorization (avoid re-sending resolved/manual)
+    const unresolved = transactions.filter(
+      (t) =>
+        !t.manual_override &&
+        (t.transaction_type === "other" ||
+          t.category === "Other" ||
+          !t.classification_confidence ||
+          t.classification_confidence < 0.7),
+    );
+
+    let proposalsMap = new Map();
+    if (unresolved.length > 0) {
+      try {
+        const catRes = await fetch("/api/ai/categorize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transactions: unresolved }),
+        });
+        if (catRes.ok) {
+          const catData = await catRes.json();
+          if (Array.isArray(catData.proposals)) {
+            for (const p of catData.proposals) {
+              proposalsMap.set(p.id, p);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[TransactionsContext] Batch AI categorization API failed, using rules:", e);
+      }
+    }
+
     setTransactions((prev) => {
       const next = prev.map((tx) => {
-        const aiCategory = categorize(
+        if (tx.manual_override) return tx;
+
+        const prop = proposalsMap.get(tx.id);
+        if (prop) {
+          const conf = Number(prop.confidence ?? 0);
+          const aiType = prop.transaction_type || "other";
+          const aiCat = prop.category || "Other";
+          const aiSub = prop.subcategory || null;
+
+          if (conf >= 0.7) {
+            return {
+              ...tx,
+              aiTransactionType: aiType,
+              aiCategory: aiCat,
+              aiSubcategory: aiSub,
+              aiConfidence: conf,
+              aiReason: prop.reason || "Qwen AI categorization",
+              transaction_type: aiType,
+              category: aiCat,
+              subcategory: aiSub,
+              classification_confidence: conf,
+              categorySource: "ai",
+            };
+          } else {
+            return {
+              ...tx,
+              aiTransactionType: aiType,
+              aiCategory: aiCat,
+              aiConfidence: conf,
+              aiReason: prop.reason || "Low confidence AI proposal",
+              transaction_type: "other",
+              category: "Other",
+              classification_confidence: conf,
+              categorySource: "ai",
+            };
+          }
+        }
+
+        const fallbackCat = categorize(
           tx.merchant || tx.merchant_normalized || tx.description,
           tx.description,
         );
         return {
           ...tx,
-          aiCategory,
-          // Update category if user hasn't manually overridden it
-          category: tx.category || aiCategory,
+          aiCategory: fallbackCat,
+          category: tx.category || fallbackCat,
+          categorySource: tx.categorySource || "rule",
         };
       });
       const stored = readStoredAnalysis();
@@ -381,22 +518,305 @@ export function TransactionsProvider({ children }) {
       }
       return next;
     });
-  }, []);
+
+    // Also fetch updated AI financial analysis insights from backend (/api/coach/suggestions)
+    try {
+      const summary = {
+        totalTransactions: transactions.length,
+        totalIncome: transactions
+          .filter((t) => t.type === "income" || t.transaction_type === "income")
+          .reduce((s, x) => s + Math.abs(x.amount || 0), 0),
+        totalExpenses: transactions
+          .filter((t) => t.type === "expense" || t.transaction_type === "expense")
+          .reduce((s, x) => s + Math.abs(x.amount || 0), 0),
+        netCashFlow: transactions.reduce((s, x) => s + (x.amount || 0), 0),
+        recentTransactions: (transactions || []).slice(0, 30).map((t) => ({
+          id: String(t.id),
+          date: t.date,
+          description: t.description || t.merchant_raw || t.merchant,
+          merchant: t.merchant_normalized || t.merchant || t.merchant_raw,
+          amount: t.amount,
+          category: t.category,
+        })),
+        topCategories: [],
+        topMerchants: [],
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const coachRes = await fetch("/api/coach/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ summary }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (coachRes.ok) {
+        const coachData = await coachRes.json();
+        if (coachData.suggestions) {
+          const full = coachData.fullInsights || {};
+          const recommendations =
+            Array.isArray(full.recommendations) && full.recommendations.length > 0
+              ? full.recommendations
+              : coachData.suggestions;
+
+          setLatestAnalysis((prev) => ({
+            ...(prev || {}),
+            status: "success",
+            aiStatus: prev?.aiStatus || { insights: coachData.source || "openrouter" },
+            insights: {
+              summary:
+                full.summary?.explanation ||
+                full.summary ||
+                "Analysis updated with Qwen AI Analyst.",
+              headline: full.summary?.headline || "",
+              financialDirection: full.summary?.financialDirection || null,
+              score: typeof full.score === "number" ? full.score : 75,
+              riskLevel: full.riskLevel || "low",
+              spendingInsights: Array.isArray(full.spendingInsights)
+                ? full.spendingInsights
+                : prev?.insights?.spendingInsights || [],
+              savingsAnalysis:
+                full.savingsAnalysis && typeof full.savingsAnalysis === "object"
+                  ? full.savingsAnalysis
+                  : prev?.insights?.savingsAnalysis || null,
+              categoryInsights: Array.isArray(full.categoryInsights)
+                ? full.categoryInsights
+                : prev?.insights?.categoryInsights || [],
+              merchantInsights: Array.isArray(full.merchantInsights)
+                ? full.merchantInsights
+                : prev?.insights?.merchantInsights || [],
+              recurringInsights: Array.isArray(full.recurringInsights)
+                ? full.recurringInsights
+                : prev?.insights?.recurringInsights || [],
+              recommendations: recommendations,
+              observations: Array.isArray(full.observations)
+                ? full.observations
+                : prev?.insights?.observations || [],
+              anomalies: Array.isArray(full.anomalies)
+                ? full.anomalies
+                : prev?.insights?.anomalies || [],
+            },
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn("[TransactionsContext] Fetch coach suggestions finished/timed out:", e);
+    }
+  }, [transactions]);
 
   const updateCategory = useCallback(async (id, category) => {
+    let updatedMerchantKey = null;
     setTransactions((prev) => {
-      const next = prev.map((t) => (t.id === id ? { ...t, category } : t));
+      const next = prev.map((t) => {
+        if (t.id === id) {
+          updatedMerchantKey = (
+            t.merchant_normalized ||
+            t.merchant ||
+            t.merchant_raw ||
+            t.description ||
+            ""
+          )
+            .trim()
+            .toLowerCase();
+          return {
+            ...t,
+            category,
+            manual_override: true,
+            category_source: "manual",
+          };
+        }
+        return t;
+      });
       const stored = readStoredAnalysis();
       if (stored) {
         persistAnalysis({ ...stored, transactions: next, origin: "import" });
       }
       return next;
     });
+
+    // Also persist reusable merchant rule to localStorage so future imports automatically apply manual category
+    if (updatedMerchantKey) {
+      try {
+        const rawRules = localStorage.getItem("finance_os_merchant_rules");
+        const rules = rawRules ? JSON.parse(rawRules) : {};
+        rules[updatedMerchantKey] = category;
+        localStorage.setItem("finance_os_merchant_rules", JSON.stringify(rules));
+      } catch {
+        /* ignore storage quota */
+      }
+    }
+
     try {
       await updateTransactionCategory(id, category);
     } catch (err) {
       console.warn("[transactions] updateCategory failed", err);
     }
+  }, []);
+
+  // Create a structured merchant rule and apply to matching non-overridden historical transactions
+  const createMerchantRule = useCallback(
+    ({
+      merchantKey,
+      category,
+      subcategory = null,
+      transactionType = "expense",
+      source = "manual",
+    }) => {
+      if (!merchantKey || !category) return;
+      const cleanKey = merchantKey.trim().toLowerCase();
+
+      // 1. Update localStorage rule list
+      let existingRules = [];
+      try {
+        const raw = localStorage.getItem("finance_os_structured_merchant_rules");
+        if (raw) existingRules = JSON.parse(raw);
+      } catch {
+        existingRules = [];
+      }
+
+      const newRule = {
+        id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        matchType: "normalized_merchant",
+        matchValue: cleanKey,
+        merchantNormalized: merchantKey,
+        category,
+        subcategory,
+        transactionType,
+        source,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const updatedRules = [newRule, ...existingRules.filter((r) => r.matchValue !== cleanKey)];
+      try {
+        localStorage.setItem("finance_os_structured_merchant_rules", JSON.stringify(updatedRules));
+        // Map simple merchant rules for backward compatibility
+        const simpleRules = {};
+        updatedRules.forEach((r) => {
+          simpleRules[r.matchValue] = r.category;
+        });
+        localStorage.setItem("finance_os_merchant_rules", JSON.stringify(simpleRules));
+      } catch {
+        /* ignore */
+      }
+
+      // 2. Apply rule across all matching non-overridden transactions
+      setTransactions((prev) => {
+        const next = prev.map((t) => {
+          if (t.manual_override) return t;
+          const mKey = (
+            t.merchant_normalized ||
+            t.merchant ||
+            t.merchant_raw ||
+            t.description ||
+            ""
+          )
+            .trim()
+            .toLowerCase();
+          if (mKey === cleanKey || mKey.includes(cleanKey)) {
+            return {
+              ...t,
+              category,
+              subcategory: subcategory || t.subcategory,
+              transaction_type: transactionType || t.transaction_type,
+              category_source: source === "manual" ? "manual" : "rule",
+              manual_override: source === "manual",
+            };
+          }
+          return t;
+        });
+
+        const stored = readStoredAnalysis();
+        if (stored) {
+          persistAnalysis({ ...stored, transactions: next, origin: "import" });
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  // Delete a merchant rule without corrupting transaction history
+  const deleteMerchantRule = useCallback((ruleId) => {
+    try {
+      const raw = localStorage.getItem("finance_os_structured_merchant_rules");
+      if (!raw) return;
+      const rules = JSON.parse(raw);
+      const filtered = rules.filter((r) => r.id !== ruleId);
+      localStorage.setItem("finance_os_structured_merchant_rules", JSON.stringify(filtered));
+
+      const simpleRules = {};
+      filtered.forEach((r) => {
+        simpleRules[r.matchValue] = r.category;
+      });
+      localStorage.setItem("finance_os_merchant_rules", JSON.stringify(simpleRules));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Reprocess uncategorized/Other transactions using current rule chain without overwriting manual overrides
+  const reprocessUncategorized = useCallback(() => {
+    let merchantRules = {};
+    try {
+      const rawRules = localStorage.getItem("finance_os_merchant_rules");
+      if (rawRules) merchantRules = JSON.parse(rawRules);
+    } catch {
+      /* ignore */
+    }
+
+    setTransactions((prev) => {
+      const next = prev.map((t) => {
+        if (t.manual_override) return t;
+        if (t.category && t.category !== "Other") return t;
+
+        const mKey = (t.merchant_normalized || t.merchant || t.merchant_raw || t.description || "")
+          .trim()
+          .toLowerCase();
+        let newCat = t.category;
+
+        if (merchantRules[mKey]) {
+          newCat = merchantRules[mKey];
+        } else {
+          newCat = categorize(t.merchant || t.merchant_normalized || t.description, t.description);
+        }
+
+        return {
+          ...t,
+          category: newCat,
+          category_source: merchantRules[mKey] ? "rule" : t.category_source,
+        };
+      });
+
+      const stored = readStoredAnalysis();
+      if (stored) {
+        persistAnalysis({ ...stored, transactions: next, origin: "import" });
+      }
+      return next;
+    });
+  }, []);
+
+  const updateTransactionType = useCallback((id, transaction_type) => {
+    setTransactions((prev) => {
+      const next = prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              transaction_type,
+              manual_override: true,
+              category_source: "manual",
+            }
+          : t,
+      );
+      const stored = readStoredAnalysis();
+      if (stored) {
+        persistAnalysis({ ...stored, transactions: next, origin: "import" });
+      }
+      return next;
+    });
   }, []);
 
   const removeOne = useCallback(async (id) => {
@@ -430,6 +850,10 @@ export function TransactionsProvider({ children }) {
     addMany,
     replaceAll,
     updateCategory,
+    createMerchantRule,
+    deleteMerchantRule,
+    reprocessUncategorized,
+    updateTransactionType,
     runAiAnalysis,
     removeOne,
     applyAnalysisResult,

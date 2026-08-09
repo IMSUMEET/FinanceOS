@@ -1,17 +1,18 @@
 export const CLASSIFICATION_TYPES = {
-  INCOME: "INCOME",
-  EXPENSE: "EXPENSE",
-  INTERNAL_TRANSFER: "INTERNAL_TRANSFER",
-  CREDIT_CARD_PAYMENT: "CREDIT_CARD_PAYMENT",
-  LOAN_PAYMENT: "LOAN_PAYMENT",
-  REFUND: "REFUND",
-  UNKNOWN: "UNKNOWN",
+  INCOME: "income",
+  EXPENSE: "expense",
+  INTERNAL_TRANSFER: "internal_transfer",
+  CREDIT_CARD_PAYMENT: "credit_card_payment",
+  LOAN_PAYMENT: "loan_payment",
+  REFUND: "refund",
+  OTHER: "other",
+  UNKNOWN: "other",
 };
 
 // Patterns for credit card payments
 const CC_PAYMENT_PATTERNS = [
   /chase\s+credit\s+card/i,
-  /capital\s+one\s+pmt|capital\s+one\s+payment|capital\s+one\s+mobile\s+pmt/i,
+  /capital\s+one\s+pmt|capital\s+one\s+payment|capital\s+one\s+mobile\s+pmt|capital\s+one\s+mobile\s+pymt/i,
   /amex\s+payment|american\s+express\s+epayment|american\s+express\s+ach/i,
   /citi\s+autopay|citi\s+card\s+payment|citicardap/i,
   /discover\s+payment|discover\s+e-payment/i,
@@ -31,12 +32,18 @@ const SALARY_PATTERNS = [/payroll|edipayment|direct\s+deposit|salary|wages|emplo
  * Classify a single transaction based on metadata, description, category, and account type
  */
 export function classifySingleTransaction(tx, accounts = []) {
+  if (tx.manual_override && tx.transaction_type) {
+    return tx.transaction_type;
+  }
   if (tx.manualClassification) {
     return tx.manualClassification;
   }
 
-  const rawAmount = Number(tx.rawAmount ?? (tx.type === "income" ? -tx.amount : tx.amount) ?? 0);
-  const isIncome = rawAmount < 0 || tx.type === "income";
+  const rawAmount = Number(tx.amount ?? 0);
+  const isIncome =
+    tx.type !== "expense" &&
+    tx.transaction_type !== "expense" &&
+    (tx.transaction_type === "income" || tx.type === "income" || rawAmount > 0);
   const desc =
     `${tx.description ?? ""} ${tx.merchant ?? ""} ${tx.merchant_raw ?? ""} ${tx.merchant_normalized ?? ""}`.trim();
   const cat = (tx.category ?? tx.finalCategory ?? "").toLowerCase();
@@ -72,14 +79,18 @@ export function classifySingleTransaction(tx, accounts = []) {
     return CLASSIFICATION_TYPES.REFUND;
   }
 
-  // 4. Salary / Payroll Income
-  if (
-    isIncome &&
-    (SALARY_PATTERNS.some((p) => p.test(desc)) ||
+  // 4. Salary / Payroll / Zelle Received Income
+  const isZelleReceived = /zelle\s+(payment\s+from|from|credit|deposit|received)/i.test(desc);
+  if (isIncome || isZelleReceived) {
+    if (
+      isZelleReceived ||
+      SALARY_PATTERNS.some((p) => p.test(desc)) ||
       cat.includes("payroll") ||
-      cat.includes("deposit"))
-  ) {
-    return CLASSIFICATION_TYPES.INCOME;
+      cat.includes("deposit") ||
+      isIncome
+    ) {
+      return CLASSIFICATION_TYPES.INCOME;
+    }
   }
 
   // 5. Default fallback based on income vs expense

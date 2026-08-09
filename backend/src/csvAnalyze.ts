@@ -97,6 +97,17 @@ export function parseAmount(raw: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+export type TransactionType =
+  | "expense"
+  | "income"
+  | "refund"
+  | "internal_transfer"
+  | "credit_card_payment"
+  | "loan_payment"
+  | "other";
+
+export type CategorySource = "manual" | "rule" | "ai" | "plaid" | "csv" | "unknown";
+
 export type AnalyzedTransaction = {
   date: string;
   merchant_raw: string;
@@ -108,6 +119,32 @@ export type AnalyzedTransaction = {
   source: string;
   card_identity?: string;
   created_at: string;
+
+  // Phase 1 Extended Model Fields
+  transaction_type: TransactionType;
+  subcategory?: string | null;
+  category_source: CategorySource;
+  classification_confidence?: number | null;
+  manual_override: boolean;
+  is_internal_transfer: boolean;
+  linked_transaction_id?: number | string | null;
+
+  // AI Proposal Fields
+  aiTransactionType?: TransactionType | null;
+  aiCategory?: string | null;
+  aiSubcategory?: string | null;
+  aiConfidence?: number | null;
+  aiReason?: string | null;
+
+  // Optional Plaid Metadata
+  plaid_transaction_id?: string;
+  plaid_account_id?: string;
+  account_type?: string;
+  account_subtype?: string;
+  pending?: boolean;
+  payment_channel?: string;
+  personal_finance_category?: string;
+  merchant_entity_id?: string;
 };
 
 export function parseToIsoDateString(dateStr: string): string {
@@ -286,11 +323,21 @@ export function mapRows(
         } else {
           amount = rawAmount > 0 ? -rawAmount : rawAmount;
         }
+
+        // Specific Zelle directional rule: Zelle FROM is credit (+), Zelle TO is debit (-)
+        const zelleDesc = `${merchantRaw} ${merchantNorm}`.toLowerCase();
+        if (/zelle\s+(payment\s+from|from|credit|received|deposit)/i.test(zelleDesc)) {
+          amount = Math.abs(amount);
+        } else if (/zelle\s+(payment\s+to|to|sent)/i.test(zelleDesc)) {
+          amount = -Math.abs(amount);
+        }
       }
 
       let category = categorize(merchantNorm, merchantRaw);
+      let transaction_type: TransactionType = amount > 0 ? "income" : "expense";
       if (format !== "chase_checking" && amount > 0) {
-        category = "Credit Card Payments";
+        category = "Debt Payment";
+        transaction_type = "credit_card_payment";
       }
       let card_identity = "Unknown";
       if (format === "amex_credit_card") card_identity = "Amex Blue Cash";
@@ -316,6 +363,19 @@ export function mapRows(
         source: "csv-analyze",
         card_identity,
         created_at: new Date(`${date}T12:00:00Z`).toISOString(),
+        transaction_type,
+        subcategory: null,
+        category_source: "csv",
+        classification_confidence: 0.9,
+        manual_override: false,
+        is_internal_transfer:
+          transaction_type === "credit_card_payment" || transaction_type === "internal_transfer",
+        linked_transaction_id: null,
+        aiTransactionType: null,
+        aiCategory: null,
+        aiSubcategory: null,
+        aiConfidence: null,
+        aiReason: null,
       });
     } catch (err: any) {
       const fileLabel = fileName ? `in "${fileName}" ` : "";
@@ -330,7 +390,9 @@ function parseIsoDate(d: string): number | null {
   return Number.isFinite(t) ? t : null;
 }
 
-export function buildSummary(transactions: Pick<AnalyzedTransaction, "amount" | "date" | "category">[]) {
+export function buildSummary(
+  transactions: Pick<AnalyzedTransaction, "amount" | "date" | "category">[],
+) {
   let totalIncome = 0;
   let totalSpending = 0;
   const catMap = new Map<string, { category: string; total: number; count: number }>();

@@ -1,31 +1,44 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { parseCsvToTransactions, getLocalCategoryHint, mergeAiCategories, aiApp, transactionCreatedAt } from "../src/aiAnalyzer.js";
-import { buildReportData, generateStaticInsights, safeJsonParse, validateInsights, generateInsightsWithOpenRouter } from "../src/openrouter.js";
+import {
+  parseCsvToTransactions,
+  getLocalCategoryHint,
+  mergeAiCategories,
+  aiApp,
+  transactionCreatedAt,
+} from "../src/aiAnalyzer.js";
+import {
+  buildReportData,
+  generateStaticInsights,
+  safeJsonParse,
+  validateInsights,
+  generateInsightsWithOpenRouter,
+} from "../src/openrouter.js";
 
 describe("CSV Parser (Lambda 2)", () => {
   it("should parse amount column and detect type correctly", () => {
     const csv = "Date,Description,Amount\n2026-06-01,Safeway,-82.14\n2026-06-02,Payroll,2500.00";
     const txns = parseCsvToTransactions(csv);
     expect(txns).toHaveLength(2);
-    
+
     expect(txns[0].amount).toBe(-82.14);
     expect(txns[0].type).toBe("expense");
     expect(txns[0].merchant).toBe("Safeway");
-    
-    expect(txns[1].amount).toBe(2500.00);
+
+    expect(txns[1].amount).toBe(2500.0);
     expect(txns[1].type).toBe("income");
     expect(txns[1].merchant).toBe("Payroll");
   });
 
   it("should parse debit/credit columns", () => {
-    const csv = "Date,Description,Debit,Credit\n2026-06-01,Safeway,82.14,\n2026-06-02,Refund,,15.00";
+    const csv =
+      "Date,Description,Debit,Credit\n2026-06-01,Safeway,82.14,\n2026-06-02,Refund,,15.00";
     const txns = parseCsvToTransactions(csv);
     expect(txns).toHaveLength(2);
-    
+
     expect(txns[0].amount).toBe(-82.14);
     expect(txns[0].type).toBe("expense");
-    
-    expect(txns[1].amount).toBe(15.00);
+
+    expect(txns[1].amount).toBe(15.0);
     expect(txns[1].type).toBe("income");
   });
 
@@ -53,7 +66,18 @@ describe("CSV Parser (Lambda 2)", () => {
 describe("mergeAiCategories date safety", () => {
   it("does not throw on US-style dates when building created_at", () => {
     const merged = mergeAiCategories(
-      [{ id: "txn_001", date: "06/15/2026", description: "Coffee", merchant: "Coffee", amount: -4.5, type: "expense", localCategory: "Food", localConfidence: 0.9 }],
+      [
+        {
+          id: "txn_001",
+          date: "06/15/2026",
+          description: "Coffee",
+          merchant: "Coffee",
+          amount: -4.5,
+          type: "expense",
+          localCategory: "Food",
+          localConfidence: 0.9,
+        },
+      ],
       [],
     );
     expect(merged[0].created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
@@ -72,8 +96,8 @@ describe("Local Category Hint", () => {
       { desc: "SHELL OIL", expected: "Transportation" },
       { desc: "PAYROLL ADADP", expected: "Income" },
       { desc: "RENT APARTMENT", expected: "Housing" },
-      { desc: "NETFLIX.COM", expected: "Entertainment" },
-      { desc: "ZELLE TO BOB", expected: "Transfers" }
+      { desc: "NETFLIX.COM", expected: "Bills & Utilities" },
+      { desc: "ZELLE TO BOB", expected: "Transfers" },
     ];
 
     for (const tc of testCases) {
@@ -93,7 +117,7 @@ describe("Report Data Computation", () => {
         merchant: "Employer",
         amount: 3000,
         type: "income",
-        finalCategory: "Income"
+        finalCategory: "Income",
       },
       {
         id: "txn_002",
@@ -101,7 +125,7 @@ describe("Report Data Computation", () => {
         merchant: "Safeway",
         amount: -100,
         type: "expense",
-        finalCategory: "Food"
+        finalCategory: "Food",
       },
       {
         id: "txn_003",
@@ -109,23 +133,31 @@ describe("Report Data Computation", () => {
         merchant: "Credit Card Payment",
         amount: -500,
         type: "expense",
-        finalCategory: "Transfers"
-      }
+        finalCategory: "Transfers",
+      },
     ];
 
     const report = buildReportData(transactions);
     expect(report.totalIncome).toBe(3000);
-    expect(report.totalExpenses).toBe(100); 
+    expect(report.totalExpenses).toBe(100);
     expect(report.netCashFlow).toBe(2900);
     expect(report.savingsRate).toBe(96.67);
-    
+
     expect(report.categoryTotals["Income"]).toBe(3000);
     expect(report.categoryTotals["Food"]).toBe(100);
     expect(report.categoryTotals["Transfers"]).toBe(500);
 
     const allowedCategories = [
-      "Income", "Housing", "Food", "Transportation", "Shopping",
-      "Bills & Utilities", "Health", "Entertainment", "Transfers", "Other"
+      "Income",
+      "Housing",
+      "Food",
+      "Transportation",
+      "Shopping",
+      "Bills & Utilities",
+      "Health",
+      "Entertainment",
+      "Transfers",
+      "Other",
     ];
     for (const cat of allowedCategories) {
       expect(report.categoryTotals).toHaveProperty(cat);
@@ -144,7 +176,7 @@ describe("AI Fallback and Parsing Safety", () => {
 
   it("handles missing api key and returns fallback insights", () => {
     const reportData = buildReportData([
-      { id: "txn_001", date: "2026-06-01", amount: -50, type: "expense", finalCategory: "Food" }
+      { id: "txn_001", date: "2026-06-01", amount: -50, type: "expense", finalCategory: "Food" },
     ]);
     const insights = generateStaticInsights(reportData);
     expect(insights.summary).toContain("income");
@@ -153,10 +185,10 @@ describe("AI Fallback and Parsing Safety", () => {
   });
 
   it("safeJsonParse removes markdown fences and handles invalid JSON", () => {
-    const validMarkdown = "```json\n{\"summary\": \"Great job\"}\n```";
+    const validMarkdown = '```json\n{"summary": "Great job"}\n```';
     expect(safeJsonParse(validMarkdown)).toEqual({ summary: "Great job" });
 
-    const extraText = "Here is the response: {\"summary\": \"Okay\"} and some extra.";
+    const extraText = 'Here is the response: {"summary": "Okay"} and some extra.';
     expect(safeJsonParse(extraText)).toEqual({ summary: "Okay" });
 
     expect(safeJsonParse("invalid json text")).toBeNull();
@@ -168,7 +200,7 @@ describe("AI Fallback and Parsing Safety", () => {
       summary: 123,
       score: "one hundred",
       riskLevel: "danger",
-      observations: "none"
+      observations: "none",
     };
 
     const validated = validateInsights(badInsights, reportData);
@@ -199,11 +231,11 @@ describe("OpenRouter Integration Mocks", () => {
               riskLevel: "low",
               observations: [],
               recommendations: [],
-              anomalies: []
-            })
-          }
-        }
-      ]
+              anomalies: [],
+            }),
+          },
+        },
+      ],
     };
 
     const globalFetchMock = vi.fn().mockResolvedValue({
@@ -236,7 +268,7 @@ describe("OpenRouter Integration Mocks", () => {
   it("handles empty choice content from fetch", async () => {
     const globalFetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ choices: [] })
+      json: async () => ({ choices: [] }),
     });
     vi.stubGlobal("fetch", globalFetchMock);
     const report = buildReportData([]);
@@ -248,7 +280,7 @@ describe("OpenRouter Integration Mocks", () => {
   it("handles unparseable json response content from fetch", async () => {
     const globalFetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ choices: [{ message: { content: "invalid-json" } }] })
+      json: async () => ({ choices: [{ message: { content: "invalid-json" } }] }),
     });
     vi.stubGlobal("fetch", globalFetchMock);
     const report = buildReportData([]);
@@ -270,7 +302,7 @@ describe("aiApp Hono Routing (Lambda 2)", () => {
 
   it("returns CORS headers on OPTIONS preflight request", async () => {
     const res = await aiApp.request("/", {
-      method: "OPTIONS"
+      method: "OPTIONS",
     });
     expect(res.status).toBe(200);
     expect(res.headers.get("access-control-allow-origin")).toBe("*");
@@ -280,7 +312,7 @@ describe("aiApp Hono Routing (Lambda 2)", () => {
   it("returns error on empty POST body", async () => {
     const res = await aiApp.request("/", {
       method: "POST",
-      body: ""
+      body: "",
     });
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -292,7 +324,7 @@ describe("aiApp Hono Routing (Lambda 2)", () => {
     const res = await aiApp.request("/", {
       method: "POST",
       headers: { "Content-Type": "text/csv" },
-      body: "\n\n"
+      body: "\n\n",
     });
     expect(res.status).toBe(400);
   });
@@ -304,7 +336,7 @@ describe("aiApp Hono Routing (Lambda 2)", () => {
     const res = await aiApp.request("/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ csv: "Date,Description,Amount\n2026-06-01,Safeway,-10.00" })
+      body: JSON.stringify({ csv: "Date,Description,Amount\n2026-06-01,Safeway,-10.00" }),
     });
 
     expect(res.status).toBe(200);

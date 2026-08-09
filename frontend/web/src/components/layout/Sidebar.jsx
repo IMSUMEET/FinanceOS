@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   ListOrdered,
   PieChart,
+  Sliders,
   Sparkles,
   Upload,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const NAV_SECTIONS = [
           { to: "/insights/ai", label: "AI Insights", icon: Sparkles },
           { to: "/transactions", label: "Transactions", icon: ListOrdered },
           { to: "/categories", label: "Categories", icon: PieChart },
+          { to: "/rules", label: "Rules", icon: Sliders },
           { to: "/reports", label: "Reports", icon: BarChart3 },
         ],
       },

@@ -12,7 +12,7 @@ describe("remaining utils branch coverage", () => {
   });
 
   it("covers category color and tint fallbacks", () => {
-    expect(categoryColor("Equity built")).toBe("#10b981");
+    expect(categoryColor("Housing")).toBe("#8b5cf6");
     expect(categoryTint("Unknown Category")).toBe(categoryTint("Other"));
   });
 
@@ -49,7 +49,9 @@ describe("remaining utils branch coverage", () => {
       { agentCommissionPct: -1, closingCostsPct: -2 },
     );
     expect(result.validationErrors.length).toBeGreaterThan(0);
-    expect(buildInsightLines({ ...result, sellingCostBlocked: true, validationErrors: [] })[0]).toContain("100%");
+    expect(
+      buildInsightLines({ ...result, sellingCostBlocked: true, validationErrors: [] })[0],
+    ).toContain("100%");
   });
 
   it("covers analysis summary income branch", () => {

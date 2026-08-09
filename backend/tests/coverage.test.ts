@@ -54,17 +54,19 @@ describe("mergeAiCategories", () => {
   };
 
   it("prefers AI category when confidence is high", () => {
-    const [merged] = mergeAiCategories([baseTxn], [
-      { id: "txn_001", aiCategory: "Shopping", aiConfidence: 0.9, reason: "retail" },
-    ]);
+    const [merged] = mergeAiCategories(
+      [baseTxn],
+      [{ id: "txn_001", aiCategory: "Shopping", aiConfidence: 0.9, reason: "retail" }],
+    );
     expect(merged.finalCategory).toBe("Shopping");
     expect(merged.categorySource).toBe("ai");
   });
 
   it("falls back to local category when AI confidence is low", () => {
-    const [merged] = mergeAiCategories([baseTxn], [
-      { id: "txn_001", aiCategory: "Shopping", aiConfidence: 0.5, reason: "unsure" },
-    ]);
+    const [merged] = mergeAiCategories(
+      [baseTxn],
+      [{ id: "txn_001", aiCategory: "Shopping", aiConfidence: 0.5, reason: "unsure" }],
+    );
     expect(merged.finalCategory).toBe("Food");
     expect(merged.categorySource).toBe("local");
   });
@@ -77,9 +79,10 @@ describe("mergeAiCategories", () => {
   });
 
   it("rejects invalid AI categories", () => {
-    const [merged] = mergeAiCategories([baseTxn], [
-      { id: "txn_001", aiCategory: "InvalidCat", aiConfidence: 0.99, reason: "bad" },
-    ]);
+    const [merged] = mergeAiCategories(
+      [baseTxn],
+      [{ id: "txn_001", aiCategory: "InvalidCat", aiConfidence: 0.99, reason: "bad" }],
+    );
     expect(merged.finalCategory).toBe("Food");
     expect(merged.categorySource).toBe("local");
   });
@@ -126,13 +129,17 @@ describe("categorizeTransactionsWithOpenRouter", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
-          choices: [{
-            message: {
-              content: JSON.stringify({
-                categorizedTransactions: [{ id: "txn_001", aiCategory: "Food", aiConfidence: 0.9, reason: "grocery" }],
-              }),
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  categorizedTransactions: [
+                    { id: "txn_001", aiCategory: "Food", aiConfidence: 0.9, reason: "grocery" },
+                  ],
+                }),
+              },
             },
-          }],
+          ],
         }),
       }),
     );
@@ -205,9 +212,7 @@ describe("categorize rule coverage", () => {
   const samples: [string, string][] = [
     ["Uber Eats", "Food"],
     ["Delta Airlines", "Travel"],
-    ["Comcast Internet", "Utilities"],
-    ["Thank You Autopay", "Credit Card Payments"],
-    ["Refund credit", "Payments"],
+    ["Comcast Internet", "Bills & Utilities"],
     ["Steam Games", "Entertainment"],
   ];
 
@@ -241,7 +246,14 @@ describe("validateInsights extended", () => {
 
   it("clamps invalid score and risk level", () => {
     const validated = validateInsights(
-      { summary: "ok", score: 150, riskLevel: "extreme", observations: "bad", recommendations: "bad", anomalies: "bad" },
+      {
+        summary: "ok",
+        score: 150,
+        riskLevel: "extreme",
+        observations: "bad",
+        recommendations: "bad",
+        anomalies: "bad",
+      },
       report,
     );
     expect(validated.score).toBe(70);
@@ -269,16 +281,37 @@ describe("validateInsights extended", () => {
 
 describe("safeJsonParse extended", () => {
   it("parses fenced json without language tag", () => {
-    expect(safeJsonParse("```\n{\"a\":1}\n```")).toEqual({ a: 1 });
+    expect(safeJsonParse('```\n{"a":1}\n```')).toEqual({ a: 1 });
   });
 });
 
 describe("buildReportData edge cases", () => {
   it("handles income-only and transfer expense transactions", () => {
     const report = buildReportData([
-      { id: "1", date: "2026-06-01", amount: 1000, type: "income", finalCategory: "Income", merchant: "Employer" },
-      { id: "2", date: "2026-06-02", amount: -200, type: "expense", finalCategory: "Transfers", merchant: "Bank" },
-      { id: "3", date: "2026-06-03", amount: -50, type: "expense", finalCategory: "Food", merchant: "Cafe" },
+      {
+        id: "1",
+        date: "2026-06-01",
+        amount: 1000,
+        type: "income",
+        finalCategory: "Income",
+        merchant: "Employer",
+      },
+      {
+        id: "2",
+        date: "2026-06-02",
+        amount: -200,
+        type: "expense",
+        finalCategory: "Transfers",
+        merchant: "Bank",
+      },
+      {
+        id: "3",
+        date: "2026-06-03",
+        amount: -50,
+        type: "expense",
+        finalCategory: "Food",
+        merchant: "Cafe",
+      },
     ]);
     expect(report.totalIncome).toBe(1000);
     expect(report.totalExpenses).toBe(50);
@@ -312,7 +345,9 @@ describe("aiApp additional routes", () => {
     const formData = new FormData();
     formData.append(
       "file",
-      new File(["Date,Description,Amount\n2026-06-01,Cafe,-3.00"], "data.csv", { type: "text/csv" }),
+      new File(["Date,Description,Amount\n2026-06-01,Cafe,-3.00"], "data.csv", {
+        type: "text/csv",
+      }),
     );
 
     const res = await aiApp.request("/", { method: "POST", body: formData });

@@ -2,31 +2,44 @@ import { monthKey } from "./format";
 import { CLASSIFICATION_TYPES } from "./classification.js";
 
 function isExcludedFromSpending(r) {
-  if (r.category === "Credit Card Payments") return true;
-  const c = r.classification;
+  if (
+    r.category === "Credit Card Payments" ||
+    r.category === "Debt Payment" ||
+    r.category === "Transfer"
+  )
+    return true;
+  const c = r.transaction_type || r.classification;
   return (
     c === CLASSIFICATION_TYPES.INTERNAL_TRANSFER ||
     c === CLASSIFICATION_TYPES.CREDIT_CARD_PAYMENT ||
-    c === CLASSIFICATION_TYPES.LOAN_PAYMENT
+    c === CLASSIFICATION_TYPES.LOAN_PAYMENT ||
+    c === "internal_transfer" ||
+    c === "credit_card_payment" ||
+    c === "loan_payment"
   );
 }
 
 const sumSpend = (rows) =>
-  rows.reduce((s, r) => {
-    if (isExcludedFromSpending(r)) return s;
-    const amt = Math.abs(Number(r.amount ?? 0));
-    if (r.classification === CLASSIFICATION_TYPES.REFUND) {
-      return s - amt;
-    }
-    if (r.type === "income" || r.classification === CLASSIFICATION_TYPES.INCOME) {
-      return s;
-    }
-    return s + amt;
-  }, 0);
+  Math.max(
+    0,
+    rows.reduce((s, r) => {
+      if (isExcludedFromSpending(r)) return s;
+      const amt = Math.abs(Number(r.amount ?? 0));
+      const type = r.transaction_type || r.classification;
+      if (type === CLASSIFICATION_TYPES.REFUND || type === "refund") {
+        return s - amt;
+      }
+      if (type === CLASSIFICATION_TYPES.INCOME || type === "income" || r.type === "income") {
+        return s;
+      }
+      return s + amt;
+    }, 0),
+  );
 
 export function totalIncome(transactions) {
   return transactions.reduce((s, r) => {
-    if (r.classification === CLASSIFICATION_TYPES.INCOME) {
+    const type = r.transaction_type || r.classification;
+    if (type === CLASSIFICATION_TYPES.INCOME || type === "income") {
       return s + Math.abs(Number(r.amount ?? 0));
     }
     return s;

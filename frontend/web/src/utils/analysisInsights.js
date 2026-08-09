@@ -1,13 +1,25 @@
 /** Normalize Lambda analysis `insights` payload for UI display. */
 export function parseAnalysisInsights(latestAnalysis) {
-  const insights = latestAnalysis?.insights;
+  if (!latestAnalysis || typeof latestAnalysis !== "object") return null;
+  const insights = latestAnalysis.insights;
   if (!insights || typeof insights !== "object") return null;
 
   return {
-    summary: typeof insights.summary === "string" ? insights.summary : "",
+    summary:
+      typeof insights.summary === "string" ? insights.summary : insights.summary?.explanation || "",
+    headline: insights.summary?.headline || "",
+    financialDirection: insights.summary?.financialDirection || null,
     score: typeof insights.score === "number" ? insights.score : null,
     riskLevel: insights.riskLevel ?? null,
     observations: Array.isArray(insights.observations) ? insights.observations : [],
+    spendingInsights: Array.isArray(insights.spendingInsights) ? insights.spendingInsights : [],
+    savingsAnalysis:
+      insights.savingsAnalysis && typeof insights.savingsAnalysis === "object"
+        ? insights.savingsAnalysis
+        : null,
+    categoryInsights: Array.isArray(insights.categoryInsights) ? insights.categoryInsights : [],
+    merchantInsights: Array.isArray(insights.merchantInsights) ? insights.merchantInsights : [],
+    recurringInsights: Array.isArray(insights.recurringInsights) ? insights.recurringInsights : [],
     recommendations: Array.isArray(insights.recommendations) ? insights.recommendations : [],
     anomalies: Array.isArray(insights.anomalies) ? insights.anomalies : [],
     source: latestAnalysis?.aiStatus?.insights ?? null,

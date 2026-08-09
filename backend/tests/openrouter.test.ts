@@ -844,6 +844,9 @@ describe("coach suggestions", () => {
   });
 
   it("skips OpenRouter without api key", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "");
+    vi.stubEnv("VITE_OPENROUTER_API_KEY", "");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("No API key")));
     const result = await generateCoachSuggestionsWithOpenRouter(sampleSummary);
     expect(result.source).toBe("fallback");
   });

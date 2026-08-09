@@ -253,7 +253,33 @@ app.post("/api/coach/suggestions", async (c) => {
   return c.json({
     status: "success",
     suggestions: result.suggestions,
+    fullInsights: (result as any).fullInsights || null,
     source: result.source,
+  });
+});
+
+app.post("/api/ai/categorize", async (c) => {
+  let body: { transactions?: any[] };
+  try {
+    body = (await c.req.json()) as { transactions?: any[] };
+  } catch {
+    return c.json({ status: "error", message: "Expected JSON body.", code: "INVALID_JSON" }, 400);
+  }
+
+  const transactions = body.transactions;
+  if (!Array.isArray(transactions) || transactions.length === 0) {
+    return c.json(
+      { status: "error", message: "Missing transactions array.", code: "MISSING_TRANSACTIONS" },
+      400,
+    );
+  }
+
+  const { generateBatchCategorizationWithQwen } = await import("./openrouter.js");
+  const proposals = await generateBatchCategorizationWithQwen(transactions);
+
+  return c.json({
+    status: "success",
+    proposals,
   });
 });
 

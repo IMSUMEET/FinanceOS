@@ -141,9 +141,16 @@ export function matchTransfersAndClassify(transactions = [], accounts = [], opti
 
       const accOut = outgoing.card_identity || outgoing.source || "";
       const accIn = incoming.card_identity || incoming.source || "";
+      const descOut = `${outgoing.description ?? ""} ${outgoing.merchant_raw ?? ""}`.toLowerCase();
+      const descIn = `${incoming.description ?? ""} ${incoming.merchant_raw ?? ""}`.toLowerCase();
+
       const isCardInvolved =
         accOut.toLowerCase().includes("card") ||
         accIn.toLowerCase().includes("card") ||
+        accOut.toLowerCase().includes("venture") ||
+        accIn.toLowerCase().includes("venture") ||
+        descOut.includes("capital one") ||
+        descIn.includes("capital one") ||
         outgoing.classification === CLASSIFICATION_TYPES.CREDIT_CARD_PAYMENT ||
         incoming.classification === CLASSIFICATION_TYPES.CREDIT_CARD_PAYMENT;
 

@@ -38,7 +38,7 @@ function HeroAiRecategorizeButton() {
       ) : (
         <Sparkles size={16} className="text-purple-600 dark:text-purple-300" />
       )}
-      <span>{loading ? "Categorizing with AI..." : "Recategorize with AI"}</span>
+      <span>{loading ? "Running AI Analysis..." : "Run AI Analysis"}</span>
     </button>
   );
 }

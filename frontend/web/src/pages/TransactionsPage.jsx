@@ -381,9 +381,7 @@ function TransactionsPage() {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {Array.from(
-              new Set([...CATEGORIES, ...transactions.map((t) => t.category).filter(Boolean)]),
-            ).map((c) => (
+            {CATEGORIES.map((c) => (
               <CategoryChip
                 key={c}
                 label={c}

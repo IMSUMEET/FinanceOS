@@ -8,6 +8,7 @@ import UploadPage from "./pages/UploadPage";
 import ConnectionsPage from "./pages/ConnectionsPage";
 import HelpSupportPage from "./pages/HelpSupportPage";
 import HouseSaleCalculator from "./pages/HouseSaleCalculator";
+import RulesPage from "./pages/RulesPage";
 import ReportsPage from "./pages/ReportsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
@@ -20,6 +21,7 @@ function App() {
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/categories/:name" element={<CategoriesPage />} />
+          <Route path="/rules" element={<RulesPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/insights/ai" element={<InsightsPage />} />
           <Route path="/connections" element={<ConnectionsPage />} />

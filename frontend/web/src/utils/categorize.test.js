@@ -3,18 +3,16 @@ import { categorize, normalizeMerchant } from "./categorize.js";
 
 describe("categorize", () => {
   it("matches each major rule bucket", () => {
-    expect(categorize("Netflix", "")).toBe("Subscriptions");
-    expect(categorize("Whole Foods", "")).toBe("Groceries");
-    expect(categorize("Chevron", "")).toBe("Gas");
+    expect(categorize("Netflix", "")).toBe("Bills & Utilities");
+    expect(categorize("Whole Foods", "")).toBe("Food");
+    expect(categorize("Chevron", "")).toBe("Transportation");
     expect(categorize("Uber Eats", "")).toBe("Food");
-    expect(categorize("Uber", "")).toBe("Transport");
+    expect(categorize("Uber", "")).toBe("Transportation");
     expect(categorize("Delta flight", "")).toBe("Travel");
     expect(categorize("Starbucks", "")).toBe("Food");
     expect(categorize("Amazon", "")).toBe("Shopping");
     expect(categorize("Steam", "")).toBe("Entertainment");
-    expect(categorize("Verizon", "")).toBe("Utilities");
-    expect(categorize("Thank you autopay", "")).toBe("Credit Card Payments");
-    expect(categorize("Refund credit", "")).toBe("Payments");
+    expect(categorize("Verizon", "")).toBe("Bills & Utilities");
   });
 
   it("returns Other when nothing matches", () => {
@@ -30,6 +28,7 @@ describe("normalizeMerchant", () => {
   it("cleans noisy merchant strings", () => {
     expect(normalizeMerchant("STARBUCKS #1234")).toBe("Starbucks");
     expect(normalizeMerchant("UBER *EATS 99882")).toBe("Uber");
+    expect(normalizeMerchant("COSTCO GAS #138")).toBe("Costco Gas");
   });
 
   it("returns Unknown for empty input", () => {

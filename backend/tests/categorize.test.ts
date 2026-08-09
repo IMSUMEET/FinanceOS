@@ -2,21 +2,21 @@ import { describe, it, expect } from "vitest";
 import { categorize, normalizeMerchant } from "../src/categorize.js";
 
 describe("categorize", () => {
-  it("should categorize subscriptions correctly", () => {
-    expect(categorize("Netflix", "Netflix subscription")).toBe("Subscriptions");
-    expect(categorize("Spotify", "")).toBe("Subscriptions");
-    expect(categorize("Apple.com/Bill", "")).toBe("Subscriptions");
+  it("should categorize subscriptions under Bills & Utilities", () => {
+    expect(categorize("Netflix", "Netflix subscription")).toBe("Bills & Utilities");
+    expect(categorize("Spotify", "")).toBe("Bills & Utilities");
+    expect(categorize("Apple.com/Bill", "")).toBe("Bills & Utilities");
   });
 
-  it("should categorize groceries correctly", () => {
-    expect(categorize("Whole Foods", "")).toBe("Groceries");
-    expect(categorize("Trader Joe's", "")).toBe("Groceries");
-    expect(categorize("Costco Whse", "")).toBe("Groceries");
+  it("should categorize groceries under Food", () => {
+    expect(categorize("Whole Foods", "")).toBe("Food");
+    expect(categorize("Trader Joe's", "")).toBe("Food");
+    expect(categorize("Costco Whse", "")).toBe("Food");
   });
 
-  it("should categorize gas correctly", () => {
-    expect(categorize("Chevron", "")).toBe("Gas");
-    expect(categorize("Shell Gas Station", "")).toBe("Gas");
+  it("should categorize gas under Transportation", () => {
+    expect(categorize("Chevron", "")).toBe("Transportation");
+    expect(categorize("Shell Gas Station", "")).toBe("Transportation");
   });
 
   it("should default to Other if no match", () => {

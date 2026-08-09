@@ -1070,6 +1070,14 @@ export interface CoachSummary {
   savingsRate: number;
   topCategories: { category: string; total: number }[];
   topMerchants: { merchant: string; total: number }[];
+  recentTransactions?: {
+    id: string;
+    date: string;
+    description: string;
+    merchant: string;
+    amount: number;
+    category: string;
+  }[];
   recurringAnnualized?: number;
   personalityLabel?: string;
 }
@@ -1079,6 +1087,15 @@ export interface CoachSuggestion {
   message: string;
   impact: "low" | "medium" | "high";
   estimatedMonthlySavings: number;
+  transactionIds?: string[];
+  relatedTransactions?: {
+    id: string;
+    date: string;
+    description: string;
+    merchant: string;
+    amount: number;
+    category: string;
+  }[];
 }
 
 export interface CoachSuggestionsResult {
@@ -1135,19 +1152,44 @@ export function validateCoachSuggestions(raw: unknown, summary: CoachSummary): C
   const fallback = fallbackCoachSuggestions(summary).suggestions;
   if (!Array.isArray(raw)) return fallback;
 
+  const recentTxns = summary.recentTransactions || [];
+
   const parsed: CoachSuggestion[] = raw
     .filter((item) => item && typeof item === "object")
-    .map((item: any, idx) => ({
-      title: typeof item.title === "string" ? item.title : (fallback[idx]?.title ?? "Suggestion"),
-      message: typeof item.message === "string" ? item.message : (fallback[idx]?.message ?? ""),
-      impact: ["low", "medium", "high"].includes(item.impact)
-        ? item.impact
-        : (fallback[idx]?.impact ?? "medium"),
-      estimatedMonthlySavings:
-        typeof item.estimatedMonthlySavings === "number"
-          ? item.estimatedMonthlySavings
-          : (fallback[idx]?.estimatedMonthlySavings ?? 0),
-    }))
+    .map((item: any, idx) => {
+      const rawIds = Array.isArray(item.transactionIds) ? item.transactionIds.map(String) : [];
+      let related = recentTxns.filter((t) => rawIds.includes(String(t.id)));
+
+      // If AI didn't provide specific transaction IDs, match transactions by keyword/category/title
+      if (related.length === 0 && recentTxns.length > 0) {
+        const titleLower = (item.title || "").toLowerCase();
+        const msgLower = (item.message || "").toLowerCase();
+        related = recentTxns
+          .filter((t) => {
+            const mName = (t.merchant || t.description || "").toLowerCase();
+            const catName = (t.category || "").toLowerCase();
+            return (
+              (mName && (titleLower.includes(mName) || msgLower.includes(mName))) ||
+              (catName && (titleLower.includes(catName) || msgLower.includes(catName)))
+            );
+          })
+          .slice(0, 5);
+      }
+
+      return {
+        title: typeof item.title === "string" ? item.title : (fallback[idx]?.title ?? "Suggestion"),
+        message: typeof item.message === "string" ? item.message : (fallback[idx]?.message ?? ""),
+        impact: ["low", "medium", "high"].includes(item.impact)
+          ? item.impact
+          : (fallback[idx]?.impact ?? "medium"),
+        estimatedMonthlySavings:
+          typeof item.estimatedMonthlySavings === "number"
+            ? item.estimatedMonthlySavings
+            : (fallback[idx]?.estimatedMonthlySavings ?? 0),
+        transactionIds: rawIds.length > 0 ? rawIds : related.map((t) => String(t.id)),
+        relatedTransactions: related,
+      };
+    })
     .slice(0, 3);
 
   while (parsed.length < 3) {
@@ -1168,29 +1210,94 @@ export async function generateCoachSuggestionsWithOpenRouter(
   // Local Ollama instance execution (strict mode: no cloud API calls)
   if (!process.env.VITEST && process.env.NODE_ENV !== "test") {
     try {
-      const prompt = `You are FinanceOS AI Coach. Analyze the financial summary and return ONLY valid JSON.
+      const prompt = `You are FinanceOS AI Analyst. Analyze the financial summary and return ONLY valid JSON with severity/impact levels.
+
 Return schema:
 {
-  "suggestions": [
+  "summary": {
+    "headline": "string",
+    "financialDirection": "improving | stable | worsening | insufficient_data",
+    "explanation": "string"
+  },
+  "score": 75,
+  "riskLevel": "low | medium | high | critical",
+  "spendingInsights": [
     {
       "title": "string",
       "message": "string",
-      "impact": "low | medium | high",
-      "estimatedMonthlySavings": 0
+      "impact": "low | medium | high | critical",
+      "evidence": ["string"]
+    }
+  ],
+  "savingsAnalysis": {
+    "currentSavings": 0,
+    "currentSavingsRate": 0,
+    "previousSavings": 0,
+    "previousSavingsRate": 0,
+    "trend": "up | stable | down | insufficient_data",
+    "message": "string"
+  },
+  "observations": [
+    {
+      "title": "string",
+      "message": "string",
+      "severity": "info | low | medium | high | critical",
+      "category": "string"
+    }
+  ],
+  "categoryInsights": [
+    {
+      "category": "string",
+      "message": "string",
+      "importance": "low | medium | high | critical"
+    }
+  ],
+  "merchantInsights": [
+    {
+      "merchant": "string",
+      "message": "string",
+      "importance": "low | medium | high | critical"
+    }
+  ],
+  "recurringInsights": [
+    {
+      "merchant": "string",
+      "estimatedMonthlyCost": 0,
+      "message": "string",
+      "reviewRecommended": true
+    }
+  ],
+  "anomalies": [
+    {
+      "transactionId": "string",
+      "title": "string",
+      "message": "string",
+      "severity": "low | medium | high | critical"
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "string",
+      "action": "string",
+      "reason": "string",
+      "impact": "low | medium | high | critical",
+      "estimatedMonthlySavings": 0,
+      "confidence": 0.95,
+      "transactionIds": ["string"]
     }
   ]
 }
 
 Rules:
-- Return exactly 3 suggestions, ordered from highest to lowest impact.
-- Each message must be one practical sentence the user can act on this week.
-- estimatedMonthlySavings must be a realistic non-negative number in USD.
+- Order recommendations from highest to lowest impact.
+- For each recommendation, include the exact transactionIds from financialSummary.recentTransactions that prompted the action.
+- Classify severity levels accurately: critical (urgent risk), high (major impact), medium (moderate impact), low (minor/info).
 
 financialSummary:
 ${JSON.stringify(summary, null, 2)}`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
       const ollamaRes = await fetch(`${ollamaBaseUrl}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1209,9 +1316,18 @@ ${JSON.stringify(summary, null, 2)}`;
         const content = ollamaData?.response;
         if (content) {
           const parsed = safeJsonParse(content);
-          if (parsed && Array.isArray((parsed as any).suggestions)) {
-            const suggestions = validateCoachSuggestions((parsed as any).suggestions, summary);
-            return { suggestions, source: "openrouter" };
+          if (parsed && typeof parsed === "object") {
+            const rawRecs = Array.isArray((parsed as any).recommendations)
+              ? (parsed as any).recommendations
+              : Array.isArray((parsed as any).suggestions)
+                ? (parsed as any).suggestions
+                : [];
+            const suggestions = validateCoachSuggestions(rawRecs, summary);
+            return {
+              suggestions,
+              fullInsights: parsed,
+              source: "openrouter",
+            };
           }
         }
       }
@@ -1350,4 +1466,168 @@ ${JSON.stringify(summary, null, 2)}`;
       timedOut: isOpenRouterTimeoutError(e),
     });
   }
+}
+
+/* ==========================================================================
+   Qwen AI Transaction Categorization & Analysis Pipeline (Phases 10, 18, 19)
+   ========================================================================== */
+
+export const QWEN_TRANSACTION_CATEGORIZATION_PROMPT = `You are FinanceOS Transaction Classifier.
+
+Your only task is to classify unresolved personal financial transactions.
+
+Return ONLY valid JSON.
+Do not return markdown.
+Do not provide financial advice.
+Do not calculate monthly spending.
+Do not calculate savings.
+Do not invent missing facts.
+
+Allowed transaction_type values:
+
+expense
+income
+refund
+internal_transfer
+credit_card_payment
+loan_payment
+other
+
+Allowed categories:
+
+Expense:
+- Housing (Rent/Mortgage, HOA, Repairs)
+- Food (Groceries, Dining, Coffee, Delivery)
+- Transportation (Gas, Uber/Lyft, Parking, Maintenance)
+- Shopping (Amazon, Clothing, Electronics, Household)
+- Bills & Utilities (Electricity, Water, Internet, Phone)
+- Entertainment (Movies, Games, Hobbies, Events)
+- Travel (Flights, Hotels, Rental Cars)
+- Health & Personal (Medical, Pharmacy, Fitness, Grooming)
+- Family & Giving (Gifts, Donations, Family)
+- Other (Uncategorized)
+
+Income:
+- Salary (Salary, Bonus)
+- Investment Income (Interest, Dividends, Capital Gains)
+- Business Income (Freelance, Side Project, Consulting)
+- Reimbursements (Employer reimbursement, expense reimbursement)
+- Other Income (Cashback, rewards, miscellaneous)
+
+Transfer:
+- Internal Transfer (Checking ↔ Savings, Brokerage funding)
+
+Debt Payment:
+- Credit Card Payment (Checking → Amex/Chase/etc.)
+- Loan Payment (EMI, auto loan, mortgage principal)
+
+Refund:
+- Refund (Merchant refund, purchase reversal)
+
+For every transaction determine:
+
+- transaction_type
+- category
+- subcategory
+- confidence
+- reason
+
+IMPORTANT RULES
+
+A negative amount does NOT automatically mean expense.
+A positive amount does NOT automatically mean income.
+Credit-card payments are NOT expenses.
+Transfers between user-owned accounts are NOT expenses or income.
+Credit-card payment received on the credit-card side is NOT income.
+Refunds are NOT normal income.
+Loan payments must be classified as loan_payment.
+Only actual purchases of goods or services should normally be classified as expense.
+
+Use all available information:
+merchant_raw, merchant_normalized, description, amount, card_identity, account_type, account_subtype, source, current category, historical merchant rules, similar previous transactions, other supplied metadata.
+
+If an existing user rule or previous manual classification clearly applies, follow it.
+Do not aggressively guess from vague merchant names.
+
+If confidence is below 0.70:
+transaction_type = "other"
+category = "Other"
+subcategory = null
+
+Confidence must be between 0 and 1.
+Reason must be short and specific.
+
+OUTPUT SCHEMA
+
+{
+  "transactions": [
+    {
+      "id": 123,
+      "transaction_type": "expense",
+      "category": "Groceries",
+      "subcategory": null,
+      "confidence": 0.97,
+      "reason": "Whole Foods is a grocery retailer."
+    }
+  ]
+}
+
+Return one result for every input transaction.
+Return no additional keys.`;
+
+export async function generateBatchCategorizationWithQwen(
+  unresolvedTransactions: any[],
+): Promise<any[]> {
+  if (!unresolvedTransactions || unresolvedTransactions.length === 0) return [];
+
+  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+  const ollamaModel = process.env.OLLAMA_MODEL || "qwen3:8b";
+
+  const compactTx = unresolvedTransactions.map((t) => ({
+    id: t.id,
+    merchant_raw: t.merchant_raw || t.description,
+    merchant_normalized: t.merchant_normalized || t.merchant,
+    description: t.description,
+    amount: t.amount,
+    card_identity: t.card_identity || t.source,
+    account_type: t.account_type || null,
+    current_category: t.category || t.finalCategory || "Other",
+  }));
+
+  const fullPrompt = `${QWEN_TRANSACTION_CATEGORIZATION_PROMPT}
+
+transactions:
+${JSON.stringify(compactTx, null, 2)}`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch(`${ollamaBaseUrl}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ollamaModel,
+        prompt: fullPrompt,
+        stream: false,
+        format: "json",
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data: any = await res.json();
+      const content = data?.response;
+      if (content) {
+        const parsed = safeJsonParse(content);
+        if (parsed && Array.isArray((parsed as any).transactions)) {
+          return (parsed as any).transactions;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[Qwen Categorizer] Ollama call failed:", err);
+  }
+
+  return [];
 }
