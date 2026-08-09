@@ -8,6 +8,12 @@ export const CATEGORIES = [
   "Travel",
   "Utilities",
   "Subscriptions",
+  "Credit Card Payments",
+  "Payments",
+  "Income",
+  "Transfer",
+  "Refunds",
+  "Loans",
   "Other",
 ];
 

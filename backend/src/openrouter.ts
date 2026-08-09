@@ -1159,18 +1159,78 @@ export function validateCoachSuggestions(raw: unknown, summary: CoachSummary): C
 export async function generateCoachSuggestionsWithOpenRouter(
   summary: CoachSummary,
 ): Promise<CoachSuggestionsResult> {
+  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+  const ollamaModel = process.env.OLLAMA_MODEL || "qwen3:8b";
   const apiKey = process.env.OPENROUTER_API_KEY;
   const model = process.env.OPENROUTER_MODEL || "openrouter/free";
   const appUrl = process.env.APP_URL || "https://financeos.app";
 
-  if (!apiKey) {
-    logOpenRouter("openrouter_skipped", {
-      operation: "coach_suggestions",
-      reason: "missing_api_key",
-      model,
-      outcome: "fallback",
-    });
-    return fallbackCoachSuggestions(summary);
+  // Local Ollama instance execution (strict mode: no cloud API calls)
+  if (!process.env.VITEST && process.env.NODE_ENV !== "test") {
+    try {
+      const prompt = `You are FinanceOS AI Coach. Analyze the financial summary and return ONLY valid JSON.
+Return schema:
+{
+  "suggestions": [
+    {
+      "title": "string",
+      "message": "string",
+      "impact": "low | medium | high",
+      "estimatedMonthlySavings": 0
+    }
+  ]
+}
+
+Rules:
+- Return exactly 3 suggestions, ordered from highest to lowest impact.
+- Each message must be one practical sentence the user can act on this week.
+- estimatedMonthlySavings must be a realistic non-negative number in USD.
+
+financialSummary:
+${JSON.stringify(summary, null, 2)}`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const ollamaRes = await fetch(`${ollamaBaseUrl}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: ollamaModel,
+          prompt,
+          stream: false,
+          format: "json",
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (ollamaRes.ok) {
+        const ollamaData: any = await ollamaRes.json();
+        const content = ollamaData?.response;
+        if (content) {
+          const parsed = safeJsonParse(content);
+          if (parsed && Array.isArray((parsed as any).suggestions)) {
+            const suggestions = validateCoachSuggestions((parsed as any).suggestions, summary);
+            return { suggestions, source: "openrouter" };
+          }
+        }
+      }
+    } catch (ollamaErr) {
+      console.warn("[Ollama] Local Ollama service unreachable:", ollamaErr);
+    }
+
+    // Return friendly local alert suggestion when Ollama is inactive
+    return {
+      suggestions: [
+        {
+          title: "Ollama model inactive",
+          message: `Please start Ollama locally ('ollama run ${ollamaModel}') to generate AI insights and categorizations.`,
+          impact: "high",
+          estimatedMonthlySavings: 0,
+        },
+      ],
+      source: "fallback",
+    };
   }
 
   logOpenRouter("openrouter_start", {

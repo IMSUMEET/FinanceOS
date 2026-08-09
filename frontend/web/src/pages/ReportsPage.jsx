@@ -17,6 +17,7 @@ import SavingsReport from "../components/reports/SavingsReport";
 import NetWorthReport from "../components/reports/NetWorthReport";
 import HealthDashboardReport from "../components/reports/HealthDashboardReport";
 import AIInsights from "../components/reports/AIInsights";
+import { InsightsSubNav } from "../components/navigation/InsightsSubNav";
 
 function ReportsPage() {
   const { transactions } = useTransactions();
@@ -109,6 +110,7 @@ function ReportsPage() {
 
   return (
     <div className="space-y-6">
+      <InsightsSubNav />
       {/* Top Header Controls */}
       <Card className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
         <ReportSelector selected={selectedReport} onChange={setSelectedReport} />

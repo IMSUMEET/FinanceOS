@@ -18,8 +18,10 @@
     "@hono/node-server": "^1.13.0",
     "@oblivion-labs-dev/arsenal-backend": "^0.1.0",
     "@oblivion-labs-dev/arsenal-shared": "^0.1.0",
+    "dotenv": "^17.4.2",
     "hono": "^4.6.0",
     "papaparse": "^5.4.1",
+    "plaid": "^45.0.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

@@ -5,6 +5,7 @@ import TransactionsPage from "./pages/TransactionsPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import InsightsPage from "./pages/InsightsPage";
 import UploadPage from "./pages/UploadPage";
+import ConnectionsPage from "./pages/ConnectionsPage";
 import HelpSupportPage from "./pages/HelpSupportPage";
 import HouseSaleCalculator from "./pages/HouseSaleCalculator";
 import ReportsPage from "./pages/ReportsPage";
@@ -20,6 +21,8 @@ function App() {
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/categories/:name" element={<CategoriesPage />} />
           <Route path="/insights" element={<InsightsPage />} />
+          <Route path="/insights/ai" element={<InsightsPage />} />
+          <Route path="/connections" element={<ConnectionsPage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/help" element={<HelpSupportPage />} />
           <Route path="/house-sale" element={<HouseSaleCalculator />} />

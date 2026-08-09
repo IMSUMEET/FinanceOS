@@ -56,3 +56,9 @@ Thumbs.db
 # Optional tooling
 .turbo/
 .vercel/
+
+# Agent config
+.agent/
+
+# Backend local data (Plaid connections, transactions, personal financial data)
+backend/data/

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { app } from "./index.js";
 import { aiApp } from "./aiAnalyzer.js";
@@ -11,4 +12,3 @@ serve({
 });
 
 console.log("Finance OS API running on http://localhost:3001");
-

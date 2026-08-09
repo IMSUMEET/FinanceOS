@@ -12,6 +12,7 @@ import Drawer from "../components/ui/Drawer";
 import Button from "../components/ui/Button";
 import AccountFilterBar from "../components/dashboard/AccountFilterBar";
 import MonthFilterSelect from "../components/filters/MonthFilterSelect";
+import { InsightsSubNav } from "../components/navigation/InsightsSubNav";
 import { usePageFilters } from "../context/usePageFilters";
 import { useTransactions } from "../context/useTransactions";
 import { ALL_MONTHS_SENTINEL } from "../context/pageFilters";
@@ -19,6 +20,7 @@ import useDocumentTitle from "../hooks/useDocumentTitle";
 import { CATEGORIES } from "../utils/categories";
 import { listAccountsForPeriod } from "../utils/accountCards";
 import { formatAmountSpend, formatDate, formatMonth } from "../utils/format";
+import { CLASSIFICATION_TYPES } from "../utils/classification.js";
 
 function TransactionDetail({ tx, onClose, onUpdateCategory }) {
   if (!tx) return null;
@@ -67,6 +69,17 @@ function TransactionDetail({ tx, onClose, onUpdateCategory }) {
               {tx.merchant_raw}
             </dd>
           </div>
+          {tx.aiCategory ? (
+            <div className="col-span-2 surface-muted p-4 border border-purple-500/30 bg-purple-50/50 dark:bg-purple-950/20">
+              <dt className="text-xs font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                <Sparkles size={12} />
+                AI Suggested Category
+              </dt>
+              <dd className="mt-1 font-bold text-purple-900 dark:text-purple-100">
+                {tx.aiCategory}
+              </dd>
+            </div>
+          ) : null}
         </dl>
 
         <div>
@@ -111,6 +124,47 @@ function CategoryChip({ active, label, onToggle }) {
   );
 }
 
+function ClassificationBadge({ classification, transferMatch, tx }) {
+  if (!classification || classification === CLASSIFICATION_TYPES.EXPENSE) return null;
+
+  const isExcluded =
+    classification === CLASSIFICATION_TYPES.CREDIT_CARD_PAYMENT ||
+    classification === CLASSIFICATION_TYPES.INTERNAL_TRANSFER ||
+    classification === CLASSIFICATION_TYPES.LOAN_PAYMENT;
+
+  const labels = {
+    [CLASSIFICATION_TYPES.CREDIT_CARD_PAYMENT]: "Credit Card Payment",
+    [CLASSIFICATION_TYPES.INTERNAL_TRANSFER]: "Internal Transfer",
+    [CLASSIFICATION_TYPES.LOAN_PAYMENT]: "Loan Payment",
+    [CLASSIFICATION_TYPES.REFUND]: "Refund",
+    [CLASSIFICATION_TYPES.INCOME]: "Income",
+  };
+
+  const label = labels[classification] || classification;
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span
+        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+          classification === CLASSIFICATION_TYPES.CREDIT_CARD_PAYMENT ||
+          classification === CLASSIFICATION_TYPES.INTERNAL_TRANSFER
+            ? "bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300"
+            : classification === CLASSIFICATION_TYPES.REFUND
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300"
+              : classification === CLASSIFICATION_TYPES.INCOME
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300"
+                : "bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300"
+        }`}
+      >
+        {label}
+      </span>
+      {isExcluded && (
+        <span className="text-[10px] text-ink-400 dark:text-ink-500">Excluded from spending</span>
+      )}
+    </div>
+  );
+}
+
 function TransactionMerchant({ tx }) {
   return (
     <div className="min-w-0">
@@ -125,16 +179,35 @@ function TransactionMerchant({ tx }) {
       {tx.description ? (
         <p className="truncate text-xs text-ink-500 dark:text-ink-400">{tx.description}</p>
       ) : null}
+      {tx.classification && tx.classification !== CLASSIFICATION_TYPES.EXPENSE ? (
+        <div className="mt-1">
+          <ClassificationBadge
+            classification={tx.classification}
+            transferMatch={tx.transferMatch}
+            tx={tx}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function TransactionAmount({ amount, className = "" }) {
+function TransactionAmount({ amount, type, classification, className = "" }) {
+  const isIncomeOrRefund =
+    type === "income" ||
+    classification === CLASSIFICATION_TYPES.INCOME ||
+    classification === CLASSIFICATION_TYPES.REFUND;
+  const prefix = isIncomeOrRefund ? "+" : "-";
+  const colorClass = isIncomeOrRefund
+    ? "text-emerald-600 dark:text-emerald-400"
+    : "text-ink-900 dark:text-ink-50";
+
   return (
     <p
-      className={`tabular shrink-0 whitespace-nowrap font-black text-ink-900 dark:text-ink-50 ${className}`.trim()}
+      className={`tabular shrink-0 whitespace-nowrap font-black ${colorClass} ${className}`.trim()}
     >
-      -{formatAmountSpend(amount)}
+      {prefix}
+      {formatAmountSpend(amount)}
     </p>
   );
 }
@@ -144,12 +217,12 @@ function TransactionRow({ tx, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(tx)}
-      className="w-full px-4 py-2.5 text-left transition hover:bg-ink-50 dark:hover:bg-ink-800/60"
+      className="surface-card group w-full px-4 py-2.5 text-left transition hover:border-brand-300 dark:hover:border-ink-700"
     >
       <div className="md:hidden">
         <div className="flex items-start justify-between gap-3">
           <TransactionMerchant tx={tx} />
-          <TransactionAmount amount={tx.amount} />
+          <TransactionAmount amount={tx.amount} type={tx.type} classification={tx.classification} />
         </div>
         <div className="mt-1.5 flex items-center gap-2">
           <CategoryBadge category={tx.category} />
@@ -165,7 +238,12 @@ function TransactionRow({ tx, onSelect }) {
         <div className="min-w-0 max-w-[9.5rem]">
           <CategoryBadge category={tx.category} />
         </div>
-        <TransactionAmount amount={tx.amount} className="justify-self-end text-right" />
+        <TransactionAmount
+          amount={tx.amount}
+          type={tx.type}
+          classification={tx.classification}
+          className="justify-self-end text-right"
+        />
       </div>
     </button>
   );
@@ -184,10 +262,14 @@ function TransactionsPage() {
   const isAllMonths = filters.month === ALL_MONTHS_SENTINEL;
   const periodLabel = isAllMonths ? "all time" : formatMonth(filters.month);
 
+  const [pageSize, setPageSize] = useState(60);
+
   const sorted = useMemo(
     () => [...filtered].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id)),
     [filtered],
   );
+
+  const visibleTransactions = useMemo(() => sorted.slice(0, pageSize), [sorted, pageSize]);
 
   const toggleCategory = (c) => {
     setFilters((f) => ({
@@ -226,6 +308,7 @@ function TransactionsPage() {
 
   return (
     <section className="space-y-5 pt-2">
+      <InsightsSubNav />
       {accounts.length > 1 ? (
         <AccountFilterBar
           accounts={accounts}
@@ -298,7 +381,9 @@ function TransactionsPage() {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {CATEGORIES.map((c) => (
+            {Array.from(
+              new Set([...CATEGORIES, ...transactions.map((t) => t.category).filter(Boolean)]),
+            ).map((c) => (
               <CategoryChip
                 key={c}
                 label={c}
@@ -331,12 +416,19 @@ function TransactionsPage() {
               <span className="text-right">Amount</span>
             </div>
             <ul className="divide-y divide-ink-100 dark:divide-ink-800">
-              {sorted.map((t) => (
+              {visibleTransactions.map((t) => (
                 <li key={t.id}>
                   <TransactionRow tx={t} onSelect={setOpenTx} />
                 </li>
               ))}
             </ul>
+            {sorted.length > visibleTransactions.length && (
+              <div className="p-4 text-center border-t border-ink-100 dark:border-ink-800">
+                <Button variant="ghost" onClick={() => setPageSize((prev) => prev + 60)}>
+                  Load more transactions ({sorted.length - visibleTransactions.length} remaining)
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>

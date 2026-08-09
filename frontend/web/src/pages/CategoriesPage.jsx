@@ -13,6 +13,7 @@ import EmptyState from "../components/ui/EmptyState";
 import SectionHeader from "../components/ui/SectionHeader";
 import MiniSparkline from "../components/charts/MiniSparkline";
 import MonthlyCategoryBars from "../components/charts/MonthlyCategoryBars";
+import { InsightsSubNav } from "../components/navigation/InsightsSubNav";
 import { useTransactions } from "../context/useTransactions";
 import { usePageFilters } from "../context/usePageFilters";
 import useDocumentTitle from "../hooks/useDocumentTitle";
@@ -226,6 +227,7 @@ function CategoriesPage() {
 
   return (
     <section className="space-y-5 pt-2">
+      <InsightsSubNav />
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <SectionHeader eyebrow="Categories" title="How your money is split" />

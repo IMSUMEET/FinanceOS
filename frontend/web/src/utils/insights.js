@@ -1,18 +1,61 @@
 import { monthKey } from "./format";
+import { CLASSIFICATION_TYPES } from "./classification.js";
+
+function isExcludedFromSpending(r) {
+  if (r.category === "Credit Card Payments") return true;
+  const c = r.classification;
+  return (
+    c === CLASSIFICATION_TYPES.INTERNAL_TRANSFER ||
+    c === CLASSIFICATION_TYPES.CREDIT_CARD_PAYMENT ||
+    c === CLASSIFICATION_TYPES.LOAN_PAYMENT
+  );
+}
 
 const sumSpend = (rows) =>
-  rows
-    .filter((r) => r.category !== "Credit Card Payments")
-    .reduce((s, r) => s + Math.abs(Number(r.amount ?? 0)), 0);
+  rows.reduce((s, r) => {
+    if (isExcludedFromSpending(r)) return s;
+    const amt = Math.abs(Number(r.amount ?? 0));
+    if (r.classification === CLASSIFICATION_TYPES.REFUND) {
+      return s - amt;
+    }
+    if (r.type === "income" || r.classification === CLASSIFICATION_TYPES.INCOME) {
+      return s;
+    }
+    return s + amt;
+  }, 0);
+
+export function totalIncome(transactions) {
+  return transactions.reduce((s, r) => {
+    if (r.classification === CLASSIFICATION_TYPES.INCOME) {
+      return s + Math.abs(Number(r.amount ?? 0));
+    }
+    return s;
+  }, 0);
+}
+
+export function totalCashOutflow(transactions) {
+  return transactions.reduce((s, r) => {
+    const isOutflow = r.type === "expense" || Number(r.rawAmount ?? r.amount) > 0;
+    if (isOutflow) {
+      return s + Math.abs(Number(r.amount ?? 0));
+    }
+    return s;
+  }, 0);
+}
 
 export function monthlyTotals(transactions) {
   const map = new Map();
   for (const t of transactions) {
-    if (t.category === "Credit Card Payments") continue;
+    if (isExcludedFromSpending(t)) continue;
     const key = monthKey(t.date);
     if (!key) continue;
     const cur = map.get(key) ?? { month: key, total: 0, count: 0 };
-    cur.total += Math.abs(Number(t.amount ?? 0));
+    const amt = Math.abs(Number(t.amount ?? 0));
+    if (t.classification === CLASSIFICATION_TYPES.REFUND) {
+      cur.total -= amt;
+    } else if (t.classification !== CLASSIFICATION_TYPES.INCOME && t.type !== "income") {
+      cur.total += amt;
+    }
     cur.count += 1;
     map.set(key, cur);
   }
@@ -22,10 +65,15 @@ export function monthlyTotals(transactions) {
 export function categoryBreakdown(transactions) {
   const map = new Map();
   for (const t of transactions) {
-    if (t.category === "Credit Card Payments") continue;
+    if (isExcludedFromSpending(t)) continue;
     const cat = t.category || "Other";
     const cur = map.get(cat) ?? { category: cat, total: 0, count: 0 };
-    cur.total += Math.abs(Number(t.amount ?? 0));
+    const amt = Math.abs(Number(t.amount ?? 0));
+    if (t.classification === CLASSIFICATION_TYPES.REFUND) {
+      cur.total -= amt;
+    } else if (t.classification !== CLASSIFICATION_TYPES.INCOME && t.type !== "income") {
+      cur.total += amt;
+    }
     cur.count += 1;
     map.set(cat, cur);
   }
@@ -35,7 +83,7 @@ export function categoryBreakdown(transactions) {
 export function merchantBreakdown(transactions) {
   const map = new Map();
   for (const t of transactions) {
-    if (t.category === "Credit Card Payments") continue;
+    if (isExcludedFromSpending(t)) continue;
     const m = t.merchant_normalized || t.merchant_raw || "Unknown";
     const cur = map.get(m) ?? {
       merchant: m,
@@ -43,7 +91,12 @@ export function merchantBreakdown(transactions) {
       count: 0,
       category: t.category,
     };
-    cur.total += Math.abs(Number(t.amount ?? 0));
+    const amt = Math.abs(Number(t.amount ?? 0));
+    if (t.classification === CLASSIFICATION_TYPES.REFUND) {
+      cur.total -= amt;
+    } else if (t.classification !== CLASSIFICATION_TYPES.INCOME && t.type !== "income") {
+      cur.total += amt;
+    }
     cur.count += 1;
     map.set(m, cur);
   }
@@ -54,7 +107,7 @@ export function monthlyByCategory(transactions) {
   // Returns: [{ month, [cat]: total, ... }]
   const map = new Map();
   for (const t of transactions) {
-    if (t.category === "Credit Card Payments") continue;
+    if (isExcludedFromSpending(t)) continue;
     const m = monthKey(t.date);
     if (!m) continue;
     const cur = map.get(m) ?? { month: m };

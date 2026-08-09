@@ -6,6 +6,9 @@ import {
   generateStaticInsights,
   mapToAllowedCategory,
 } from "./openrouter.js";
+import { PlaidService } from "./services/plaid/plaidService.js";
+import { PlaidStore } from "./services/plaid/plaidStore.js";
+import { getPlaidConfig } from "./services/plaid/plaidClient.js";
 
 export const app = new Hono();
 
@@ -149,7 +152,7 @@ app.post("/api/analyze", async (c) => {
         localConfidence: t.category === "Other" ? 0.5 : 0.9,
         finalCategory: allowedCat,
         categorySource: "local",
-        
+
         // backwards compatibility fields
         merchant_raw: t.merchant_raw || t.description || "Unknown",
         merchant_normalized: t.merchant_normalized || "Unknown",
@@ -157,7 +160,7 @@ app.post("/api/analyze", async (c) => {
         category: allowedCat,
         source: t.source || "csv-analyze",
         card_identity: t.card_identity || "Unknown",
-        created_at: t.created_at || new Date().toISOString()
+        created_at: t.created_at || new Date().toISOString(),
       };
     });
 
@@ -228,7 +231,10 @@ app.post("/api/coach/suggestions", async (c) => {
 
   const summary = body.summary;
   if (!summary || typeof summary !== "object") {
-    return c.json({ status: "error", message: "Missing summary object.", code: "MISSING_SUMMARY" }, 400);
+    return c.json(
+      { status: "error", message: "Missing summary object.", code: "MISSING_SUMMARY" },
+      400,
+    );
   }
 
   const hasApiKey = !!process.env.OPENROUTER_API_KEY;
@@ -249,4 +255,179 @@ app.post("/api/coach/suggestions", async (c) => {
     suggestions: result.suggestions,
     source: result.source,
   });
+});
+
+/* ==========================================================================
+   Plaid Integration Endpoints
+   ========================================================================== */
+
+// GET /api/plaid/config — Public configuration status check
+app.get("/api/plaid/config", (c) => {
+  const config = getPlaidConfig();
+  return c.json({
+    status: "success",
+    isConfigured: config.isConfigured,
+    environment: config.env,
+  });
+});
+
+// POST /api/plaid/link-token — Create Link Token for frontend Link modal
+app.post("/api/plaid/link-token", async (c) => {
+  let connectionId: string | undefined;
+  try {
+    const body = (await c.req.json()) as Record<string, unknown>;
+    if (typeof body?.connectionId === "string") {
+      connectionId = body.connectionId;
+    }
+  } catch {
+    /* JSON body is optional */
+  }
+
+  try {
+    const result = await PlaidService.createLinkToken(connectionId);
+    return c.json({
+      status: "success",
+      link_token: result.linkToken,
+      expiration: result.expiration,
+    });
+  } catch (err: any) {
+    return c.json(
+      {
+        status: "error",
+        message: err.message || "Failed to create Link token.",
+        code: "PLAID_LINK_TOKEN_FAILED",
+      },
+      500,
+    );
+  }
+});
+
+// POST /api/plaid/exchange-token — Exchange public token & establish connection
+app.post("/api/plaid/exchange-token", async (c) => {
+  let body: { public_token?: string; metadata?: any };
+  try {
+    body = (await c.req.json()) as { public_token?: string; metadata?: any };
+  } catch {
+    return c.json({ status: "error", message: "Expected JSON body.", code: "INVALID_JSON" }, 400);
+  }
+
+  if (!body.public_token) {
+    return c.json(
+      { status: "error", message: "Missing public_token.", code: "MISSING_PUBLIC_TOKEN" },
+      400,
+    );
+  }
+
+  try {
+    const connection = await PlaidService.exchangePublicToken(body.public_token, body.metadata);
+    return c.json({
+      status: "success",
+      connection,
+    });
+  } catch (err: any) {
+    return c.json(
+      {
+        status: "error",
+        message: err.message || "Failed to exchange public token.",
+        code: "PLAID_EXCHANGE_FAILED",
+      },
+      500,
+    );
+  }
+});
+
+// GET /api/plaid/connections — List all saved connections & accounts
+app.get("/api/plaid/connections", (c) => {
+  const connections = PlaidStore.getSafeConnections();
+  const accounts = PlaidStore.getAccounts();
+  return c.json({
+    status: "success",
+    connections,
+    accounts,
+  });
+});
+
+// GET /api/plaid/transactions — Get all stored real Plaid transactions across all connections
+app.get("/api/plaid/transactions", (c) => {
+  const transactions = PlaidStore.getTransactions();
+  return c.json({
+    status: "success",
+    transactions,
+  });
+});
+
+// POST /api/plaid/connections/:id/sync — Incremental transaction sync & balance refresh
+app.post("/api/plaid/connections/:id/sync", async (c) => {
+  const connectionId = c.req.param("id");
+  const resetCursor = c.req.query("resetCursor") === "true";
+  try {
+    const result = await PlaidService.syncTransactions(connectionId, { resetCursor });
+    return c.json({
+      status: "success",
+      added: result.added,
+      modified: result.modified,
+      removed: result.removed,
+      allStored: result.allStored,
+      totalAddedCount: result.totalAddedCount,
+      accounts: result.accounts,
+    });
+  } catch (err: any) {
+    const isLoginRequired = err.message === "ITEM_LOGIN_REQUIRED";
+    return c.json(
+      {
+        status: "error",
+        message: isLoginRequired
+          ? "Bank login required. Please reconnect your institution."
+          : err.message || "Failed to sync transactions.",
+        code: isLoginRequired ? "ITEM_LOGIN_REQUIRED" : "PLAID_SYNC_FAILED",
+      },
+      isLoginRequired ? 401 : 500,
+    );
+  }
+});
+
+// POST /api/plaid/connections/:id/update-link-token — Link token for update/reconnect mode
+app.post("/api/plaid/connections/:id/update-link-token", async (c) => {
+  const connectionId = c.req.param("id");
+  try {
+    const result = await PlaidService.createLinkToken(connectionId);
+    return c.json({
+      status: "success",
+      link_token: result.linkToken,
+      expiration: result.expiration,
+    });
+  } catch (err: any) {
+    return c.json(
+      {
+        status: "error",
+        message: err.message || "Failed to create update Link token.",
+        code: "PLAID_UPDATE_LINK_FAILED",
+      },
+      500,
+    );
+  }
+});
+
+// DELETE /api/plaid/connections/:id — Disconnect institution and remove local item
+app.delete("/api/plaid/connections/:id", async (c) => {
+  const connectionId = c.req.param("id");
+  try {
+    const removed = await PlaidService.removeConnection(connectionId);
+    if (!removed) {
+      return c.json({ status: "error", message: "Connection not found.", code: "NOT_FOUND" }, 404);
+    }
+    return c.json({
+      status: "success",
+      message: "Connection removed successfully.",
+    });
+  } catch (err: any) {
+    return c.json(
+      {
+        status: "error",
+        message: err.message || "Failed to remove connection.",
+        code: "PLAID_REMOVE_FAILED",
+      },
+      500,
+    );
+  }
 });

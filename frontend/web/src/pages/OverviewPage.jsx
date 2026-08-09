@@ -21,6 +21,8 @@ import {
   dailyAverage,
   detectRecurring,
   totalSpend,
+  totalIncome,
+  totalCashOutflow,
   monthlyTotals,
   monthlyByCategory,
   categoryBreakdown,
@@ -209,26 +211,32 @@ function OverviewPage() {
                 derived.categories.slice(0, 5).map((c, i) => {
                   const isActive = activeCatIdx === i;
                   return (
-                    <button
-                      type="button"
+                    <Link
                       key={c.category}
+                      to={`/categories/${encodeURIComponent(c.category)}`}
                       onMouseEnter={() => setActiveCatIdx(i)}
                       onMouseLeave={() => setActiveCatIdx(null)}
                       onFocus={() => setActiveCatIdx(i)}
                       onBlur={() => setActiveCatIdx(null)}
-                      className={`flex w-full items-center justify-between rounded-xl2 px-4 py-2.5 transition ${
+                      className={`group flex w-full items-center justify-between rounded-xl2 px-4 py-2.5 transition cursor-pointer ${
                         isActive
                           ? "surface-muted scale-[1.01] shadow-soft ring-1 ring-brand-200/60 dark:ring-brand-800/40"
-                          : "surface-muted"
+                          : "surface-muted hover:border-brand-300 dark:hover:border-brand-500/50"
                       }`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <CategoryBadge category={c.category} size="md" />
                       </div>
-                      <span className="tabular shrink-0 text-base font-bold text-ink-900 dark:text-ink-50">
-                        {formatCurrency(c.total, { compact: true })}
-                      </span>
-                    </button>
+                      <div className="flex items-center gap-2">
+                        <span className="tabular shrink-0 text-base font-bold text-ink-900 dark:text-ink-50">
+                          {formatCurrency(c.total, { compact: true })}
+                        </span>
+                        <ArrowUpRight
+                          size={14}
+                          className="opacity-0 transition group-hover:opacity-100 text-brand-500"
+                        />
+                      </div>
+                    </Link>
                   );
                 })
               )}
@@ -241,8 +249,8 @@ function OverviewPage() {
             eyebrow="Categories"
             title="Top spending categories"
             action={
-              <Link to="/insights">
-                <IconButton variant="dark" aria-label="See all insights">
+              <Link to="/categories">
+                <IconButton variant="dark" aria-label="See all categories">
                   <ArrowUpRight size={16} />
                 </IconButton>
               </Link>
@@ -255,12 +263,19 @@ function OverviewPage() {
               derived.categories.slice(0, 5).map((c) => {
                 const share = total ? (c.total / total) * 100 : 0;
                 return (
-                  <div
+                  <Link
                     key={c.category}
-                    className="surface-muted flex items-center justify-between px-4 py-3"
+                    to={`/categories/${encodeURIComponent(c.category)}`}
+                    className="surface-muted group flex items-center justify-between px-4 py-3 transition hover:border-brand-300 dark:hover:border-brand-500/50 cursor-pointer"
                   >
                     <div className="flex min-w-0 flex-col gap-1">
-                      <CategoryBadge category={c.category} size="md" />
+                      <div className="flex items-center gap-1.5">
+                        <CategoryBadge category={c.category} size="md" />
+                        <ArrowUpRight
+                          size={14}
+                          className="opacity-0 transition group-hover:opacity-100 text-brand-500"
+                        />
+                      </div>
                       <p className="text-sm text-ink-500 dark:text-ink-400">
                         {c.count} {c.count === 1 ? "transaction" : "transactions"}
                       </p>
@@ -273,7 +288,7 @@ function OverviewPage() {
                         {share.toFixed(1)}% of spend
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 );
               })
             )}

@@ -1,12 +1,47 @@
-import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, Sparkles, RefreshCw, Check } from "lucide-react";
 import { motion as Motion } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ClayWalletGraphic from "./ClayWalletGraphic";
 import CountUp from "../effects/CountUp";
 import { useTransactions } from "../../context/useTransactions";
 import { monthlyTotals } from "../../utils/insights";
 import { formatCurrency, formatMonth } from "../../utils/format";
+
+function HeroAiRecategorizeButton() {
+  const { runAiAnalysis } = useTransactions();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleRun = async () => {
+    if (loading || !runAiAnalysis) return;
+    setLoading(true);
+    try {
+      await runAiAnalysis();
+      navigate("/insights");
+    } catch (err) {
+      console.warn("[AI Analysis] Error running analysis:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleRun}
+      disabled={loading}
+      className="group inline-flex h-11 items-center gap-2 rounded-full border border-purple-500/40 bg-purple-500/10 px-5 text-sm font-bold text-purple-700 shadow-sm transition hover:bg-purple-500/20 active:scale-[0.98] dark:border-purple-400/40 dark:bg-purple-500/20 dark:text-purple-200 dark:hover:bg-purple-500/30"
+    >
+      {loading ? (
+        <RefreshCw size={16} className="animate-spin text-purple-600 dark:text-purple-300" />
+      ) : (
+        <Sparkles size={16} className="text-purple-600 dark:text-purple-300" />
+      )}
+      <span>{loading ? "Categorizing with AI..." : "Recategorize with AI"}</span>
+    </button>
+  );
+}
 
 function greeting() {
   const h = new Date().getHours();
@@ -86,7 +121,7 @@ function WelcomeHero({ compactGraphic = false, fillHeight = false }) {
             </div>
           ) : null}
 
-          <div className="mt-7">
+          <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
               to={hasData ? "/transactions" : "/upload"}
               className="group inline-flex h-11 items-center gap-2 rounded-full border border-brand-300/30 bg-gradient-to-br from-brand-400 to-brand-600 px-5 text-sm font-bold text-white shadow-brand transition hover:brightness-105 active:scale-[0.98]"
@@ -94,6 +129,8 @@ function WelcomeHero({ compactGraphic = false, fillHeight = false }) {
               {hasData ? "View transactions" : "Import statements"}
               <ArrowRight size={16} className="transition group-hover:translate-x-0.5" />
             </Link>
+
+            {hasData && <HeroAiRecategorizeButton />}
           </div>
         </div>
 
